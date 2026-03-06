@@ -3,26 +3,1026 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fiducia Lang</title>
+  <title>Fiducia — Securing Critical Systems by Design</title>
+  <meta name="description" content="Fiducia is a programming language and toolchain for building secure, formally verifiable software on the seL4 microkernel.">
   <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      margin: 0;
-      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    nav .logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+    nav .logo span { color: var(--accent); }
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 28px;
+    }
+    nav ul a {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    nav ul a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+    .hero h1 .highlight {
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      max-width: 640px;
+      margin: 0 auto 36px;
+      font-size: 1.15rem;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--accent-dim);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent); text-decoration: none; }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--text-dim); text-decoration: none; }
+
+    /* ── Section ── */
+    section { padding: 80px 0; }
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    section h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+    }
+    section > .container > p.section-desc {
+      color: var(--text-dim);
+      max-width: 640px;
+      margin-bottom: 48px;
+      font-size: 1.05rem;
+    }
+
+    /* ── Feature grid ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
+      font-size: 1.2rem;
+      margin-bottom: 16px;
     }
-    h1 {
-      font-size: 2.5rem;
-      font-weight: 300;
-      letter-spacing: 0.05em;
+    .feature-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* ── Code blocks ── */
+    .code-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .code-section { grid-template-columns: 1fr; }
+    }
+    .code-block {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .code-header .file-ext {
+      color: var(--accent);
+    }
+    .code-block pre {
+      padding: 18px;
+      overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .code-block pre .kw { color: var(--accent); }
+    .code-block pre .type { color: var(--purple); }
+    .code-block pre .str { color: var(--green); }
+    .code-block pre .num { color: var(--amber); }
+    .code-block pre .cmt { color: #475569; font-style: italic; }
+    .code-block pre .op { color: var(--cyan); }
+    .code-block pre .label { color: var(--rose); }
+    .code-block pre .fn { color: var(--green); }
+
+    /* ── Pipeline ── */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 48px 0 32px;
+    }
+    .pipeline-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 22px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .pipeline-step .step-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+    .pipeline-step .step-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    .pipeline-arrow {
+      color: var(--accent);
+      font-size: 1.3rem;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Architecture diagram ── */
+    .arch-diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 36px;
+      margin: 40px 0;
+      text-align: center;
+    }
+    .arch-layers {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .arch-layer {
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .arch-layer.app {
+      background: rgba(96, 165, 250, 0.12);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      color: var(--accent);
+    }
+    .arch-layer.fiducia {
+      background: rgba(167, 139, 250, 0.15);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      color: var(--purple);
+      font-size: 1rem;
+    }
+    .arch-layer.microkit {
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--green);
+    }
+    .arch-layer.sel4 {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: var(--amber);
+    }
+    .arch-layer.hw {
+      background: rgba(148, 163, 184, 0.08);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-dim);
+    }
+    .arch-arrow {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      padding: 2px 0;
+    }
+
+    /* ── Use cases ── */
+    .use-cases {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .use-case {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .use-case h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .use-case p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+    .use-case-tag {
+      display: inline-block;
+      padding: 2px 10px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      margin-bottom: 14px;
+    }
+    .tag-defence {
+      background: rgba(251, 113, 133, 0.12);
+      color: var(--rose);
+      border: 1px solid rgba(251, 113, 133, 0.25);
+    }
+    .tag-space {
+      background: rgba(96, 165, 250, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(96, 165, 250, 0.25);
+    }
+    .tag-infra {
+      background: rgba(251, 191, 36, 0.12);
+      color: var(--amber);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+
+    /* ── Info grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .info-item {
+      text-align: center;
+      padding: 24px;
+    }
+    .info-item .info-value {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .info-item .info-label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    footer .footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+
+    /* ── Team ── */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .team-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+    }
+    .team-card .team-photo {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin: 0 auto 14px;
+      display: block;
+      border: 2px solid var(--border);
+    }
+    .team-card .team-role {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .team-card .team-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .team-card .team-name a {
+      color: var(--text);
+      transition: color 0.2s;
+    }
+    .team-card .team-name a:hover {
+      color: var(--accent);
+    }
+    .team-card .team-affiliation {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .team-card .team-bio {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ── Supporters ── */
+    .supporters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .supporter-card {
+      display: block;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 28px;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.2s;
+      color: var(--text);
+    }
+    .supporter-card:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+    .supporter-logo {
+      height: 48px;
+      max-width: 180px;
+      object-fit: contain;
+      margin: 0 auto 16px;
+      display: block;
+    }
+    .supporter-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .supporter-desc {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+    .supporter-cta {
+      border-style: dashed;
+      border-color: var(--accent-dim);
+    }
+    .supporter-cta .supporter-name {
+      color: var(--accent);
+    }
+    .supporter-cta:hover {
+      background: rgba(96, 165, 250, 0.05);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      nav ul { gap: 16px; }
+      .hero { padding: 60px 0 50px; }
+      section { padding: 50px 0; }
+      .pipeline { gap: 8px; }
+      .pipeline-step { min-width: 90px; padding: 12px 14px; }
+      .pipeline-step .step-name { font-size: 0.8rem; }
+      .pipeline-arrow { font-size: 1rem; }
     }
   </style>
 </head>
 <body>
-  <h1>Coming Soon</h1>
+
+  <!-- Nav -->
+  <nav>
+    <div class="container">
+      <div class="logo"><span>F</span>iducia</div>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#examples">Examples</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#use-cases">Use Cases</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#supporters">Supporters</a></li>
+        <li><a href="mailto:alex.potanin@anu.edu.au">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-badge">In Development</div>
+      <h1>Secure by <span class="highlight">construction</span>,<br>not by coincidence.</h1>
+      <p>
+        Fiducia is a programming language and toolchain for building verifiably
+        secure systems on the seL4 microkernel. It brings formal verification to
+        everyday developers&mdash;no PhD required.
+      </p>
+      <div class="hero-actions">
+        <a href="mailto:alex.potanin@anu.edu.au" class="btn btn-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Get in Touch
+        </a>
+        <a href="#examples" class="btn btn-secondary">See code examples</a>
+      </div>
+      <p style="margin-top:20px;font-size:0.85rem;color:var(--text-dim);">Under active private development. Public release planned for mid-2026.</p>
+    </div>
+  </header>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="container">
+      <div class="section-label">Why Fiducia</div>
+      <h2>Security and correctness, built in.</h2>
+      <p class="section-desc">
+        Fiducia closes the trust gap between the formally verified seL4 kernel
+        and the applications built on top. It catches entire classes of bugs
+        at compile time that would be invisible at runtime.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(167,139,250,0.12);color:var(--purple);">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <h3>Choreographic Programming</h3>
+          <p>Describe the global communication protocol once. The compiler projects it into correct local programs for each protection domain&mdash;deadlock-free by construction.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(251,113,133,0.12);color:var(--rose);">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Information Flow Security</h3>
+          <p>A two-level security type system (Low/High) statically enforces that sensitive data never leaks to lower-security domains. No runtime checks needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(52,211,153,0.12);color:var(--green);">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3>Deadlock Freedom</h3>
+          <p>Five well-typedness conditions&mdash;unique ownership, paired communication, acyclic channels, and more&mdash;guarantee that every well-typed choreography is deadlock-free.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(96,165,250,0.12);color:var(--accent);">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+          </div>
+          <h3>CSP-Inspired Processes</h3>
+          <p>Program protection domain behaviour using communicating sequential processes with events, guarded choice, and channel send/receive&mdash;clear, composable, and verifiable.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(251,191,36,0.12);color:var(--amber);">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          </div>
+          <h3>seL4 Microkit Native</h3>
+          <p>First-class support for protection domains, shared memory regions, typed channels, and the seL4 Microkit System Description Format. Compile directly to SDF.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(34,211,238,0.12);color:var(--cyan);">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3>Rust-Powered Compiler</h3>
+          <p>A fast, modern compiler built in Rust with rich error diagnostics, LSP integration, and sub-microsecond compilation stages. Includes VS Code support.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code Examples -->
+  <section id="examples" style="background: rgba(17,24,39,0.4);">
+    <div class="container">
+      <div class="section-label">By Example</div>
+      <h2>Two files. One verified system.</h2>
+      <p class="section-desc">
+        A Fiducia project consists of a system declaration (<code>.fis</code>) that defines
+        the global architecture, and per-domain programs (<code>.fi</code>) that describe
+        local behaviour. The compiler verifies the whole.
+      </p>
+      <div class="code-section">
+        <div class="code-block">
+          <div class="code-header">
+            <span>System Declaration</span>
+            <span class="file-ext">datadiode.fis</span>
+          </div>
+          <pre><span class="cmt">// Memory regions used as channel buffers</span>
+<span class="kw">MemoryRegion</span> eth_outer_output(<span class="num">0x200_000</span>);
+<span class="kw">MemoryRegion</span> eth_inner_input(<span class="num">0x200_000</span>);
+
+<span class="cmt">// Protection domains: (priority, irq, budget, period)</span>
+<span class="kw">ProtectionDomain</span> eth_outer(<span class="num">99</span>, <span class="num">159</span>, <span class="num">1000</span>, <span class="num">100_000</span>);
+<span class="kw">ProtectionDomain</span> eth_inner(<span class="num">199</span>, <span class="num">155</span>);
+<span class="kw">ProtectionDomain</span> dd(<span class="num">100</span>);
+
+<span class="cmt">// One-way SPSC channels</span>
+<span class="kw">Chan</span> o2d <span class="op">=</span> eth_outer <span class="op">--></span> dd;
+    o2d.<span class="fn">set_buffer</span>(eth_outer_output);
+<span class="kw">Chan</span> d2i <span class="op">=</span> dd <span class="op">--></span> eth_inner;
+    d2i.<span class="fn">set_buffer</span>(eth_inner_input);
+
+<span class="cmt">// System composition</span>
+<span class="kw">System</span> <span class="op">=</span> eth_outer <span class="op">|||</span> eth_inner <span class="op">|||</span> dd;</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span>Data Diode Process</span>
+            <span class="file-ext">dd.fi</span>
+          </div>
+          <pre><span class="kw">import</span> <span class="str">"ddiode.c"</span> <span class="kw">as</span> dd;
+() : dd.<span class="fn">init</span>();
+
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    o2d<span class="op">?</span>pkt <span class="op">-></span> d2i<span class="op">!</span>pkt <span class="op">-></span> <span class="fn">Notified</span>();</pre>
+          <div class="code-header" style="border-top:1px solid var(--border);border-bottom:none;">
+            <span>Ethernet Driver</span>
+            <span class="file-ext">eth_outer.fi</span>
+          </div>
+          <pre><span class="kw">import</span> <span class="str">"eth.c"</span> <span class="kw">as</span> eth;
+
+<span class="kw">Mapping</span> ring_buffer  (<span class="num">0x10_000</span>, <span class="str">rw</span>);
+<span class="kw">Mapping</span> packet_buffer(<span class="num">0x200_000</span>, <span class="str">rw</span>);
+
+<span class="kw">Events</span>:
+  <span class="kw">Event</span> handle_irq:    eth.<span class="fn">handle_irq</span>(eth)
+  <span class="kw">Event</span> restart_engine: eth.<span class="fn">restart_engine</span>(eth)
+  <span class="kw">Event</span> send_frame:    eth.<span class="fn">send_frame</span>(pkt)
+
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    irq<span class="op">?</span><span class="num">159</span> <span class="op">-></span> <span class="fn">Handle_eth</span>(); <span class="fn">Notified</span>();</pre>
+        </div>
+      </div>
+
+      <!-- Information flow example -->
+      <div style="margin-top:32px;">
+        <div class="code-block" style="max-width:540px;">
+          <div class="code-header">
+            <span>Information Flow Checking</span>
+            <span class="file-ext">security labels</span>
+          </div>
+          <pre><span class="cmt">// Security labels prevent data leaks at compile time</span>
+<span class="label">High</span> <span class="kw">MemoryRegion</span> secret(<span class="num">0x1000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> public(<span class="num">0x1000</span>);
+
+<span class="label">High</span> <span class="kw">Mapping</span> m1(secret, <span class="str">"rw"</span>);  <span class="cmt">// OK: High -> High</span>
+<span class="label">High</span> <span class="kw">Mapping</span> m2(public, <span class="str">"rw"</span>);  <span class="cmt">// OK: Low  -> High</span>
+<span class="label">Low</span>  <span class="kw">Mapping</span> m3(secret, <span class="str">"rw"</span>);  <span class="cmt">// ERROR: High -> Low leak!</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-label">Compilation Pipeline</div>
+      <h2>From specification to verified system.</h2>
+      <p class="section-desc">
+        The Fiducia compiler discovers your project files, parses them into a rich AST,
+        validates cross-references and memory layout, checks information flow security,
+        and emits a verified seL4 Microkit System Description.
+      </p>
+      <div class="pipeline">
+        <div class="pipeline-step">
+          <div class="step-name">.fis + .fi</div>
+          <div class="step-desc">Source files</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="step-name">Parse</div>
+          <div class="step-desc">Build AST</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="step-name">Validate</div>
+          <div class="step-desc">Cross-refs</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="step-name">Typecheck</div>
+          <div class="step-desc">Info flow</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="step-name">Lower</div>
+          <div class="step-desc">SDF IR</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="step-name">.system</div>
+          <div class="step-desc">seL4 Microkit</div>
+        </div>
+      </div>
+
+      <div class="arch-diagram">
+        <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:20px;font-weight:600;">Where Fiducia fits in the verified stack</p>
+        <div class="arch-layers">
+          <div class="arch-layer app">Application Protection Domains (C / Pancake)</div>
+          <div class="arch-arrow">&uarr; orchestrated by</div>
+          <div class="arch-layer fiducia">Fiducia &mdash; Choreographic Specification &amp; Verification</div>
+          <div class="arch-arrow">&darr; compiles to</div>
+          <div class="arch-layer microkit">seL4 Microkit &mdash; System Description Format</div>
+          <div class="arch-arrow">&darr; runs on</div>
+          <div class="arch-layer sel4">seL4 &mdash; Formally Verified Microkernel</div>
+          <div class="arch-arrow">&darr;</div>
+          <div class="arch-layer hw">Hardware (AArch64)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section id="use-cases" style="background: rgba(17,24,39,0.4);">
+    <div class="container">
+      <div class="section-label">Killer Applications</div>
+      <h2>Security patterns you can verify, not just hope for.</h2>
+      <p class="section-desc">
+        We are building a library of verified security design patterns on
+        seL4&mdash;currently implemented in C, these will be converted to
+        Fiducia <code>.fis</code> and <code>.fi</code> specifications with
+        compile-time security guarantees.
+      </p>
+      <div class="use-cases">
+        <div class="use-case">
+          <div class="use-case-tag tag-infra">Information Flow</div>
+          <h3>Network Data Diode</h3>
+          <p>
+            Enforces strict one-way information flow between HIGH and LOW networks
+            through a trusted intermediary. The diode applies policy checks and
+            audit logging&mdash;no data ever flows backwards. Fiducia will verify
+            unidirectionality structurally at compile time.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-defence">Trusted Input</div>
+          <h3>Keyboard Switch</h3>
+          <p>
+            Routes HID input to one security domain at a time with buffer flush
+            on switch. Keystrokes are delivered exclusively&mdash;no broadcast,
+            no residual data leakage between SECRET and UNCLASSIFIED domains.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-defence">Content Policy</div>
+          <h3>Clipboard Guard</h3>
+          <p>
+            Inspects clipboard content crossing domain boundaries against a policy
+            (e.g. rejecting "TOP SECRET", "CLASSIFIED" keywords). Only approved
+            content is forwarded, with full audit logging of every decision.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-defence">Multi-Level Security</div>
+          <h3>MLS Email Guard</h3>
+          <p>
+            Manages asymmetric email flow between SECRET and OFFICIAL domains.
+            Downgrade: allowed after sanitisation (stripping classified markers).
+            Upgrade: always blocked. The guard enforces the policy, not the user.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-space">Trusted Display</div>
+          <h3>Framebuffer Compositor</h3>
+          <p>
+            Multiple security domains render to isolated framebuffers. A trusted
+            compositor reads all buffers and draws border decorations that
+            cannot be spoofed. Domains cannot read each other's display content.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-infra">Covert Channels</div>
+          <h3>NRL Pump</h3>
+          <p>
+            A probabilistic downgrader that buffers, reorders, and adds timing
+            jitter to messages crossing security boundaries. Defeats timing-based
+            covert channels that simple data diodes leave open.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-defence">Residual Data</div>
+          <h3>Domain Switch Flush</h3>
+          <p>
+            Zeroes all shared workspace buffers on every domain switch, verified
+            clean before the new domain activates. Prevents covert channels
+            through residual state in shared memory.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-infra">Virtualisation</div>
+          <h3>Linux VM Data Diode</h3>
+          <p>
+            Ethernet-level data diode between two full Linux virtual machines
+            running on seL4. Frames flow HIGH&rarr;LOW only through a trusted
+            bridge. The VMs are completely isolated by seL4 capabilities.
+          </p>
+        </div>
+        <div class="use-case">
+          <div class="use-case-tag tag-space">Media Sanitisation</div>
+          <h3>JPEG Metadata Filter</h3>
+          <p>
+            Strips EXIF, GPS, camera data, and comments from JPEG images crossing
+            a security boundary. Only pixel data passes through. Operates inline
+            between Linux VMs at wire speed.
+          </p>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-value" style="color:var(--accent);">9</div>
+          <div class="info-label">Verified security patterns and growing</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" style="color:var(--green);">seL4</div>
+          <div class="info-label">Formally verified microkernel foundation</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" style="color:var(--purple);">&lt;4&micro;s</div>
+          <div class="info-label">Full compilation pipeline (per file)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" style="color:var(--amber);">ANU</div>
+          <div class="info-label">Developed at The Australian National University</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Research -->
+  <section id="research">
+    <div class="container">
+      <div class="section-label">Research</div>
+      <h2>Grounded in rigorous mathematics.</h2>
+      <p class="section-desc">
+        Fiducia builds on decades of research in choreographic programming, process
+        algebra, and information flow security. Its theoretical foundations are
+        published in peer-reviewed venues.
+      </p>
+      <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <div class="feature-card">
+          <h3>ChorFi: A Choreography Language for Embedded Systems</h3>
+          <p>
+            The first choreographic programming language designed for seL4 MicroKit.
+            Formal operational semantics and a well-typedness discipline that guarantees
+            deadlock freedom for any well-typed choreography. Draft coming to arXiv soon.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>Formal Verification for Critical Systems</h3>
+          <p>
+            Fiducia makes advanced formal methods accessible to everyday developers.
+            By embedding verification directly in the toolchain, it closes the trust gap
+            between verified OS kernels and real-world applications.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section id="team">
+    <div class="container">
+      <div class="section-label">Team</div>
+      <h2>The people behind Fiducia.</h2>
+      <p class="section-desc">
+        Fiducia is built by a team at The Australian National University combining
+        expertise in programming languages, formal methods, and systems security.
+      </p>
+      <div class="team-grid">
+        <div class="team-card">
+          <img class="team-photo" src="https://comp.anu.edu.au/assets/images/people/alex-potanin.png" alt="Alex Potanin">
+          <div class="team-role">Lead</div>
+          <div class="team-name"><a href="https://potanin.github.io/" target="_blank" rel="noopener">A/Prof Alex Potanin</a></div>
+          <div class="team-affiliation">The Australian National University</div>
+          <div class="team-bio">Expert in programming languages, memory and data safety. Creator of the Wyvern programming language. Research has influenced the design of Rust.</div>
+        </div>
+        <div class="team-card">
+          <img class="team-photo" src="https://researchportalplus.anu.edu.au/files-asset/255948707/yanliu.jpeg?w=160&f=jpg" alt="Yan Liu">
+          <div class="team-role">Researcher</div>
+          <div class="team-name"><a href="https://emmayanliu.bitbucket.io/" target="_blank" rel="noopener">Dr Yan Liu</a></div>
+          <div class="team-affiliation">The Australian National University</div>
+          <div class="team-bio">Formal methods and model checking. PhD from National University of Singapore. Industry experience in formal verification at Runtime Verification and Pi Squared.</div>
+        </div>
+        <div class="team-card">
+          <img class="team-photo" src="https://comp.anu.edu.au/assets/images/people/alwen-tiu.png" alt="Alwen Tiu">
+          <div class="team-role">Researcher</div>
+          <div class="team-name"><a href="https://comp.anu.edu.au/people/alwen-tiu/" target="_blank" rel="noopener">A/Prof Alwen Tiu</a></div>
+          <div class="team-affiliation">The Australian National University</div>
+          <div class="team-bio">Computational logic, automated theorem proving, and computer security. Internationally recognised research in mathematical proofs for trustworthy software.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Supporters -->
+  <section id="supporters" style="text-align:center;">
+    <div class="container">
+      <div class="section-label">Supporters</div>
+      <h2>Backed by leaders in trustworthy systems.</h2>
+      <p class="section-desc" style="margin-left:auto;margin-right:auto;">
+        Fiducia is developed at ANU with support from leading organisations in
+        verified systems and space technology. We're looking for more partners
+        to help shape the future of secure software.
+      </p>
+      <div class="supporters-grid">
+        <a href="https://trustworthy.systems/" class="supporter-card" target="_blank" rel="noopener">
+          <img class="supporter-logo" src="https://trustworthy.systems/images/LOGOS/ts_key.svg" alt="Trustworthy Systems logo">
+          <div class="supporter-name">Trustworthy Systems</div>
+          <div class="supporter-desc">Pioneers of the seL4 formally verified microkernel &mdash; the foundation Fiducia builds upon.</div>
+        </a>
+        <a href="https://skykraft.com.au/" class="supporter-card" target="_blank" rel="noopener">
+          <img class="supporter-logo" src="https://static.wixstatic.com/media/a5867f_63382dbb88604265a2a009500af6b1aa~mv2.png" alt="Skykraft logo">
+          <div class="supporter-name">Skykraft</div>
+          <div class="supporter-desc">Australian space services company deploying small satellite constellations for air traffic management.</div>
+        </a>
+        <a href="mailto:alex.potanin@anu.edu.au" class="supporter-card supporter-cta">
+          <div class="supporter-name">Your Organisation?</div>
+          <div class="supporter-desc">We're looking for industry and research partners to join us. Get in touch to collaborate.</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section style="text-align:center; padding: 80px 0 100px; background: rgba(17,24,39,0.4);">
+    <div class="container">
+      <h2 style="font-size:2.2rem;margin-bottom:16px;">Interested in trustworthy systems?</h2>
+      <p style="color:var(--text-dim);max-width:540px;margin:0 auto 12px;font-size:1.05rem;">
+        Fiducia is under active private development with a public release planned
+        for mid-2026. Get in touch to learn more or discuss collaboration.
+      </p>
+      <p style="color:var(--text-dim);max-width:540px;margin:0 auto 32px;font-size:0.9rem;">
+        alex.potanin@anu.edu.au
+      </p>
+      <div class="hero-actions">
+        <a href="mailto:alex.potanin@anu.edu.au" class="btn btn-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Get in Touch
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#examples">Examples</a>
+        <a href="#research">Research</a>
+        <a href="#team">Team</a>
+        <a href="#supporters">Supporters</a>
+        <a href="mailto:alex.potanin@anu.edu.au">Contact</a>
+      </div>
+      <p>Fiducia is developed at <a href="https://anu.edu.au">The Australian National University</a> with support from <a href="https://trustworthy.systems/">Trustworthy Systems</a> and <a href="https://skykraft.com.au/">Skykraft</a>.</p>
+    </div>
+  </footer>
+
 </body>
 </html>
