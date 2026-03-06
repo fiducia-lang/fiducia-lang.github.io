@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JPEG Metadata Filter — Fiducia</title>
+  <meta name="description" content="JPEG Metadata Filter: a media sanitisation pattern on seL4 Microkit. Strips EXIF, GPS, and comments from JPEG images crossing a security boundary.">
+  <meta property="og:title" content="JPEG Metadata Filter — Fiducia">
+  <meta property="og:description" content="Media sanitisation on seL4 Microkit. Strips EXIF, GPS, camera info from JPEG images at the security boundary.">
+  <meta property="og:image" content="https://fiducia-lang.github.io/images/og.png">
+  <meta property="og:url" content="https://fiducia-lang.github.io/examples/jpeg-filter.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Fiducia">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="JPEG Metadata Filter — Fiducia">
+  <meta name="twitter:description" content="Media sanitisation on seL4 Microkit. Strips EXIF, GPS, camera info from JPEG images at the security boundary.">
+  <meta name="twitter:image" content="https://fiducia-lang.github.io/images/og.png">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    nav .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
+    nav .logo span { color: var(--accent); }
+    nav .back-link { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; }
+    nav .back-link:hover { color: var(--text); text-decoration: none; }
+
+    .page-hero { padding: 60px 0 40px; }
+    .page-hero .tag {
+      display: inline-block; padding: 4px 14px; font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      background: rgba(96, 165, 250, 0.12); color: var(--accent);
+      border: 1px solid rgba(96, 165, 250, 0.25); border-radius: 20px; margin-bottom: 16px;
+    }
+    .page-hero h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .page-hero p { color: var(--text-dim); font-size: 1.05rem; max-width: 680px; line-height: 1.8; }
+
+    .section { padding: 40px 0; }
+    .section-label {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+    .section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
+    .section p.desc { color: var(--text-dim); font-size: 0.95rem; max-width: 680px; margin-bottom: 24px; }
+
+    .arch-box {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px; margin-bottom: 32px; overflow-x: auto;
+    }
+    .arch-box pre {
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.6; color: var(--text);
+    }
+    .arch-box .arch-title {
+      font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+      margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    .stats {
+      display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px;
+    }
+    .stat {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 20px; text-align: center; min-width: 100px;
+    }
+    .stat .val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+    .stat .lbl { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+
+    .code-block {
+      background: var(--bg-code); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; margin-bottom: 24px;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+    }
+    .code-header .file-ext { color: var(--accent); }
+    .code-block pre {
+      padding: 18px; overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.7; color: var(--text);
+    }
+    .code-block pre .kw { color: var(--accent); }
+    .code-block pre .cmt { color: #475569; font-style: italic; }
+    .code-block pre .str { color: var(--green); }
+    .code-block pre .num { color: var(--amber); }
+    .code-block pre .tag { color: var(--rose); }
+    .code-block pre .attr { color: var(--purple); }
+
+    .security-list { list-style: none; margin-bottom: 24px; }
+    .security-list li {
+      padding: 8px 0; font-size: 0.92rem; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .security-list li:last-child { border-bottom: none; }
+    .security-list li strong { color: var(--text); }
+
+    /* Segment table */
+    .segment-table {
+      width: 100%; border-collapse: collapse; margin-bottom: 24px;
+      font-size: 0.88rem;
+    }
+    .segment-table th {
+      text-align: left; padding: 10px 14px; font-weight: 600; color: var(--text);
+      border-bottom: 2px solid var(--border); font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .segment-table td {
+      padding: 8px 14px; border-bottom: 1px solid var(--border); color: var(--text-dim);
+    }
+    .segment-table .pass { color: var(--green); font-weight: 600; }
+    .segment-table .strip { color: var(--rose); font-weight: 600; }
+
+    .contact-note {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px 24px; margin: 24px 0; font-size: 0.9rem; color: var(--text-dim);
+    }
+    .contact-note a { color: var(--accent); }
+
+    .coming-soon-section {
+      background: rgba(167, 139, 250, 0.06); border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 12px; padding: 32px; margin: 32px 0;
+    }
+    .coming-soon-badge {
+      display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(167, 139, 250, 0.15); color: var(--purple);
+      border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 20px; margin-bottom: 14px;
+    }
+    .coming-soon-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .coming-soon-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; }
+    .coming-soon-section ul { list-style: none; margin-top: 14px; }
+    .coming-soon-section ul li { padding: 6px 0; font-size: 0.9rem; color: var(--text-dim); }
+    .coming-soon-section ul li::before { content: "\2192 "; color: var(--purple); font-weight: 700; }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
+      color: var(--text-dim); font-size: 0.85rem;
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo"><span>F</span>iducia</a>
+      <a href="../index.html" class="back-link">Back to Fiducia</a>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <div class="tag">Media Sanitisation</div>
+      <h1>JPEG Metadata Filter</h1>
+      <p>
+        Strips EXIF, GPS, camera data, and comments from JPEG images crossing a
+        security boundary. Only pixel data passes through. Operates inline between
+        Linux VMs at wire speed using the same VM diode architecture.
+      </p>
+    </div>
+  </header>
+
+  <div class="section">
+    <div class="container">
+      <div class="section-label">Architecture</div>
+      <div class="arch-box">
+        <div class="arch-title">System Topology &mdash; JPEG Filter Between VMs</div>
+<pre>
+  +-------------------------------+            +-------------------------------+
+  |          vmm_high             |            |          vmm_low              |
+  |        (JPEG source)          |            |        (JPEG sink)            |
+  |          (pri 101)            |            |          (pri 101)            |
+  |  +-------------------------+ |            |  +-------------------------+  |
+  |  |  vm_high (Linux, pri 100)| |            |  |  vm_low (Linux, pri 99) |  |
+  |  |  guest_ram: 256MB       | |            |  |  guest_ram: 256MB       |  |
+  |  +-------------------------+ |            |  +-------------------------+  |
+  +---------------+--------------+            +---------------+---------------+
+                  |                                           |
+        net_high_to_filter                         net_filter_to_low
+            (2MB ring)                                 (2MB ring)
+                  |                                           |
+                  +-----------------+    +--------------------+
+                                    |    |
+                          +---------+----+---------+
+                          |     jpeg_filter        |
+                          |   (trusted, pri 200)   |
+                          |                        |
+                          |  STRIPS: EXIF, GPS,    |
+                          |   APP1-15, COM         |
+                          |  KEEPS:  SOI, SOF,     |
+                          |   DHT, DQT, SOS, EOI   |
+                          +------------------------+
+
+  Only pixel data crosses the boundary.
+  All metadata is removed by the trusted filter.
+</pre>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="val">3+2</div><div class="lbl">PDs + VMs</div></div>
+        <div class="stat"><div class="val">256MB</div><div class="lbl">Guest RAM Each</div></div>
+        <div class="stat"><div class="val">2MB</div><div class="lbl">Ring Buffers</div></div>
+        <div class="stat"><div class="val">2</div><div class="lbl">Channels</div></div>
+      </div>
+
+      <h2>JPEG Segment Handling</h2>
+      <table class="segment-table">
+        <thead>
+          <tr><th>Segment</th><th>Marker</th><th>Action</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>SOI</td><td>0xFFD8</td><td class="pass">PASS</td><td>Start of image (required)</td></tr>
+          <tr><td>SOF</td><td>0xFFC0</td><td class="pass">PASS</td><td>Frame header (image dimensions, channels)</td></tr>
+          <tr><td>DHT</td><td>0xFFC4</td><td class="pass">PASS</td><td>Huffman tables (needed for decoding)</td></tr>
+          <tr><td>DQT</td><td>0xFFDB</td><td class="pass">PASS</td><td>Quantisation tables (needed for decoding)</td></tr>
+          <tr><td>SOS</td><td>0xFFDA</td><td class="pass">PASS</td><td>Start of scan + compressed pixel data</td></tr>
+          <tr><td>EOI</td><td>0xFFD9</td><td class="pass">PASS</td><td>End of image (required)</td></tr>
+          <tr><td>APP1 (EXIF)</td><td>0xFFE1</td><td class="strip">STRIP</td><td>Camera info, GPS coordinates, timestamps</td></tr>
+          <tr><td>APP2-APP15</td><td>0xFFE2-EF</td><td class="strip">STRIP</td><td>ICC profiles, extensions, vendor data</td></tr>
+          <tr><td>COM</td><td>0xFFFE</td><td class="strip">STRIP</td><td>Comments (may contain sensitive text)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Security Properties</h2>
+      <ul class="security-list">
+        <li><strong>EXIF removal</strong> &mdash; All APP1 segments (camera make/model, lens, settings, timestamps) stripped</li>
+        <li><strong>GPS data removal</strong> &mdash; Geolocation coordinates embedded in EXIF are completely removed</li>
+        <li><strong>Comment removal</strong> &mdash; COM segments that may contain sensitive text or annotations stripped</li>
+        <li><strong>Pixel-only output</strong> &mdash; Only the structural segments needed to decode the image pass through</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section" style="background: rgba(17,24,39,0.4); padding: 48px 0;">
+    <div class="container">
+      <div class="section-label">Current Implementation</div>
+      <h2>seL4 Microkit + C</h2>
+      <p class="desc">
+        The system uses the same VM diode architecture as the Linux VM Data Diode,
+        but the trusted intermediary parses JPEG data instead of forwarding raw
+        Ethernet frames. The filter walks the JPEG segment structure and only
+        emits segments that contain pixel data.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span>System Description</span>
+          <span class="file-ext">jpeg_filter.system</span>
+        </div>
+        <pre><span class="cmt">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="tag">&lt;system&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"guest_ram_high"</span> <span class="attr">size</span>=<span class="str">"0x10000000"</span>
+                   <span class="attr">page_size</span>=<span class="str">"0x200_000"</span> <span class="attr">phys_addr</span>=<span class="str">"0x40000000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"guest_ram_low"</span> <span class="attr">size</span>=<span class="str">"0x10000000"</span>
+                   <span class="attr">page_size</span>=<span class="str">"0x200_000"</span> <span class="attr">phys_addr</span>=<span class="str">"0x50000000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"uart"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="attr">phys_addr</span>=<span class="str">"0x9_000_000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"gic_vcpu"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="attr">phys_addr</span>=<span class="str">"0x8040000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"net_high_to_filter"</span> <span class="attr">size</span>=<span class="str">"0x200_000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"net_filter_to_low"</span> <span class="attr">size</span>=<span class="str">"0x200_000"</span> <span class="tag">/&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"vmm_high"</span> <span class="attr">priority</span>=<span class="str">"101"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"vmm_high.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guest_ram_high"</span> <span class="attr">vaddr</span>=<span class="str">"0x40000000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span>
+             <span class="attr">setvar_vaddr</span>=<span class="str">"guest_ram_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"net_high_to_filter"</span> <span class="attr">vaddr</span>=<span class="str">"0x6_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span>
+             <span class="attr">setvar_vaddr</span>=<span class="str">"net_buf_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;virtual_machine</span> <span class="attr">name</span>=<span class="str">"vm_high"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+            <span class="tag">&lt;vcpu</span> <span class="attr">id</span>=<span class="str">"0"</span> <span class="tag">/&gt;</span>
+            <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guest_ram_high"</span> <span class="attr">vaddr</span>=<span class="str">"0x40000000"</span> <span class="attr">perms</span>=<span class="str">"rwx"</span> <span class="tag">/&gt;</span>
+            <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"uart"</span> <span class="attr">vaddr</span>=<span class="str">"0x9000000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">cached</span>=<span class="str">"false"</span> <span class="tag">/&gt;</span>
+            <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"gic_vcpu"</span> <span class="attr">vaddr</span>=<span class="str">"0x8010000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">cached</span>=<span class="str">"false"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;/virtual_machine&gt;</span>
+        <span class="tag">&lt;irq</span> <span class="attr">irq</span>=<span class="str">"33"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"vmm_low"</span> <span class="attr">priority</span>=<span class="str">"101"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"vmm_low.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guest_ram_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x40000000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span>
+             <span class="attr">setvar_vaddr</span>=<span class="str">"guest_ram_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"net_filter_to_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x6_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span>
+             <span class="attr">setvar_vaddr</span>=<span class="str">"net_buf_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;virtual_machine</span> <span class="attr">name</span>=<span class="str">"vm_low"</span> <span class="attr">priority</span>=<span class="str">"99"</span><span class="tag">&gt;</span>
+            <span class="tag">&lt;vcpu</span> <span class="attr">id</span>=<span class="str">"0"</span> <span class="tag">/&gt;</span>
+            <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guest_ram_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x40000000"</span> <span class="attr">perms</span>=<span class="str">"rwx"</span> <span class="tag">/&gt;</span>
+            <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"gic_vcpu"</span> <span class="attr">vaddr</span>=<span class="str">"0x8010000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">cached</span>=<span class="str">"false"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;/virtual_machine&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"jpeg_filter"</span> <span class="attr">priority</span>=<span class="str">"200"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"jpeg_filter.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"net_high_to_filter"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span>
+             <span class="attr">setvar_vaddr</span>=<span class="str">"net_in_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"net_filter_to_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x5_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span>
+             <span class="attr">setvar_vaddr</span>=<span class="str">"net_out_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;channel&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"vmm_high"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"jpeg_filter"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span><span class="tag">&lt;/channel&gt;</span>
+    <span class="tag">&lt;channel&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"jpeg_filter"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"vmm_low"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span><span class="tag">&lt;/channel&gt;</span>
+<span class="tag">&lt;/system&gt;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span>Key Code Highlight</span>
+          <span class="file-ext">jpeg_filter.c</span>
+        </div>
+        <pre><span class="cmt">/* JPEG segment markers */</span>
+<span class="kw">#define</span> JPEG_SOI  <span class="num">0xFFD8</span>   <span class="cmt">/* Start of Image     */</span>
+<span class="kw">#define</span> JPEG_EOI  <span class="num">0xFFD9</span>   <span class="cmt">/* End of Image       */</span>
+<span class="kw">#define</span> JPEG_SOS  <span class="num">0xFFDA</span>   <span class="cmt">/* Start of Scan      */</span>
+<span class="kw">#define</span> JPEG_APP1 <span class="num">0xFFE1</span>   <span class="cmt">/* EXIF / GPS data    */</span>
+<span class="kw">#define</span> JPEG_COM  <span class="num">0xFFFE</span>   <span class="cmt">/* Comment            */</span>
+
+<span class="kw">static int</span> is_safe_marker(<span class="kw">uint16_t</span> marker) {
+    <span class="cmt">/* Allow only structural segments needed for decoding */</span>
+    <span class="kw">switch</span> (marker) {
+        <span class="kw">case</span> <span class="num">0xFFD8</span>: <span class="cmt">/* SOI */</span>
+        <span class="kw">case</span> <span class="num">0xFFC0</span>: <span class="cmt">/* SOF0 */</span>
+        <span class="kw">case</span> <span class="num">0xFFC4</span>: <span class="cmt">/* DHT  */</span>
+        <span class="kw">case</span> <span class="num">0xFFDB</span>: <span class="cmt">/* DQT  */</span>
+        <span class="kw">case</span> <span class="num">0xFFDA</span>: <span class="cmt">/* SOS  */</span>
+        <span class="kw">case</span> <span class="num">0xFFD9</span>: <span class="cmt">/* EOI  */</span>
+            <span class="kw">return</span> <span class="num">1</span>;
+        <span class="kw">default</span>:
+            <span class="kw">return</span> <span class="num">0</span>;  <span class="cmt">/* Strip everything else */</span>
+    }
+}
+
+<span class="kw">size_t</span> filter_jpeg(<span class="kw">const uint8_t</span> *in, <span class="kw">size_t</span> in_len,
+                   <span class="kw">uint8_t</span> *out, <span class="kw">size_t</span> out_cap) {
+    <span class="kw">size_t</span> r = <span class="num">0</span>, w = <span class="num">0</span>;
+    <span class="kw">while</span> (r < in_len - <span class="num">1</span>) {
+        <span class="kw">uint16_t</span> marker = (in[r] << <span class="num">8</span>) | in[r+<span class="num">1</span>];
+        <span class="kw">if</span> (is_safe_marker(marker)) {
+            <span class="cmt">/* Copy safe segment to output */</span>
+            <span class="kw">size_t</span> seg_len = get_segment_length(in, r, in_len);
+            memcpy(out + w, in + r, seg_len);
+            w += seg_len; r += seg_len;
+        } <span class="kw">else</span> {
+            <span class="cmt">/* Skip unsafe segment (EXIF, GPS, COM, etc.) */</span>
+            r += get_segment_length(in, r, in_len);
+        }
+    }
+    <span class="kw">return</span> w;
+}</pre>
+      </div>
+
+      <div class="contact-note">
+        Full implementation available on request. Contact us at
+        <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="container">
+      <div class="coming-soon-section">
+        <div class="coming-soon-badge">Coming Soon</div>
+        <h2>Fiducia Specification</h2>
+        <p>
+          The Fiducia version of this system will use the same one-way channel
+          topology as the data diode. The JPEG parsing and filtering logic stays
+          entirely within the C/Pancake implementation of the jpeg_filter protection
+          domain &mdash; Fiducia verifies the structural information flow guarantee.
+        </p>
+        <ul>
+          <li><strong>Same topology as data diode</strong> &mdash; The .fis system declaration uses the identical one-way channel pattern</li>
+          <li><strong>JPEG parsing stays in C/Pancake</strong> &mdash; The segment-level filter logic remains in the imported C implementation</li>
+          <li><strong>Structural flow guarantee</strong> &mdash; Fiducia verifies at compile time that no image data or metadata can flow from LOW back to HIGH</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="../index.html">Fiducia</a> is developed at
+        <a href="https://anu.edu.au">The Australian National University</a>.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

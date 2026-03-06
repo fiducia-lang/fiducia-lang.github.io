@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keyboard Switch — Fiducia</title>
+  <meta name="description" content="Keyboard Switch: a trusted input routing pattern on seL4 Microkit. Routes HID input to one security domain at a time with buffer flush on switch.">
+  <meta property="og:title" content="Keyboard Switch — Fiducia">
+  <meta property="og:description" content="Trusted input routing on seL4 Microkit with buffer flush on domain switch.">
+  <meta property="og:image" content="https://fiducia-lang.github.io/images/og.png">
+  <meta property="og:url" content="https://fiducia-lang.github.io/examples/keyboard-switch.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Fiducia">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Keyboard Switch — Fiducia">
+  <meta name="twitter:description" content="Trusted input routing on seL4 Microkit with buffer flush on domain switch.">
+  <meta name="twitter:image" content="https://fiducia-lang.github.io/images/og.png">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    nav .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
+    nav .logo span { color: var(--accent); }
+    nav .back-link { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; }
+    nav .back-link:hover { color: var(--text); text-decoration: none; }
+
+    /* Hero */
+    .page-hero { padding: 60px 0 40px; }
+    .page-hero .tag {
+      display: inline-block; padding: 4px 14px; font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      background: rgba(251, 113, 133, 0.12); color: var(--rose);
+      border: 1px solid rgba(251, 113, 133, 0.25); border-radius: 20px; margin-bottom: 16px;
+    }
+    .page-hero h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .page-hero p { color: var(--text-dim); font-size: 1.05rem; max-width: 680px; line-height: 1.8; }
+
+    /* Sections */
+    .section { padding: 40px 0; }
+    .section-label {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+    .section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
+    .section p.desc { color: var(--text-dim); font-size: 0.95rem; max-width: 680px; margin-bottom: 24px; }
+
+    /* Architecture diagram */
+    .arch-box {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px; margin-bottom: 32px; overflow-x: auto;
+    }
+    .arch-box pre {
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.6; color: var(--text);
+    }
+    .arch-box .arch-title {
+      font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+      margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px;
+    }
+    .stat {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 20px; text-align: center; min-width: 100px;
+    }
+    .stat .val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+    .stat .lbl { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg-code); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; margin-bottom: 24px;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+    }
+    .code-header .file-ext { color: var(--accent); }
+    .code-block pre {
+      padding: 18px; overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.7; color: var(--text);
+    }
+    .code-block pre .kw { color: var(--accent); }
+    .code-block pre .cmt { color: #475569; font-style: italic; }
+    .code-block pre .str { color: var(--green); }
+    .code-block pre .num { color: var(--amber); }
+    .code-block pre .tag { color: var(--rose); }
+    .code-block pre .attr { color: var(--purple); }
+
+    /* Security list */
+    .security-list { list-style: none; margin-bottom: 24px; }
+    .security-list li {
+      padding: 8px 0; font-size: 0.92rem; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .security-list li:last-child { border-bottom: none; }
+    .security-list li strong { color: var(--text); }
+
+    /* Contact note */
+    .contact-note {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px 24px; margin: 24px 0; font-size: 0.9rem; color: var(--text-dim);
+    }
+    .contact-note a { color: var(--accent); }
+
+    /* Coming soon */
+    .coming-soon-section {
+      background: rgba(167, 139, 250, 0.06); border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 12px; padding: 32px; margin: 32px 0;
+    }
+    .coming-soon-badge {
+      display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(167, 139, 250, 0.15); color: var(--purple);
+      border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 20px; margin-bottom: 14px;
+    }
+    .coming-soon-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .coming-soon-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; }
+    .coming-soon-section ul {
+      list-style: none; margin-top: 14px;
+    }
+    .coming-soon-section ul li {
+      padding: 6px 0; font-size: 0.9rem; color: var(--text-dim);
+    }
+    .coming-soon-section ul li::before {
+      content: "\2192 "; color: var(--purple); font-weight: 700;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
+      color: var(--text-dim); font-size: 0.85rem;
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo"><span>F</span>iducia</a>
+      <a href="../index.html" class="back-link">Back to Fiducia</a>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <div class="tag">Trusted Input</div>
+      <h1>Keyboard Switch</h1>
+      <p>
+        Routes HID keyboard input to one security domain at a time with complete buffer
+        flush on domain switch. Keystrokes are delivered exclusively &mdash; no broadcast,
+        no residual data leakage between SECRET and UNCLASSIFIED domains.
+      </p>
+    </div>
+  </header>
+
+  <!-- Architecture -->
+  <div class="section">
+    <div class="container">
+      <div class="section-label">Architecture</div>
+      <div class="arch-box">
+        <div class="arch-title">System Topology</div>
+<pre>
+                          +------------------+
+                          |    keyboard      |
+                          |   (pri 100)      |
+                          +--------+---------+
+                                   |
+                            kbd_to_switch
+                                   |
+                          +--------+---------+
+                          |   kbd_switch     |
+                          | (trusted, pri 200)|
+                          +---+----------+---+
+                              |          |
+                       switch_to_a  switch_to_b
+                              |          |
+                    +---------+--+  +----+---------+
+                    |  domain_a  |  |  domain_b    |
+                    |  (SECRET)  |  | (UNCLASSIFIED)|
+                    |  (pri 100) |  |  (pri 100)   |
+                    +------------+  +--------------+
+
+  No shared memory between domain_a and domain_b.
+  kbd_switch has exclusive routing authority.
+</pre>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="val">4</div><div class="lbl">Protection Domains</div></div>
+        <div class="stat"><div class="val">3</div><div class="lbl">Memory Regions</div></div>
+        <div class="stat"><div class="val">3</div><div class="lbl">Channels</div></div>
+      </div>
+
+      <h2>Security Properties</h2>
+      <ul class="security-list">
+        <li><strong>Exclusive keystroke delivery</strong> &mdash; Only one domain receives input at any time</li>
+        <li><strong>Buffer flush on domain switch</strong> &mdash; All outbound buffers are zeroed before routing to new domain</li>
+        <li><strong>Audit logging</strong> &mdash; Every domain switch event is logged with timestamp</li>
+        <li><strong>No shared memory</strong> &mdash; domain_a and domain_b have zero shared state</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Current Implementation -->
+  <div class="section" style="background: rgba(17,24,39,0.4); padding: 48px 0;">
+    <div class="container">
+      <div class="section-label">Current Implementation</div>
+      <h2>seL4 Microkit + C</h2>
+      <p class="desc">
+        The system description defines four protection domains connected by three
+        unidirectional shared memory channels. The trusted kbd_switch PD runs at
+        priority 200 and has exclusive access to both outbound buffers.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span>System Description</span>
+          <span class="file-ext">keyboard_switch.system</span>
+        </div>
+        <pre><span class="cmt">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="tag">&lt;system&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"kbd_to_switch"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"switch_to_a"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"switch_to_b"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"keyboard"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"keyboard.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"kbd_to_switch"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"outbox_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"kbd_switch"</span> <span class="attr">priority</span>=<span class="str">"200"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"kbd_switch.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"kbd_to_switch"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"inbound_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"switch_to_a"</span> <span class="attr">vaddr</span>=<span class="str">"0x5_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"outbound_a_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"switch_to_b"</span> <span class="attr">vaddr</span>=<span class="str">"0x6_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"outbound_b_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_a"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"domain_a.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"switch_to_a"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"inbox_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_b"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"domain_b.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"switch_to_b"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"inbox_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;channel&gt;</span>
+        <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"keyboard"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"kbd_switch"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/channel&gt;</span>
+    <span class="tag">&lt;channel&gt;</span>
+        <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"kbd_switch"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_a"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/channel&gt;</span>
+    <span class="tag">&lt;channel&gt;</span>
+        <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"kbd_switch"</span> <span class="attr">id</span>=<span class="str">"3"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_b"</span> <span class="attr">id</span>=<span class="str">"3"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/channel&gt;</span>
+<span class="tag">&lt;/system&gt;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span>Key Code Highlight</span>
+          <span class="file-ext">kbd_switch.c</span>
+        </div>
+        <pre><span class="kw">static int</span> active_domain = <span class="num">0</span>;  <span class="cmt">/* 0 = domain_a, 1 = domain_b */</span>
+
+<span class="kw">static void</span> flush_buffers(<span class="kw">void</span>) {
+    <span class="cmt">/* Zero both outbound buffers on domain switch */</span>
+    memset((<span class="kw">void</span> *)outbound_a_vaddr, <span class="num">0</span>, BUF_SIZE);
+    memset((<span class="kw">void</span> *)outbound_b_vaddr, <span class="num">0</span>, BUF_SIZE);
+}
+
+<span class="kw">void</span> notified(<span class="kw">microkit_channel</span> ch) {
+    <span class="kw">if</span> (ch == SWITCH_CH) {
+        flush_buffers();
+        active_domain = !active_domain;
+        log_switch_event(active_domain);
+    } <span class="kw">else if</span> (ch == KBD_CH) {
+        <span class="cmt">/* Route keystroke to active domain only */</span>
+        <span class="kw">if</span> (active_domain == <span class="num">0</span>)
+            forward_to(outbound_a_vaddr, DOMAIN_A_CH);
+        <span class="kw">else</span>
+            forward_to(outbound_b_vaddr, DOMAIN_B_CH);
+    }
+}</pre>
+      </div>
+
+      <div class="contact-note">
+        Full implementation available on request. Contact us at
+        <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Fiducia Coming Soon -->
+  <div class="section">
+    <div class="container">
+      <div class="coming-soon-section">
+        <div class="coming-soon-badge">Coming Soon</div>
+        <h2>Fiducia Specification</h2>
+        <p>
+          The Fiducia version of this system will express the keyboard switch as a
+          choreographic specification with compile-time guarantees. The Fiducia compiler
+          will verify the routing topology, buffer isolation, and domain exclusivity
+          structurally &mdash; eliminating entire classes of implementation bugs.
+        </p>
+        <ul>
+          <li><strong>External choice routing</strong> &mdash; Domain switch expressed as guarded external choice in CSP-style process algebra</li>
+          <li><strong>Buffer flush as process event</strong> &mdash; The flush operation becomes a verified event in the process specification, not just a C function call</li>
+          <li><strong>ProtectionDomain composition with |||</strong> &mdash; Interleaved composition proves domain_a and domain_b can never interfere</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="../index.html">Fiducia</a> is developed at
+        <a href="https://anu.edu.au">The Australian National University</a>.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

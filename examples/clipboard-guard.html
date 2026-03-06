@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clipboard Guard — Fiducia</title>
+  <meta name="description" content="Clipboard Guard: content-based policy enforcement for cross-domain copy-paste on seL4 Microkit, with Fiducia specification.">
+  <meta property="og:title" content="Clipboard Guard — Fiducia">
+  <meta property="og:description" content="Content-based clipboard policy enforcement on seL4 Microkit, specified in Fiducia.">
+  <meta property="og:image" content="https://fiducia-lang.github.io/images/og.png">
+  <meta property="og:url" content="https://fiducia-lang.github.io/examples/clipboard-guard.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Fiducia">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Clipboard Guard — Fiducia">
+  <meta name="twitter:image" content="https://fiducia-lang.github.io/images/og.png">
+  <style>
+    :root {
+      --bg: #0a0e17; --bg-card: #111827; --bg-code: #0d1220; --border: #1e293b;
+      --text: #e2e8f0; --text-dim: #94a3b8; --accent: #60a5fa; --accent-dim: #3b82f6;
+      --green: #34d399; --amber: #fbbf24; --rose: #fb7185; --purple: #a78bfa; --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+    nav { position: sticky; top: 0; z-index: 100; background: rgba(10,14,23,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    nav .container { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    nav .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); } nav .logo span { color: var(--accent); }
+    nav .back-link { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; } nav .back-link:hover { color: var(--text); text-decoration: none; }
+    .page-hero { padding: 60px 0 40px; }
+    .page-hero .tag { display: inline-block; padding: 4px 14px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; background: rgba(251,113,133,0.12); color: var(--rose); border: 1px solid rgba(251,113,133,0.25); border-radius: 20px; margin-bottom: 16px; }
+    .page-hero .featured { display: inline-block; padding: 4px 14px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.3); border-radius: 20px; margin-left: 8px; margin-bottom: 16px; }
+    .page-hero h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .page-hero p { color: var(--text-dim); font-size: 1.05rem; max-width: 680px; line-height: 1.8; }
+    .section { padding: 40px 0; }
+    .section-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; }
+    .section p.desc { color: var(--text-dim); font-size: 0.95rem; max-width: 680px; margin-bottom: 24px; }
+    .arch-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 32px; overflow-x: auto; }
+    .arch-box pre { font-family: "SF Mono","Fira Code","JetBrains Mono",Menlo,Consolas,monospace; font-size: 0.82rem; line-height: 1.6; color: var(--text); }
+    .arch-box .arch-title { font-size: 0.8rem; font-weight: 600; color: var(--text-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stats { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+    .stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 20px; text-align: center; min-width: 100px; }
+    .stat .val { font-size: 1.4rem; font-weight: 800; color: var(--accent); } .stat .lbl { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+    .code-block { background: var(--bg-code); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+    .code-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: var(--text-dim); }
+    .code-header .file-ext { color: var(--accent); }
+    .code-block pre { padding: 18px; overflow-x: auto; font-family: "SF Mono","Fira Code","JetBrains Mono",Menlo,Consolas,monospace; font-size: 0.82rem; line-height: 1.7; color: var(--text); }
+    .code-block pre .kw { color: var(--accent); } .code-block pre .cmt { color: #475569; font-style: italic; } .code-block pre .str { color: var(--green); } .code-block pre .num { color: var(--amber); } .code-block pre .tag { color: var(--rose); } .code-block pre .attr { color: var(--purple); } .code-block pre .op { color: var(--cyan); } .code-block pre .fn { color: var(--green); } .code-block pre .label { color: var(--rose); }
+    .security-list { list-style: none; margin-bottom: 24px; }
+    .security-list li { padding: 8px 0; font-size: 0.92rem; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+    .security-list li:last-child { border-bottom: none; } .security-list li strong { color: var(--text); }
+    .contact-note { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin: 24px 0; font-size: 0.9rem; color: var(--text-dim); }
+    .fiducia-section { background: rgba(167,139,250,0.06); border: 1px solid rgba(167,139,250,0.2); border-radius: 12px; padding: 32px; margin: 32px 0; }
+    .fiducia-badge { display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(167,139,250,0.15); color: var(--purple); border: 1px solid rgba(167,139,250,0.35); border-radius: 20px; margin-bottom: 14px; }
+    .fiducia-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .fiducia-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+    .vs-divider { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; color: var(--text-dim); font-size: 0.85rem; }
+    footer a { color: var(--text-dim); } footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo"><span>F</span>iducia</a>
+      <a href="../index.html#use-cases" class="back-link">Back to Use Cases</a>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <span class="tag">Content Policy</span><span class="featured">Fiducia Example</span>
+      <h1>Clipboard Guard</h1>
+      <p>
+        Inspects clipboard content crossing domain boundaries against a configurable
+        policy. Forbidden keywords ("TOP SECRET", "CLASSIFIED", "SCI") are rejected;
+        approved content is forwarded with full audit logging. Unlike a data diode,
+        the guard makes content-based decisions.
+      </p>
+    </div>
+  </header>
+
+  <!-- Architecture -->
+  <div class="section">
+    <div class="container">
+      <div class="arch-box">
+        <div class="arch-title">Architecture</div>
+<pre>
+  Managed Cross-Domain Clipboard
+  ==============================
+
+  +-----------+    high_to_guard    +-----------+    guard_to_low    +-----------+
+  |  domain   | ------ ch1 ------> | clipboard |  --- ch2 -------> |  domain   |
+  |   HIGH    |                     |   guard   |    (if approved)  |    LOW    |
+  | pri = 100 |                     | pri = 200 |                   | pri = 100 |
+  +-----------+                     +-----------+                   +-----------+
+                                    (TRUSTED)
+                                    Policy: reject
+                                    "TOP SECRET"
+                                    "CLASSIFIED"
+                                    "SCI"
+</pre>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="val">3</div><div class="lbl">Protection Domains</div></div>
+        <div class="stat"><div class="val">2</div><div class="lbl">Memory Regions</div></div>
+        <div class="stat"><div class="val">2</div><div class="lbl">Channels</div></div>
+        <div class="stat"><div class="val" style="color:var(--rose);">Policy</div><div class="lbl">Content-based</div></div>
+      </div>
+
+      <ul class="security-list">
+        <li><strong>Content inspection:</strong> Every clipboard item is scanned for forbidden keywords before crossing</li>
+        <li><strong>Reject or forward:</strong> The guard makes a binary decision &mdash; approve or block</li>
+        <li><strong>Audit trail:</strong> Approved/rejected counts and reasons logged for every operation</li>
+        <li><strong>No direct path:</strong> HIGH and LOW have no shared memory or channel &mdash; all flow through the guard</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Current Implementation -->
+  <div class="section" style="background: rgba(17,24,39,0.4); padding: 48px 0;">
+    <div class="container">
+      <div class="section-label">Current Implementation</div>
+      <h2>seL4 Microkit + C</h2>
+      <p class="desc">
+        The clipboard guard is implemented as a trusted protection domain that
+        reads clipboard items from HIGH, applies keyword scanning, and forwards
+        only approved content to LOW.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header"><span>System Description</span><span class="file-ext">clipboard_guard.system</span></div>
+<pre><span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"high_to_guard"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"guard_to_low"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+
+<span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_high"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"high_to_guard"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/protection_domain&gt;</span>
+
+<span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"clipboard_guard"</span> <span class="attr">priority</span>=<span class="str">"200"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"high_to_guard"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guard_to_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x5_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/protection_domain&gt;</span>
+
+<span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_low"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guard_to_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/protection_domain&gt;</span>
+
+<span class="tag">&lt;channel&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_high"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"clipboard_guard"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/channel&gt;</span>
+<span class="tag">&lt;channel&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"clipboard_guard"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_low"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/channel&gt;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span>Policy Enforcement</span><span class="file-ext">clipboard_guard.c</span></div>
+<pre><span class="kw">static int</span> <span class="fn">policy_check</span>(<span class="kw">const char</span> *msg, <span class="kw">int</span> len) {
+    <span class="kw">for</span> (<span class="kw">int</span> k = <span class="num">0</span>; k &lt; NUM_FORBIDDEN; k++) {
+        <span class="kw">if</span> (clip_strstr(msg, len, forbidden_keywords[k]))
+            <span class="kw">return</span> k;  <span class="cmt">/* Forbidden keyword found */</span>
+    }
+    <span class="kw">return</span> -<span class="num">1</span>;  <span class="cmt">/* Content is clean */</span>
+}
+
+<span class="kw">void</span> <span class="fn">notified</span>(microkit_channel ch) {
+    <span class="kw">if</span> (ch == CH_HIGH) {
+        <span class="kw">int</span> len = clip_buf_read(in_buf, msg, <span class="num">255</span>);
+        <span class="kw">int</span> forbidden_idx = policy_check(msg, len);
+
+        <span class="kw">if</span> (forbidden_idx >= <span class="num">0</span>) {
+            rejected_count++;
+            <span class="cmt">/* REJECTED: contains forbidden keyword */</span>
+        } <span class="kw">else</span> {
+            approved_count++;
+            clip_buf_write(out_buf, msg, len);
+            microkit_notify(CH_LOW);
+            <span class="cmt">/* APPROVED: forwarded to LOW paste buffer */</span>
+        }
+    }
+}</pre>
+      </div>
+
+      <div class="contact-note">
+        Full C implementation with Makefile and QEMU runner available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="vs-divider">VS</div>
+
+  <!-- Fiducia Implementation -->
+  <div class="section">
+    <div class="container">
+      <div class="fiducia-section">
+        <div class="fiducia-badge">Fiducia Specification</div>
+        <h2>Content policy as guarded choice.</h2>
+        <p>
+          In Fiducia, the clipboard guard's approve/reject decision maps directly
+          to ChorFi's <strong>external choice</strong> operator. The guard receives a
+          clipboard item, evaluates the policy, and either forwards or drops it.
+          The information flow type system ensures the one-way HIGH&rarr;LOW
+          direction is enforced at compile time.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header"><span>System Declaration</span><span class="file-ext">clipboard.fis</span></div>
+<pre><span class="cmt">// Memory regions</span>
+<span class="label">High</span> <span class="kw">MemoryRegion</span> high_to_guard(<span class="num">0x1000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> guard_to_low(<span class="num">0x1000</span>);
+
+<span class="cmt">// Protection domains</span>
+<span class="kw">ProtectionDomain</span> domain_high(<span class="num">100</span>);
+<span class="kw">ProtectionDomain</span> clipboard_guard(<span class="num">200</span>);
+<span class="kw">ProtectionDomain</span> domain_low(<span class="num">100</span>);
+
+<span class="cmt">// One-way channels: HIGH -> guard -> LOW</span>
+<span class="kw">Chan</span> h2g <span class="op">=</span> domain_high <span class="op">--></span> clipboard_guard;
+    h2g.<span class="fn">set_buffer</span>(high_to_guard);
+<span class="kw">Chan</span> g2l <span class="op">=</span> clipboard_guard <span class="op">--></span> domain_low;
+    g2l.<span class="fn">set_buffer</span>(guard_to_low);
+
+<span class="kw">System</span> <span class="op">=</span> domain_high <span class="op">|||</span> clipboard_guard <span class="op">|||</span> domain_low;</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Guard Process with External Choice</span><span class="file-ext">clipboard_guard.fi</span></div>
+<pre><span class="kw">import</span> <span class="str">"clipboard_guard.c"</span> <span class="kw">as</span> guard;
+() : guard.<span class="fn">init</span>();
+
+<span class="kw">Events</span>:
+  <span class="kw">Event</span> policy_check: guard.<span class="fn">policy_check</span>(item)
+
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    h2g<span class="op">?</span>item <span class="op">-></span> <span class="fn">Check</span>(item);
+
+  <span class="fn">Check</span>(item):
+    <span class="cmt">// External choice: approve or reject</span>
+    [ policy_check(item) ] g2l<span class="op">!</span>item <span class="op">-></span> <span class="fn">Notified</span>()
+    [ ]                    <span class="kw">Skip</span>      <span class="op">-></span> <span class="fn">Notified</span>();</pre>
+        </div>
+
+        <p style="margin-top:8px;">
+          <strong style="color:var(--text);">What the compiler verifies:</strong>
+          the <code>[ ]</code> external choice ensures exactly one branch is taken
+          (no deadlock), information flow labels prevent High&rarr;Low leaks on
+          the memory regions, and the one-way channels (<code>--></code>) structurally
+          prevent reverse data flow from LOW to HIGH.
+        </p>
+      </div>
+
+      <div class="contact-note">
+        Fiducia compiler and specification available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p><a href="../index.html">Fiducia</a> is developed at <a href="https://anu.edu.au">The Australian National University</a>.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

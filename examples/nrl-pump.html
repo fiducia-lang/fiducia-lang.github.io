@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NRL Pump — Fiducia</title>
+  <meta name="description" content="NRL Pump: a covert channel mitigation pattern on seL4 Microkit. Probabilistic downgrader with batching, reordering, and timing jitter.">
+  <meta property="og:title" content="NRL Pump — Fiducia">
+  <meta property="og:description" content="Covert channel mitigation on seL4 Microkit with batching, Fisher-Yates reordering, and timing jitter.">
+  <meta property="og:image" content="https://fiducia-lang.github.io/images/og.png">
+  <meta property="og:url" content="https://fiducia-lang.github.io/examples/nrl-pump.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Fiducia">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NRL Pump — Fiducia">
+  <meta name="twitter:description" content="Covert channel mitigation on seL4 Microkit with batching, Fisher-Yates reordering, and timing jitter.">
+  <meta name="twitter:image" content="https://fiducia-lang.github.io/images/og.png">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    nav .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
+    nav .logo span { color: var(--accent); }
+    nav .back-link { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; }
+    nav .back-link:hover { color: var(--text); text-decoration: none; }
+
+    .page-hero { padding: 60px 0 40px; }
+    .page-hero .tag {
+      display: inline-block; padding: 4px 14px; font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      background: rgba(251, 191, 36, 0.12); color: var(--amber);
+      border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 20px; margin-bottom: 16px;
+    }
+    .page-hero h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .page-hero p { color: var(--text-dim); font-size: 1.05rem; max-width: 680px; line-height: 1.8; }
+
+    .section { padding: 40px 0; }
+    .section-label {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+    .section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.01em; }
+    .section p.desc { color: var(--text-dim); font-size: 0.95rem; max-width: 680px; margin-bottom: 24px; }
+
+    .arch-box {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px; margin-bottom: 32px; overflow-x: auto;
+    }
+    .arch-box pre {
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.6; color: var(--text);
+    }
+    .arch-box .arch-title {
+      font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+      margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    .stats {
+      display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px;
+    }
+    .stat {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 20px; text-align: center; min-width: 100px;
+    }
+    .stat .val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+    .stat .lbl { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+
+    .code-block {
+      background: var(--bg-code); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; margin-bottom: 24px;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+    }
+    .code-header .file-ext { color: var(--accent); }
+    .code-block pre {
+      padding: 18px; overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.7; color: var(--text);
+    }
+    .code-block pre .kw { color: var(--accent); }
+    .code-block pre .cmt { color: #475569; font-style: italic; }
+    .code-block pre .str { color: var(--green); }
+    .code-block pre .num { color: var(--amber); }
+    .code-block pre .tag { color: var(--rose); }
+    .code-block pre .attr { color: var(--purple); }
+
+    .security-list { list-style: none; margin-bottom: 24px; }
+    .security-list li {
+      padding: 8px 0; font-size: 0.92rem; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .security-list li:last-child { border-bottom: none; }
+    .security-list li strong { color: var(--text); }
+
+    .contact-note {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px 24px; margin: 24px 0; font-size: 0.9rem; color: var(--text-dim);
+    }
+    .contact-note a { color: var(--accent); }
+
+    .coming-soon-section {
+      background: rgba(167, 139, 250, 0.06); border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 12px; padding: 32px; margin: 32px 0;
+    }
+    .coming-soon-badge {
+      display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(167, 139, 250, 0.15); color: var(--purple);
+      border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 20px; margin-bottom: 14px;
+    }
+    .coming-soon-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .coming-soon-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; }
+    .coming-soon-section ul { list-style: none; margin-top: 14px; }
+    .coming-soon-section ul li { padding: 6px 0; font-size: 0.9rem; color: var(--text-dim); }
+    .coming-soon-section ul li::before { content: "\2192 "; color: var(--purple); font-weight: 700; }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
+      color: var(--text-dim); font-size: 0.85rem;
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo"><span>F</span>iducia</a>
+      <a href="../index.html" class="back-link">Back to Fiducia</a>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <div class="tag">Covert Channels</div>
+      <h1>NRL Pump</h1>
+      <p>
+        A probabilistic downgrader that buffers, reorders, and adds timing jitter to
+        messages crossing security boundaries. Same topology as a data diode, but with
+        active timing channel mitigation that defeats covert channels simple diodes leave open.
+      </p>
+    </div>
+  </header>
+
+  <div class="section">
+    <div class="container">
+      <div class="section-label">Architecture</div>
+      <div class="arch-box">
+        <div class="arch-title">System Topology &mdash; Timing Channel Mitigation</div>
+<pre>
+  +----------------+                              +----------------+
+  |  domain_high   |                              |  domain_low    |
+  |   (pri 100)    |                              |   (pri 100)    |
+  +-------+--------+                              +--------+-------+
+          |                                                |
+     high_to_pump                                    pump_to_low
+      (write only)                                   (read only)
+          |                                                |
+          +-------------------+    +-------------------+---+
+                              |    |
+                     +--------+----+--------+
+                     |      nrl_pump        |
+                     |  (trusted, pri 200)  |
+                     |                      |
+                     |  [batch: 4 msgs]     |
+                     |  [Fisher-Yates]      |
+                     |  [random jitter]     |
+                     +----------------------+
+
+  HIGH ---> LOW only.  Timing correlations broken by
+  batching, reordering, and pseudo-random delay.
+</pre>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="val">3</div><div class="lbl">Protection Domains</div></div>
+        <div class="stat"><div class="val">2</div><div class="lbl">Memory Regions</div></div>
+        <div class="stat"><div class="val">2</div><div class="lbl">Channels</div></div>
+      </div>
+
+      <h2>Security Properties</h2>
+      <ul class="security-list">
+        <li><strong>Batch accumulation</strong> &mdash; Messages are collected in groups of 4 before forwarding</li>
+        <li><strong>Fisher-Yates reordering</strong> &mdash; Each batch is randomly shuffled to destroy ordering correlations</li>
+        <li><strong>Pseudo-random jitter</strong> &mdash; Random delay added between batch releases to break timing channels</li>
+        <li><strong>Unidirectional flow</strong> &mdash; Data flows HIGH to LOW only, no reverse path exists</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section" style="background: rgba(17,24,39,0.4); padding: 48px 0;">
+    <div class="container">
+      <div class="section-label">Current Implementation</div>
+      <h2>seL4 Microkit + C</h2>
+      <p class="desc">
+        The system description is identical in topology to a data diode. The pump
+        logic &mdash; batching, reordering, and jitter &mdash; lives entirely within
+        the nrl_pump protection domain's C implementation.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span>System Description</span>
+          <span class="file-ext">nrl_pump.system</span>
+        </div>
+        <pre><span class="cmt">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="tag">&lt;system&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"high_to_pump"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"pump_to_low"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_high"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"domain_high.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"high_to_pump"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"outbox_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"nrl_pump"</span> <span class="attr">priority</span>=<span class="str">"200"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"nrl_pump.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"high_to_pump"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"inbound_vaddr"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"pump_to_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x5_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"outbound_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_low"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;program_image</span> <span class="attr">path</span>=<span class="str">"domain_low.elf"</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"pump_to_low"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="attr">setvar_vaddr</span>=<span class="str">"inbox_vaddr"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/protection_domain&gt;</span>
+
+    <span class="tag">&lt;channel&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_high"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"nrl_pump"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span><span class="tag">&lt;/channel&gt;</span>
+    <span class="tag">&lt;channel&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"nrl_pump"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span><span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_low"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span><span class="tag">&lt;/channel&gt;</span>
+<span class="tag">&lt;/system&gt;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span>Key Code Highlight</span>
+          <span class="file-ext">nrl_pump.c</span>
+        </div>
+        <pre><span class="kw">#define</span> BATCH_SIZE <span class="num">4</span>
+
+<span class="kw">static</span> msg_t batch[BATCH_SIZE];
+<span class="kw">static int</span> batch_count = <span class="num">0</span>;
+
+<span class="cmt">/* Fisher-Yates shuffle to destroy ordering correlations */</span>
+<span class="kw">static void</span> shuffle_batch(<span class="kw">void</span>) {
+    <span class="kw">for</span> (<span class="kw">int</span> i = BATCH_SIZE - <span class="num">1</span>; i > <span class="num">0</span>; i--) {
+        <span class="kw">int</span> j = prng_next() % (i + <span class="num">1</span>);
+        msg_t tmp = batch[i];
+        batch[i] = batch[j];
+        batch[j] = tmp;
+    }
+}
+
+<span class="kw">void</span> notified(<span class="kw">microkit_channel</span> ch) {
+    <span class="kw">if</span> (ch == HIGH_CH) {
+        batch[batch_count++] = read_msg(inbound_vaddr);
+        <span class="kw">if</span> (batch_count == BATCH_SIZE) {
+            shuffle_batch();
+            add_jitter(prng_next() % MAX_JITTER);
+            <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < BATCH_SIZE; i++)
+                write_msg(outbound_vaddr, batch[i]);
+            microkit_notify(LOW_CH);
+            batch_count = <span class="num">0</span>;
+        }
+    }
+}</pre>
+      </div>
+
+      <div class="contact-note">
+        Full implementation available on request. Contact us at
+        <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="container">
+      <div class="coming-soon-section">
+        <div class="coming-soon-badge">Coming Soon</div>
+        <h2>Fiducia Specification</h2>
+        <p>
+          The NRL Pump shares the same topology as the data diode in Fiducia &mdash;
+          a simple HIGH to LOW one-way channel. The pump logic (batching, reordering,
+          jitter) stays entirely within the C/Pancake implementation of the pump
+          protection domain. Fiducia verifies the structural information flow guarantee.
+        </p>
+        <ul>
+          <li><strong>Same topology as data diode</strong> &mdash; The .fis system declaration is structurally identical to the basic data diode</li>
+          <li><strong>Internal pump logic in C/Pancake</strong> &mdash; Batching, Fisher-Yates shuffle, and jitter remain in the imported C implementation</li>
+          <li><strong>Structural flow guarantee</strong> &mdash; Fiducia verifies at compile time that no reverse channel exists from LOW to HIGH</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="../index.html">Fiducia</a> is developed at
+        <a href="https://anu.edu.au">The Australian National University</a>.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

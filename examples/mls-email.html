@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MLS Email Guard — Fiducia</title>
+  <meta name="description" content="MLS Email Guard: asymmetric email flow between SECRET and OFFICIAL domains on seL4 Microkit, with Fiducia specification.">
+  <meta property="og:title" content="MLS Email Guard — Fiducia">
+  <meta property="og:description" content="Asymmetric multi-level security email on seL4 Microkit, specified in Fiducia.">
+  <meta property="og:image" content="https://fiducia-lang.github.io/images/og.png">
+  <meta property="og:url" content="https://fiducia-lang.github.io/examples/mls-email.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Fiducia">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MLS Email Guard — Fiducia">
+  <meta name="twitter:image" content="https://fiducia-lang.github.io/images/og.png">
+  <style>
+    :root {
+      --bg: #0a0e17; --bg-card: #111827; --bg-code: #0d1220; --border: #1e293b;
+      --text: #e2e8f0; --text-dim: #94a3b8; --accent: #60a5fa; --accent-dim: #3b82f6;
+      --green: #34d399; --amber: #fbbf24; --rose: #fb7185; --purple: #a78bfa; --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+    nav { position: sticky; top: 0; z-index: 100; background: rgba(10,14,23,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    nav .container { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    nav .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); } nav .logo span { color: var(--accent); }
+    nav .back-link { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; } nav .back-link:hover { color: var(--text); text-decoration: none; }
+    .page-hero { padding: 60px 0 40px; }
+    .page-hero .tag { display: inline-block; padding: 4px 14px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; background: rgba(251,113,133,0.12); color: var(--rose); border: 1px solid rgba(251,113,133,0.25); border-radius: 20px; margin-bottom: 16px; }
+    .page-hero .featured { display: inline-block; padding: 4px 14px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.3); border-radius: 20px; margin-left: 8px; margin-bottom: 16px; }
+    .page-hero h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .page-hero p { color: var(--text-dim); font-size: 1.05rem; max-width: 680px; line-height: 1.8; }
+    .section { padding: 40px 0; }
+    .section-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+    .section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; }
+    .section p.desc { color: var(--text-dim); font-size: 0.95rem; max-width: 680px; margin-bottom: 24px; }
+    .arch-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 32px; overflow-x: auto; }
+    .arch-box pre { font-family: "SF Mono","Fira Code","JetBrains Mono",Menlo,Consolas,monospace; font-size: 0.82rem; line-height: 1.6; color: var(--text); }
+    .arch-box .arch-title { font-size: 0.8rem; font-weight: 600; color: var(--text-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stats { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+    .stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 20px; text-align: center; min-width: 100px; }
+    .stat .val { font-size: 1.4rem; font-weight: 800; color: var(--accent); } .stat .lbl { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+    .code-block { background: var(--bg-code); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+    .code-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: var(--text-dim); }
+    .code-header .file-ext { color: var(--accent); }
+    .code-block pre { padding: 18px; overflow-x: auto; font-family: "SF Mono","Fira Code","JetBrains Mono",Menlo,Consolas,monospace; font-size: 0.82rem; line-height: 1.7; color: var(--text); }
+    .code-block pre .kw { color: var(--accent); } .code-block pre .cmt { color: #475569; font-style: italic; } .code-block pre .str { color: var(--green); } .code-block pre .num { color: var(--amber); } .code-block pre .tag { color: var(--rose); } .code-block pre .attr { color: var(--purple); } .code-block pre .op { color: var(--cyan); } .code-block pre .fn { color: var(--green); } .code-block pre .label { color: var(--rose); }
+    .security-list { list-style: none; margin-bottom: 24px; }
+    .security-list li { padding: 8px 0; font-size: 0.92rem; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+    .security-list li:last-child { border-bottom: none; } .security-list li strong { color: var(--text); }
+    .contact-note { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin: 24px 0; font-size: 0.9rem; color: var(--text-dim); }
+    .fiducia-section { background: rgba(167,139,250,0.06); border: 1px solid rgba(167,139,250,0.2); border-radius: 12px; padding: 32px; margin: 32px 0; }
+    .fiducia-badge { display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(167,139,250,0.15); color: var(--purple); border: 1px solid rgba(167,139,250,0.35); border-radius: 20px; margin-bottom: 14px; }
+    .fiducia-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .fiducia-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+    .vs-divider { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .flow-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 0.9rem; }
+    .flow-table th { text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--border); color: var(--text); font-weight: 600; }
+    .flow-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+    .flow-table .allowed { color: var(--green); font-weight: 700; }
+    .flow-table .blocked { color: var(--rose); font-weight: 700; }
+    footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; color: var(--text-dim); font-size: 0.85rem; }
+    footer a { color: var(--text-dim); } footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo"><span>F</span>iducia</a>
+      <a href="../index.html#use-cases" class="back-link">Back to Use Cases</a>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <span class="tag">Multi-Level Security</span><span class="featured">Fiducia Example</span>
+      <h1>MLS Email Guard</h1>
+      <p>
+        Manages asymmetric email flow between SECRET and OFFICIAL domains.
+        Downgrade (SECRET&rarr;OFFICIAL) is allowed after sanitisation&mdash;stripping
+        classified markers and adding downgrade labels. Upgrade (OFFICIAL&rarr;SECRET)
+        is always blocked. The guard enforces the policy, not the user.
+      </p>
+    </div>
+  </header>
+
+  <!-- Architecture -->
+  <div class="section">
+    <div class="container">
+      <div class="arch-box">
+        <div class="arch-title">Architecture</div>
+<pre>
+  Asymmetric Multi-Level Security Email
+  =====================================
+
+  +-----------+   secret_to_guard   +-----------+  guard_to_official  +-----------+
+  |  domain   | ------  ch1 ------> |   mail    | ------- ch2 ------> |  domain   |
+  |  SECRET   |                     |   guard   |                     | OFFICIAL  |
+  | pri = 100 | &lt;--- guard_to_    | pri = 200 | &lt;--- official_to_ | pri = 100 |
+  +-----------+      secret         +-----------+      guard          +-----------+
+                  (unused: upgrade                  (BLOCKED: upgrade
+                   not permitted)                    OFFICIAL->SECRET)
+
+  Downgrade:  SECRET -> OFFICIAL    ALLOWED (with sanitisation)
+  Upgrade:    OFFICIAL -> SECRET    ALWAYS BLOCKED
+</pre>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="val">3</div><div class="lbl">Protection Domains</div></div>
+        <div class="stat"><div class="val">4</div><div class="lbl">Memory Regions</div></div>
+        <div class="stat"><div class="val">2</div><div class="lbl">Channels</div></div>
+        <div class="stat"><div class="val" style="color:var(--rose);">Asymmetric</div><div class="lbl">Security Policy</div></div>
+      </div>
+
+      <table class="flow-table">
+        <tr><th>Direction</th><th>Policy</th><th>Action</th></tr>
+        <tr><td>SECRET &rarr; OFFICIAL</td><td class="allowed">ALLOWED</td><td>Sanitise: strip "CLASSIFIED:" prefix, add "[DOWNGRADED]" to subject</td></tr>
+        <tr><td>OFFICIAL &rarr; SECRET</td><td class="blocked">BLOCKED</td><td>Rejected unconditionally &mdash; no upward flow without accreditation</td></tr>
+      </table>
+
+      <ul class="security-list">
+        <li><strong>Asymmetric flow:</strong> Downgrade permitted with sanitisation; upgrade always blocked</li>
+        <li><strong>Email sanitisation:</strong> Classified markers stripped, downgrade label inserted</li>
+        <li><strong>Architectural isolation:</strong> No direct path between SECRET and OFFICIAL</li>
+        <li><strong>Audit logging:</strong> Every email decision (allowed/blocked) logged with direction</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Current Implementation -->
+  <div class="section" style="background: rgba(17,24,39,0.4); padding: 48px 0;">
+    <div class="container">
+      <div class="section-label">Current Implementation</div>
+      <h2>seL4 Microkit + C</h2>
+      <p class="desc">
+        The mail guard uses bidirectional channels but enforces asymmetric policy:
+        it reads from both domains but only forwards in the SECRET&rarr;OFFICIAL direction
+        after sanitisation.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header"><span>System Description</span><span class="file-ext">mls_email.system</span></div>
+<pre><span class="cmt">&lt;!-- 4 memory regions for bidirectional mailboxes --&gt;</span>
+<span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"secret_to_guard"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"guard_to_secret"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"official_to_guard"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;memory_region</span> <span class="attr">name</span>=<span class="str">"guard_to_official"</span> <span class="attr">size</span>=<span class="str">"0x1_000"</span> <span class="tag">/&gt;</span>
+
+<span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_secret"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"secret_to_guard"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guard_to_secret"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_001_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/protection_domain&gt;</span>
+
+<span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"mail_guard"</span> <span class="attr">priority</span>=<span class="str">"200"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"secret_to_guard"</span>   <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guard_to_secret"</span>   <span class="attr">vaddr</span>=<span class="str">"0x4_001_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"official_to_guard"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_002_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guard_to_official"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_003_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/protection_domain&gt;</span>
+
+<span class="tag">&lt;protection_domain</span> <span class="attr">name</span>=<span class="str">"domain_official"</span> <span class="attr">priority</span>=<span class="str">"100"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"official_to_guard"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_000_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;map</span> <span class="attr">mr</span>=<span class="str">"guard_to_official"</span> <span class="attr">vaddr</span>=<span class="str">"0x4_001_000"</span> <span class="attr">perms</span>=<span class="str">"rw"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/protection_domain&gt;</span>
+
+<span class="cmt">&lt;!-- Bidirectional channels (policy is asymmetric, not the channels) --&gt;</span>
+<span class="tag">&lt;channel&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_secret"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"mail_guard"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/channel&gt;</span>
+<span class="tag">&lt;channel&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"domain_official"</span> <span class="attr">id</span>=<span class="str">"1"</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;end</span> <span class="attr">pd</span>=<span class="str">"mail_guard"</span> <span class="attr">id</span>=<span class="str">"2"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/channel&gt;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span>Asymmetric Policy Enforcement</span><span class="file-ext">mail_guard.c</span></div>
+<pre><span class="kw">void</span> <span class="fn">notified</span>(microkit_channel ch) {
+    <span class="kw">if</span> (ch == CH_SECRET_GUARD) {
+        <span class="cmt">/* SECRET -> OFFICIAL: downgrade allowed */</span>
+        <span class="kw">int</span> len = mail_buf_read(secret_in, email, <span class="num">511</span>);
+        len = sanitise_for_downgrade(email, len, <span class="num">511</span>);
+        <span class="cmt">/* Strips "CLASSIFIED:" prefix, adds "[DOWNGRADED]" */</span>
+        mail_buf_write(official_out, email, len);
+        microkit_notify(CH_OFFICIAL_GUARD);
+    }
+
+    <span class="kw">if</span> (ch == CH_OFFICIAL_GUARD) {
+        <span class="cmt">/* OFFICIAL -> SECRET: BLOCKED unconditionally */</span>
+        mail_buf_read(official_in, email, <span class="num">511</span>);
+        microkit_dbg_puts(<span class="str">"BLOCKED: upward flow not permitted\n"</span>);
+        <span class="cmt">/* Message is consumed and discarded */</span>
+    }
+}</pre>
+      </div>
+
+      <div class="contact-note">
+        Full C implementation with Makefile and QEMU runner available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="vs-divider">VS</div>
+
+  <!-- Fiducia Implementation -->
+  <div class="section">
+    <div class="container">
+      <div class="fiducia-section">
+        <div class="fiducia-badge">Fiducia Specification</div>
+        <h2>Asymmetric security enforced by the type system.</h2>
+        <p>
+          In Fiducia, the MLS email guard is the most compelling example of how
+          the information flow type system catches errors that C cannot. The
+          bidirectional channels carry notifications, but the <code>High</code>/<code>Low</code>
+          labels on memory regions ensure that the compiler rejects any attempt
+          to flow data upward from OFFICIAL to SECRET.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header"><span>System Declaration</span><span class="file-ext">mls_email.fis</span></div>
+<pre><span class="cmt">// Memory regions with security labels</span>
+<span class="label">High</span> <span class="kw">MemoryRegion</span> secret_to_guard(<span class="num">0x1000</span>);
+<span class="label">High</span> <span class="kw">MemoryRegion</span> guard_to_secret(<span class="num">0x1000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> official_to_guard(<span class="num">0x1000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> guard_to_official(<span class="num">0x1000</span>);
+
+<span class="cmt">// Protection domains</span>
+<span class="kw">ProtectionDomain</span> domain_secret(<span class="num">100</span>);
+<span class="kw">ProtectionDomain</span> mail_guard(<span class="num">200</span>);
+<span class="kw">ProtectionDomain</span> domain_official(<span class="num">100</span>);
+
+<span class="cmt">// Channels: both domains communicate with guard</span>
+<span class="kw">Chan</span> sec <span class="op">=</span> domain_secret <span class="op">&lt;-></span> mail_guard;
+<span class="kw">Chan</span> off <span class="op">=</span> domain_official <span class="op">&lt;-></span> mail_guard;
+
+<span class="kw">System</span> <span class="op">=</span> domain_secret <span class="op">|||</span> mail_guard <span class="op">|||</span> domain_official;</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Mail Guard Process</span><span class="file-ext">mail_guard.fi</span></div>
+<pre><span class="kw">import</span> <span class="str">"mail_guard.c"</span> <span class="kw">as</span> guard;
+() : guard.<span class="fn">init</span>();
+
+<span class="cmt">// Mappings: the guard reads HIGH and writes LOW</span>
+<span class="label">High</span> <span class="kw">Mapping</span> secret_in(secret_to_guard, <span class="str">"r"</span>);
+<span class="label">Low</span>  <span class="kw">Mapping</span> official_out(guard_to_official, <span class="str">"rw"</span>);
+
+<span class="cmt">// This would be a compile-time ERROR:</span>
+<span class="cmt">// High Mapping upgrade(guard_to_secret, "rw");</span>
+<span class="cmt">//   with Low Mapping official_in(official_to_guard, "r");</span>
+<span class="cmt">//   -&gt; the type system blocks Low data flowing to High mapping</span>
+
+<span class="kw">Events</span>:
+  <span class="kw">Event</span> sanitise: guard.<span class="fn">sanitise_for_downgrade</span>(email)
+
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    <span class="cmt">// Downgrade: SECRET -> OFFICIAL (allowed)</span>
+    sec<span class="op">?</span>email <span class="op">-></span> sanitise(email) <span class="op">-></span> off<span class="op">!</span>email <span class="op">-></span> <span class="fn">Notified</span>()
+    <span class="cmt">// Upgrade attempts: consumed and discarded</span>
+    [ ] off<span class="op">?</span>email <span class="op">-></span> <span class="kw">Skip</span> <span class="op">-></span> <span class="fn">Notified</span>();</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Type System Catches Upward Flow</span><span class="file-ext">compile-time error</span></div>
+<pre><span class="cmt">// If someone tried to write OFFICIAL data to SECRET's inbox:</span>
+<span class="label">Low</span>  <span class="kw">Mapping</span> official_in(official_to_guard, <span class="str">"r"</span>);
+<span class="label">High</span> <span class="kw">Mapping</span> secret_out(guard_to_secret, <span class="str">"rw"</span>);
+
+<span class="cmt">// The Fiducia compiler would reject this:</span>
+<span class="cmt">//   ERROR: Information flow violation</span>
+<span class="cmt">//   Low data from 'official_to_guard' cannot flow to</span>
+<span class="cmt">//   High mapping 'secret_out' without explicit declassification.</span>
+<span class="cmt">//</span>
+<span class="cmt">// In the C version, this protection relies entirely on the</span>
+<span class="cmt">// developer never writing such code. In Fiducia, the compiler</span>
+<span class="cmt">// catches it automatically.</span></pre>
+        </div>
+
+        <p style="margin-top:8px;">
+          <strong style="color:var(--text);">What the compiler verifies:</strong>
+          <code>High</code>/<code>Low</code> labels enforce that SECRET data only flows
+          downward (to OFFICIAL) after explicit sanitisation. The bidirectional
+          channels (<code>&lt;-></code>) carry notifications, but the memory region labels
+          ensure data can only move in the permitted direction. External choice in
+          the process handles both incoming directions with the correct policy for each.
+        </p>
+      </div>
+
+      <div class="contact-note">
+        Fiducia compiler and specification available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p><a href="../index.html">Fiducia</a> is developed at <a href="https://anu.edu.au">The Australian National University</a>.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

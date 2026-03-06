@@ -356,10 +356,22 @@
       margin-top: 40px;
     }
     .use-case {
+      display: block;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 28px;
+      color: var(--text);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .use-case:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+    .use-case.featured {
+      border-color: rgba(167, 139, 250, 0.35);
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.1);
     }
     .use-case h3 {
       font-size: 1.1rem;
@@ -370,6 +382,32 @@
       font-size: 0.9rem;
       color: var(--text-dim);
       line-height: 1.65;
+    }
+    .fiducia-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(167, 139, 250, 0.12);
+      color: var(--purple);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .coming-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--text-dim);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 4px;
+      margin-left: 6px;
     }
     .use-case-tag {
       display: inline-block;
@@ -801,89 +839,91 @@
         Fiducia <code>.fis</code> and <code>.fi</code> specifications with
         compile-time security guarantees.
       </p>
+      <p class="section-desc" style="margin-bottom:24px; color:var(--accent); font-weight:600; font-size:0.95rem;">
+        &#9758; Click any tile below to explore the full example&mdash;including architecture diagrams, C implementations, and Fiducia code.
+      </p>
       <div class="use-cases">
-        <div class="use-case">
-          <div class="use-case-tag tag-infra">Information Flow</div>
+        <a href="examples/data-diode.html" class="use-case featured">
+          <div class="use-case-tag tag-infra">Information Flow</div><span class="fiducia-tag">Fiducia Example</span>
           <h3>Network Data Diode</h3>
           <p>
             Enforces strict one-way information flow between HIGH and LOW networks
             through a trusted intermediary. The diode applies policy checks and
-            audit logging&mdash;no data ever flows backwards. Fiducia will verify
-            unidirectionality structurally at compile time.
+            audit logging&mdash;no data ever flows backwards.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-defence">Trusted Input</div>
-          <h3>Keyboard Switch</h3>
-          <p>
-            Routes HID input to one security domain at a time with buffer flush
-            on switch. Keystrokes are delivered exclusively&mdash;no broadcast,
-            no residual data leakage between SECRET and UNCLASSIFIED domains.
-          </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-defence">Content Policy</div>
+        </a>
+        <a href="examples/clipboard-guard.html" class="use-case featured">
+          <div class="use-case-tag tag-defence">Content Policy</div><span class="fiducia-tag">Fiducia Example</span>
           <h3>Clipboard Guard</h3>
           <p>
             Inspects clipboard content crossing domain boundaries against a policy
             (e.g. rejecting "TOP SECRET", "CLASSIFIED" keywords). Only approved
             content is forwarded, with full audit logging of every decision.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-defence">Multi-Level Security</div>
+        </a>
+        <a href="examples/mls-email.html" class="use-case featured">
+          <div class="use-case-tag tag-defence">Multi-Level Security</div><span class="fiducia-tag">Fiducia Example</span>
           <h3>MLS Email Guard</h3>
           <p>
             Manages asymmetric email flow between SECRET and OFFICIAL domains.
             Downgrade: allowed after sanitisation (stripping classified markers).
             Upgrade: always blocked. The guard enforces the policy, not the user.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-space">Trusted Display</div>
+        </a>
+        <a href="examples/keyboard-switch.html" class="use-case">
+          <div class="use-case-tag tag-defence">Trusted Input</div><span class="coming-tag">Fiducia Coming Soon</span>
+          <h3>Keyboard Switch</h3>
+          <p>
+            Routes HID input to one security domain at a time with buffer flush
+            on switch. Keystrokes are delivered exclusively&mdash;no broadcast,
+            no residual data leakage between SECRET and UNCLASSIFIED domains.
+          </p>
+        </a>
+        <a href="examples/framebuffer-compositor.html" class="use-case">
+          <div class="use-case-tag tag-space">Trusted Display</div><span class="coming-tag">Fiducia Coming Soon</span>
           <h3>Framebuffer Compositor</h3>
           <p>
             Multiple security domains render to isolated framebuffers. A trusted
             compositor reads all buffers and draws border decorations that
             cannot be spoofed. Domains cannot read each other's display content.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-infra">Covert Channels</div>
+        </a>
+        <a href="examples/nrl-pump.html" class="use-case">
+          <div class="use-case-tag tag-infra">Covert Channels</div><span class="coming-tag">Fiducia Coming Soon</span>
           <h3>NRL Pump</h3>
           <p>
             A probabilistic downgrader that buffers, reorders, and adds timing
             jitter to messages crossing security boundaries. Defeats timing-based
             covert channels that simple data diodes leave open.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-defence">Residual Data</div>
+        </a>
+        <a href="examples/domain-switch-flush.html" class="use-case">
+          <div class="use-case-tag tag-defence">Residual Data</div><span class="coming-tag">Fiducia Coming Soon</span>
           <h3>Domain Switch Flush</h3>
           <p>
             Zeroes all shared workspace buffers on every domain switch, verified
             clean before the new domain activates. Prevents covert channels
             through residual state in shared memory.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-infra">Virtualisation</div>
+        </a>
+        <a href="examples/data-diode-linux.html" class="use-case">
+          <div class="use-case-tag tag-infra">Virtualisation</div><span class="coming-tag">Fiducia Coming Soon</span>
           <h3>Linux VM Data Diode</h3>
           <p>
             Ethernet-level data diode between two full Linux virtual machines
             running on seL4. Frames flow HIGH&rarr;LOW only through a trusted
             bridge. The VMs are completely isolated by seL4 capabilities.
           </p>
-        </div>
-        <div class="use-case">
-          <div class="use-case-tag tag-space">Media Sanitisation</div>
+        </a>
+        <a href="examples/jpeg-filter.html" class="use-case">
+          <div class="use-case-tag tag-space">Media Sanitisation</div><span class="coming-tag">Fiducia Coming Soon</span>
           <h3>JPEG Metadata Filter</h3>
           <p>
             Strips EXIF, GPS, camera data, and comments from JPEG images crossing
             a security boundary. Only pixel data passes through. Operates inline
             between Linux VMs at wire speed.
           </p>
-        </div>
+        </a>
       </div>
       <div class="info-grid">
         <div class="info-item">
@@ -899,8 +939,8 @@
           <div class="info-label">Full compilation pipeline (per file)</div>
         </div>
         <div class="info-item">
-          <div class="info-value" style="color:var(--amber);">ANU</div>
-          <div class="info-label">Developed at The Australian National University</div>
+          <a href="https://comp.anu.edu.au/" target="_blank" rel="noopener"><img src="images/logos/anu.jpg" alt="The Australian National University" style="height:40px;"></a>
+          <div class="info-label" style="margin-top:8px;"><a href="https://comp.anu.edu.au/" target="_blank" rel="noopener" style="color:var(--text-dim);">School of Computing</a>, ANU</div>
         </div>
       </div>
     </div>
@@ -1032,7 +1072,7 @@
         <a href="#supporters">Supporters</a>
         <a href="mailto:alex.potanin@anu.edu.au">Contact</a>
       </div>
-      <p>Fiducia is developed at <a href="https://anu.edu.au">The Australian National University</a> with support from <a href="https://trustworthy.systems/">Trustworthy Systems</a> and <a href="https://skykraft.com.au/">Skykraft</a>.</p>
+      <p>Fiducia is developed at the <a href="https://comp.anu.edu.au/">School of Computing</a>, <a href="https://anu.edu.au">The Australian National University</a> with support from <a href="https://trustworthy.systems/">Trustworthy Systems</a> and <a href="https://skykraft.com.au/">Skykraft</a>.</p>
     </div>
   </footer>
 
