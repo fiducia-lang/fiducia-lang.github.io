@@ -134,21 +134,30 @@
     }
     .contact-note a { color: var(--accent); }
 
-    .coming-soon-section {
+    .fiducia-section {
       background: rgba(167, 139, 250, 0.06); border: 1px solid rgba(167, 139, 250, 0.2);
       border-radius: 12px; padding: 32px; margin: 32px 0;
     }
-    .coming-soon-badge {
+    .fiducia-badge {
       display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700;
       letter-spacing: 0.06em; text-transform: uppercase;
       background: rgba(167, 139, 250, 0.15); color: var(--purple);
       border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 20px; margin-bottom: 14px;
     }
-    .coming-soon-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
-    .coming-soon-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; }
-    .coming-soon-section ul { list-style: none; margin-top: 14px; }
-    .coming-soon-section ul li { padding: 6px 0; font-size: 0.9rem; color: var(--text-dim); }
-    .coming-soon-section ul li::before { content: "\2192 "; color: var(--purple); font-weight: 700; }
+    .fiducia-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .fiducia-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+    .fiducia-section .code-block { margin-bottom: 16px; }
+    .vs-divider { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .code-block pre .op { color: var(--cyan); }
+    .code-block pre .fn { color: var(--green); }
+    .code-block pre .label { color: var(--rose); }
+    .page-hero .featured {
+      display: inline-block; padding: 4px 14px; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(52, 211, 153, 0.12); color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 20px;
+      margin-left: 8px; margin-bottom: 16px;
+    }
 
     footer {
       border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
@@ -169,7 +178,7 @@
 
   <header class="page-hero">
     <div class="container">
-      <div class="tag">Covert Channels</div>
+      <span class="tag">Covert Channels</span><span class="featured">Fiducia Example</span>
       <h1>NRL Pump</h1>
       <p>
         A probabilistic downgrader that buffers, reorders, and adds timing jitter to
@@ -308,22 +317,82 @@
     </div>
   </div>
 
+  <div class="vs-divider">VS</div>
+
   <div class="section">
     <div class="container">
-      <div class="coming-soon-section">
-        <div class="coming-soon-badge">Coming Soon</div>
-        <h2>Fiducia Specification</h2>
+      <div class="fiducia-section">
+        <div class="fiducia-badge">Fiducia Specification</div>
+        <h2>Same topology as data diode, verified at compile time.</h2>
         <p>
-          The NRL Pump shares the same topology as the data diode in Fiducia &mdash;
-          a simple HIGH to LOW one-way channel. The pump logic (batching, reordering,
-          jitter) stays entirely within the C/Pancake implementation of the pump
-          protection domain. Fiducia verifies the structural information flow guarantee.
+          The NRL Pump is topologically identical to the data diode &mdash; HIGH &rarr;
+          PUMP &rarr; LOW with two one-way channels and no backward path. The batching,
+          Fisher-Yates reordering, and timing jitter all live within the C implementation
+          imported by the pump PD. Fiducia verifies the structural flow guarantee.
         </p>
-        <ul>
-          <li><strong>Same topology as data diode</strong> &mdash; The .fis system declaration is structurally identical to the basic data diode</li>
-          <li><strong>Internal pump logic in C/Pancake</strong> &mdash; Batching, Fisher-Yates shuffle, and jitter remain in the imported C implementation</li>
-          <li><strong>Structural flow guarantee</strong> &mdash; Fiducia verifies at compile time that no reverse channel exists from LOW to HIGH</li>
-        </ul>
+
+        <div class="code-block">
+          <div class="code-header"><span>System Declaration</span><span class="file-ext">nrl_pump.fis</span></div>
+<pre><span class="cmt">// Shared memory buffers</span>
+<span class="kw">MemoryRegion</span> high_to_pump(<span class="num">0x1_000</span>);
+<span class="kw">MemoryRegion</span> pump_to_low(<span class="num">0x1_000</span>);
+
+<span class="cmt">// Protection domains</span>
+<span class="kw">ProtectionDomain</span> domain_high(<span class="num">100</span>);
+<span class="kw">ProtectionDomain</span> domain_low(<span class="num">100</span>);
+<span class="kw">ProtectionDomain</span> nrl_pump(<span class="num">200</span>);
+
+<span class="cmt">// One-way channels: HIGH -> pump -> LOW</span>
+<span class="kw">Chan</span> h2p <span class="op">=</span> domain_high <span class="op">--></span> nrl_pump;
+    h2p.<span class="fn">set_buffer</span>(high_to_pump);
+<span class="kw">Chan</span> p2l <span class="op">=</span> nrl_pump <span class="op">--></span> domain_low;
+    p2l.<span class="fn">set_buffer</span>(pump_to_low);
+
+<span class="cmt">// System composition</span>
+<span class="kw">System</span> <span class="op">=</span> domain_high <span class="op">|||</span> domain_low <span class="op">|||</span> nrl_pump;</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Pump Process</span><span class="file-ext">nrl_pump.fi</span></div>
+<pre><span class="kw">import</span> <span class="str">"nrl_pump.c"</span> <span class="kw">as</span> pump;
+() : pump.<span class="fn">init</span>();
+
+<span class="cmt">// The pump receives from HIGH, applies batching/shuffle/jitter</span>
+<span class="cmt">// in C, then forwards to LOW. The channel topology is identical</span>
+<span class="cmt">// to a simple data diode.</span>
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    h2p<span class="op">?</span>msg <span class="op">-></span> pump.<span class="fn">batch_and_shuffle</span>(msg)
+            <span class="op">-></span> p2l<span class="op">!</span>msg <span class="op">-></span> <span class="fn">Notified</span>();</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Information Flow Labels</span><span class="file-ext">with security types</span></div>
+<pre><span class="cmt">// Security labels — same as data diode</span>
+<span class="label">High</span> <span class="kw">MemoryRegion</span> high_to_pump(<span class="num">0x1_000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> pump_to_low(<span class="num">0x1_000</span>);
+
+<span class="cmt">// Pump reads High, writes Low — permitted</span>
+<span class="label">High</span> <span class="kw">Mapping</span> inbound(high_to_pump, <span class="str">"r"</span>);    <span class="cmt">// OK</span>
+<span class="label">Low</span>  <span class="kw">Mapping</span> outbound(pump_to_low, <span class="str">"rw"</span>);   <span class="cmt">// OK</span>
+
+<span class="cmt">// No reverse path — compile-time guarantee</span>
+<span class="cmt">// Low Mapping leak(high_to_pump, "rw");  // ERROR!</span></pre>
+        </div>
+
+        <p style="margin-top:8px;">
+          <strong style="color:var(--text);">What the compiler verifies:</strong>
+          identical guarantees to the data diode &mdash; unidirectional channels,
+          no reverse path, and information flow labels. The batching, Fisher-Yates
+          shuffle, and jitter are <em>computation events</em> inside the pump PD's
+          imported C code, not communication patterns, so they don't affect the
+          choreographic verification.
+        </p>
+      </div>
+
+      <div class="contact-note">
+        Fiducia compiler and specification available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
       </div>
     </div>
   </div>

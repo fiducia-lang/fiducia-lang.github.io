@@ -150,21 +150,30 @@
     }
     .contact-note a { color: var(--accent); }
 
-    .coming-soon-section {
+    .fiducia-section {
       background: rgba(167, 139, 250, 0.06); border: 1px solid rgba(167, 139, 250, 0.2);
       border-radius: 12px; padding: 32px; margin: 32px 0;
     }
-    .coming-soon-badge {
+    .fiducia-badge {
       display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700;
       letter-spacing: 0.06em; text-transform: uppercase;
       background: rgba(167, 139, 250, 0.15); color: var(--purple);
       border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 20px; margin-bottom: 14px;
     }
-    .coming-soon-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
-    .coming-soon-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; }
-    .coming-soon-section ul { list-style: none; margin-top: 14px; }
-    .coming-soon-section ul li { padding: 6px 0; font-size: 0.9rem; color: var(--text-dim); }
-    .coming-soon-section ul li::before { content: "\2192 "; color: var(--purple); font-weight: 700; }
+    .fiducia-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .fiducia-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+    .fiducia-section .code-block { margin-bottom: 16px; }
+    .vs-divider { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .code-block pre .op { color: var(--cyan); }
+    .code-block pre .fn { color: var(--green); }
+    .code-block pre .label { color: var(--rose); }
+    .page-hero .featured {
+      display: inline-block; padding: 4px 14px; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(52, 211, 153, 0.12); color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 20px;
+      margin-left: 8px; margin-bottom: 16px;
+    }
 
     footer {
       border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
@@ -185,7 +194,7 @@
 
   <header class="page-hero">
     <div class="container">
-      <div class="tag">Media Sanitisation</div>
+      <span class="tag">Media Sanitisation</span><span class="featured">Fiducia Example</span>
       <h1>JPEG Metadata Filter</h1>
       <p>
         Strips EXIF, GPS, camera data, and comments from JPEG images crossing a

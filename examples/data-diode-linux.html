@@ -134,21 +134,30 @@
     }
     .contact-note a { color: var(--accent); }
 
-    .coming-soon-section {
+    .fiducia-section {
       background: rgba(167, 139, 250, 0.06); border: 1px solid rgba(167, 139, 250, 0.2);
       border-radius: 12px; padding: 32px; margin: 32px 0;
     }
-    .coming-soon-badge {
+    .fiducia-badge {
       display: inline-block; padding: 4px 14px; font-size: 0.75rem; font-weight: 700;
       letter-spacing: 0.06em; text-transform: uppercase;
       background: rgba(167, 139, 250, 0.15); color: var(--purple);
       border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 20px; margin-bottom: 14px;
     }
-    .coming-soon-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
-    .coming-soon-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; }
-    .coming-soon-section ul { list-style: none; margin-top: 14px; }
-    .coming-soon-section ul li { padding: 6px 0; font-size: 0.9rem; color: var(--text-dim); }
-    .coming-soon-section ul li::before { content: "\2192 "; color: var(--purple); font-weight: 700; }
+    .fiducia-section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--purple); }
+    .fiducia-section p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+    .fiducia-section .code-block { margin-bottom: 16px; }
+    .vs-divider { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .code-block pre .op { color: var(--cyan); }
+    .code-block pre .fn { color: var(--green); }
+    .code-block pre .label { color: var(--rose); }
+    .page-hero .featured {
+      display: inline-block; padding: 4px 14px; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(52, 211, 153, 0.12); color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 20px;
+      margin-left: 8px; margin-bottom: 16px;
+    }
 
     footer {
       border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
@@ -169,7 +178,7 @@
 
   <header class="page-hero">
     <div class="container">
-      <div class="tag">Virtualisation</div>
+      <span class="tag">Virtualisation</span><span class="featured">Fiducia Example</span>
       <h1>Linux VM Data Diode</h1>
       <p>
         Ethernet-level data diode between two full Linux virtual machines running on
@@ -329,22 +338,78 @@
     </div>
   </div>
 
+  <div class="vs-divider">VS</div>
+
   <div class="section">
     <div class="container">
-      <div class="coming-soon-section">
-        <div class="coming-soon-badge">Coming Soon</div>
-        <h2>Fiducia Specification</h2>
+      <div class="fiducia-section">
+        <div class="fiducia-badge">Fiducia Specification</div>
+        <h2>The same VM diode, verified at compile time.</h2>
         <p>
-          The Fiducia version of this system will use the same data diode pattern
-          from the basic example but extended with virtual machine support. This
-          is a key milestone for Fiducia &mdash; handling VM-based architectures
-          within the choreographic specification framework.
+          The inter-PD choreography between vmm_high, data_diode, and vmm_low
+          is directly expressible in ChorFi today. The one-way channel topology
+          is identical to the basic data diode &mdash; Fiducia verifies that no
+          reverse path exists, even with full Linux VMs behind the VMMs.
         </p>
-        <ul>
-          <li><strong>Same data diode pattern</strong> &mdash; The one-way channel topology is identical to the basic data diode in Fiducia's .fis format</li>
-          <li><strong>VM support extension</strong> &mdash; Extending Fiducia to express virtual_machine blocks, guest RAM, vCPU, and device passthrough</li>
-          <li><strong>Structural flow guarantee</strong> &mdash; Compile-time verification that no reverse channel exists from vmm_low to vmm_high at the Ethernet level</li>
-        </ul>
+
+        <div class="code-block">
+          <div class="code-header"><span>System Declaration</span><span class="file-ext">vm_diode.fis</span></div>
+<pre><span class="cmt">// Network ring buffers (2MB each)</span>
+<span class="kw">MemoryRegion</span> net_high_to_diode(<span class="num">0x200_000</span>);
+<span class="kw">MemoryRegion</span> net_diode_to_low(<span class="num">0x200_000</span>);
+
+<span class="cmt">// Protection domains (VMMs + trusted diode)</span>
+<span class="kw">ProtectionDomain</span> vmm_high(<span class="num">101</span>);
+<span class="kw">ProtectionDomain</span> vmm_low(<span class="num">101</span>);
+<span class="kw">ProtectionDomain</span> data_diode(<span class="num">200</span>);
+
+<span class="cmt">// One-way channels: HIGH -> diode -> LOW</span>
+<span class="kw">Chan</span> h2d <span class="op">=</span> vmm_high <span class="op">--></span> data_diode;
+    h2d.<span class="fn">set_buffer</span>(net_high_to_diode);
+<span class="kw">Chan</span> d2l <span class="op">=</span> data_diode <span class="op">--></span> vmm_low;
+    d2l.<span class="fn">set_buffer</span>(net_diode_to_low);
+
+<span class="cmt">// System composition</span>
+<span class="kw">System</span> <span class="op">=</span> vmm_high <span class="op">|||</span> vmm_low <span class="op">|||</span> data_diode;</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Diode Process</span><span class="file-ext">data_diode.fi</span></div>
+<pre><span class="kw">import</span> <span class="str">"data_diode.c"</span> <span class="kw">as</span> dd;
+() : dd.<span class="fn">init</span>();
+
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    h2d<span class="op">?</span>frame <span class="op">-></span> d2l<span class="op">!</span>frame <span class="op">-></span> <span class="fn">Notified</span>();</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Information Flow Labels</span><span class="file-ext">with security types</span></div>
+<pre><span class="cmt">// Security labels enforce one-way flow at the type level</span>
+<span class="label">High</span> <span class="kw">MemoryRegion</span> net_high_to_diode(<span class="num">0x200_000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> net_diode_to_low(<span class="num">0x200_000</span>);
+
+<span class="cmt">// Diode reads High, writes Low — permitted (downgrade)</span>
+<span class="label">High</span> <span class="kw">Mapping</span> in_buf(net_high_to_diode, <span class="str">"r"</span>);   <span class="cmt">// OK</span>
+<span class="label">Low</span>  <span class="kw">Mapping</span> out_buf(net_diode_to_low, <span class="str">"rw"</span>);  <span class="cmt">// OK</span>
+
+<span class="cmt">// Reverse would be a compile-time ERROR:</span>
+<span class="cmt">// Low Mapping leak(net_high_to_diode, "rw"); // High -> Low!</span></pre>
+        </div>
+
+        <p style="margin-top:8px;">
+          <strong style="color:var(--text);">What the compiler verifies:</strong>
+          unidirectional channels (<code>--></code>), no reverse path from vmm_low to vmm_high,
+          information flow labels prevent High&rarr;Low leaks, and the <code>|||</code>
+          composition ensures all PDs are accounted for. The VM guest RAM and device
+          passthrough remain in the Microkit system description &mdash; Fiducia
+          orchestrates the inter-PD communication layer.
+        </p>
+      </div>
+
+      <div class="contact-note">
+        Fiducia compiler and specification available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
       </div>
     </div>
   </div>
