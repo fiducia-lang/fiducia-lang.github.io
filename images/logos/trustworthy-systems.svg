@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="15.346236mm"
+   height="6.7139783mm"
+   viewBox="0 0 15.346236 6.7139783"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="tslogo_key.svg"
+   inkscape:export-filename="C:\Users\Birgit Brecknell\Documents\TS Website\tslogo.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2">
+    <rect
+       x="276.48267"
+       y="725.76703"
+       width="1904.9657"
+       height="931.74664"
+       id="rect37591" />
+    <rect
+       x="-95.386528"
+       y="471.40298"
+       width="16.588961"
+       height="125.79962"
+       id="rect26820" />
+    <rect
+       x="-456.19641"
+       y="540.52362"
+       width="161.74237"
+       height="170.03685"
+       id="rect14574" />
+    <rect
+       x="-471.40298"
+       y="493.52158"
+       width="174.1841"
+       height="103.68101"
+       id="rect3186" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-0.10990137,-0.79912448)">
+    <ellipse
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke-width:0.264583"
+       id="path159"
+       cx="51.755547"
+       cy="74.432884"
+       rx="17.739532"
+       ry="15.54495" />
+    <text
+       xml:space="preserve"
+       transform="scale(0.26458333)"
+       id="text3184"
+       style="font-style:normal;font-weight:normal;font-size:160px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect3186);fill:#000000;fill-opacity:1;stroke:none"><tspan
+         x="-471.40234"
+         y="743.17598"
+         id="tspan17367"><tspan
+           dx="0 89.457703"
+           style="font-family:'Sitka Display';-inkscape-font-specification:'Sitka Display'"
+           id="tspan17365">TS</tspan></tspan></text>
+    <g
+       id="g12119">
+      <rect
+         style="fill:#ffffff;stroke:none;stroke-width:0.499999;stroke-opacity:1"
+         id="rect11835"
+         width="15.346236"
+         height="6.7139783"
+         x="0.10990137"
+         y="0.79912448" />
+      <ellipse
+         style="fill:none;fill-opacity:1;stroke:#8dc43d;stroke-width:1.16521;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="path1344"
+         cx="3.259258"
+         cy="4.0451732"
+         rx="2.1404674"
+         ry="2.4503014" />
+      <rect
+         style="fill:#8DC43D;fill-opacity:100;stroke:#8DC43D;stroke-width:1.25144;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect1434"
+         width="8.5931139"
+         height="0.20968656"
+         x="5.6786637"
+         y="3.4720128" />
+      <rect
+         style="fill:#000000;fill-opacity:0;stroke:#8DC43D;stroke-width:1.63351;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect1562"
+         width="3.5535097"
+         height="1.3451371"
+         x="9.627224"
+         y="4.8460751" />
+      <text
+         xml:space="preserve"
+         transform="matrix(0.03230661,0,0,0.03385403,23.787394,-15.436573)"
+         id="text14572"
+         style="font-style:normal;font-weight:normal;font-size:140.614px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect14574);fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.00157;stroke-miterlimit:4;stroke-dasharray:none"><tspan
+           x="-456.19727"
+           y="668.80985"
+           id="tspan17371"><tspan
+             style="font-weight:bold;font-size:107.976px;font-family:Verdana;-inkscape-font-specification:'Verdana Bold';fill:#ffffff"
+             id="tspan17369">TS</tspan></tspan></text>
+    </g>
+  </g>
+</svg>
