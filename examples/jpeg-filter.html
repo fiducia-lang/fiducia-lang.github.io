@@ -396,22 +396,83 @@
     </div>
   </div>
 
+  <div class="vs-divider">VS</div>
+
   <div class="section">
     <div class="container">
-      <div class="coming-soon-section">
-        <div class="coming-soon-badge">Coming Soon</div>
-        <h2>Fiducia Specification</h2>
+      <div class="fiducia-section">
+        <div class="fiducia-badge">Fiducia Specification</div>
+        <h2>Verified metadata stripping, same diode topology.</h2>
         <p>
-          The Fiducia version of this system will use the same one-way channel
-          topology as the data diode. The JPEG parsing and filtering logic stays
-          entirely within the C/Pancake implementation of the jpeg_filter protection
-          domain &mdash; Fiducia verifies the structural information flow guarantee.
+          The JPEG filter uses the same one-way channel topology as the data diode.
+          The filter PD's process receives JPEG data from HIGH, calls the C
+          metadata-stripping function (which transforms the buffer contents in place),
+          and forwards the clean image to LOW. ChorFi's <code>c?x &rarr; c!x</code>
+          pattern handles this naturally since <code>x</code> is a buffer reference
+          whose contents the C event modifies.
         </p>
-        <ul>
-          <li><strong>Same topology as data diode</strong> &mdash; The .fis system declaration uses the identical one-way channel pattern</li>
-          <li><strong>JPEG parsing stays in C/Pancake</strong> &mdash; The segment-level filter logic remains in the imported C implementation</li>
-          <li><strong>Structural flow guarantee</strong> &mdash; Fiducia verifies at compile time that no image data or metadata can flow from LOW back to HIGH</li>
-        </ul>
+
+        <div class="code-block">
+          <div class="code-header"><span>System Declaration</span><span class="file-ext">jpeg_filter.fis</span></div>
+<pre><span class="cmt">// Network ring buffers (2MB each)</span>
+<span class="kw">MemoryRegion</span> net_high_to_filter(<span class="num">0x200_000</span>);
+<span class="kw">MemoryRegion</span> net_filter_to_low(<span class="num">0x200_000</span>);
+
+<span class="cmt">// Protection domains (VMMs + trusted filter)</span>
+<span class="kw">ProtectionDomain</span> vmm_high(<span class="num">101</span>);
+<span class="kw">ProtectionDomain</span> vmm_low(<span class="num">101</span>);
+<span class="kw">ProtectionDomain</span> jpeg_filter(<span class="num">200</span>);
+
+<span class="cmt">// One-way channels: HIGH -> filter -> LOW</span>
+<span class="kw">Chan</span> h2f <span class="op">=</span> vmm_high <span class="op">--></span> jpeg_filter;
+    h2f.<span class="fn">set_buffer</span>(net_high_to_filter);
+<span class="kw">Chan</span> f2l <span class="op">=</span> jpeg_filter <span class="op">--></span> vmm_low;
+    f2l.<span class="fn">set_buffer</span>(net_filter_to_low);
+
+<span class="cmt">// System composition</span>
+<span class="kw">System</span> <span class="op">=</span> vmm_high <span class="op">|||</span> vmm_low <span class="op">|||</span> jpeg_filter;</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Filter Process</span><span class="file-ext">jpeg_filter.fi</span></div>
+<pre><span class="kw">import</span> <span class="str">"jpeg_filter.c"</span> <span class="kw">as</span> jf;
+() : jf.<span class="fn">init</span>();
+
+<span class="cmt">// Receive JPEG from HIGH, strip metadata in C,</span>
+<span class="cmt">// forward clean image to LOW</span>
+<span class="kw">Process</span>:
+  <span class="fn">Notified</span>():
+    h2f<span class="op">?</span>jpeg <span class="op">-></span> jf.<span class="fn">strip_metadata</span>(jpeg)
+             <span class="op">-></span> f2l<span class="op">!</span>jpeg <span class="op">-></span> <span class="fn">Notified</span>();</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Information Flow Labels</span><span class="file-ext">with security types</span></div>
+<pre><span class="cmt">// Security labels enforce one-way image flow</span>
+<span class="label">High</span> <span class="kw">MemoryRegion</span> net_high_to_filter(<span class="num">0x200_000</span>);
+<span class="label">Low</span>  <span class="kw">MemoryRegion</span> net_filter_to_low(<span class="num">0x200_000</span>);
+
+<span class="cmt">// Filter reads High (raw JPEG), writes Low (clean JPEG)</span>
+<span class="label">High</span> <span class="kw">Mapping</span> in_buf(net_high_to_filter, <span class="str">"r"</span>);    <span class="cmt">// OK</span>
+<span class="label">Low</span>  <span class="kw">Mapping</span> out_buf(net_filter_to_low, <span class="str">"rw"</span>);   <span class="cmt">// OK</span>
+
+<span class="cmt">// No reverse path — metadata can never flow back</span>
+<span class="cmt">// Low Mapping leak(net_high_to_filter, "rw"); // ERROR!</span></pre>
+        </div>
+
+        <p style="margin-top:8px;">
+          <strong style="color:var(--text);">What the compiler verifies:</strong>
+          unidirectional channels (<code>--></code>), no reverse path from vmm_low to vmm_high,
+          and information flow labels prevent any data flowing back. The JPEG segment
+          parsing and metadata stripping are <em>computation events</em> &mdash; they
+          transform the buffer contents but don't affect the communication topology
+          that ChorFi verifies.
+        </p>
+      </div>
+
+      <div class="contact-note">
+        Fiducia compiler and specification available on request.
+        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
       </div>
     </div>
   </div>
