@@ -603,6 +603,7 @@
         <li><a href="#hardware">Hardware</a></li>
         <li><a href="#team">Team</a></li>
         <li><a href="#supporters">Supporters</a></li>
+        <li><a href="#blog">Blog</a></li>
         <li><a href="mailto:alex.potanin@anu.edu.au">Contact</a></li>
       </ul>
     </div>
@@ -1079,6 +1080,30 @@
     </div>
   </section>
 
+  <!-- Blog -->
+  <section id="blog">
+    <div class="container">
+      <div class="section-label">Blog</div>
+      <h2>From the workshop.</h2>
+      <p class="section-desc">
+        Notes from building verified systems on real hardware.
+      </p>
+      <div class="use-cases" style="grid-template-columns: 1fr;">
+        <a href="blog/sel4-jetson-orin-nano.html" class="use-case featured" style="max-width:700px;">
+          <div class="use-case-tag tag-space">Hardware</div>
+          <h3>How to Get sel4test Running on NVIDIA Jetson Orin Nano 8GB</h3>
+          <p>
+            A complete step-by-step guide for porting the seL4 microkernel to the
+            Jetson Orin Nano developer kit. Covers hardware setup, serial console,
+            custom BL31 firmware to fix T234 RAS errors, building sel4test, and
+            booting via UEFI. 141/141 tests pass.
+          </p>
+          <p style="margin-top:12px;font-size:0.8rem;color:var(--text-dim);">March 7, 2026</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section style="text-align:center; padding: 80px 0 100px; background: rgba(17,24,39,0.4);">
     <div class="container">
@@ -1108,6 +1133,7 @@
         <a href="#research">Research</a>
         <a href="#team">Team</a>
         <a href="#supporters">Supporters</a>
+        <a href="#blog">Blog</a>
         <a href="mailto:alex.potanin@anu.edu.au">Contact</a>
       </div>
       <p>Fiducia is developed at the <a href="https://comp.anu.edu.au/">School of Computing</a>, <a href="https://anu.edu.au">The Australian National University</a> with support from <a href="https://trustworthy.systems/">Trustworthy Systems</a> and <a href="https://skykraft.com.au/">Skykraft</a>.</p>
