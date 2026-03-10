@@ -774,7 +774,24 @@ ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</co
       are triggered by speculative accesses.
     </p>
 
-    <h3>9.7 Key Build Configuration</h3>
+    <h3>9.7 SDRAM-Only Physical Memory Window</h3>
+    <p>
+      The upstream kernel's <code>map_kernel_window()</code> maps the entire physical
+      address range (<code>PADDR_BASE</code> to <code>PADDR_TOP</code>) as Normal
+      memory using 2 MiB large pages. On the T234 with a 40-bit PA, this covers ~510 GiB
+      &mdash; most of which is not DRAM but device registers and firmware-protected regions.
+      Speculative accesses to these addresses trigger RAS errors.
+    </p>
+    <p>
+      Our port modifies <code>map_kernel_window()</code> to iterate over
+      <code>avail_p_regs[]</code> (the SDRAM regions from the device tree) and only
+      maps those ranges. Non-DRAM physical addresses remain unmapped in the kernel's
+      physical window, so speculative accesses fault harmlessly rather than hitting
+      device/firmware memory. This is noted as a FIXME in upstream
+      <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>.
+    </p>
+
+    <h3>9.8 Key Build Configuration</h3>
     <pre><code>PLATFORM=orin-nano
 AARCH64=TRUE
 ARM_HYP=ON                          # UEFI boots to EL2
@@ -830,6 +847,7 @@ KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
         <tr><td><code>kernel/tools/dts/orin-nano.dts</code></td><td>Full device tree extracted from hardware</td></tr>
         <tr><td><code>kernel/src/drivers/serial/tegra_omap3_dwapb.c</code></td><td>8250-style UART driver</td></tr>
         <tr><td><code>kernel/src/arch/arm/kernel/boot.c</code></td><td>Low-address reservation for T234</td></tr>
+        <tr><td><code>kernel/src/arch/arm/64/kernel/vspace.c</code></td><td>SDRAM-only physical memory window mapping</td></tr>
         <tr><td><code>tools/seL4/elfloader-tool/src/arch-arm/sys_boot.c</code></td><td>BPMP UARTC clock enable, cache flush</td></tr>
         <tr><td><code>projects/seL4_libs/libsel4utils/src/process.c</code></td><td>VKA error path cleanup fix</td></tr>
       </tbody>
