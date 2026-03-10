@@ -227,7 +227,7 @@
   </nav>
 
   <article class="article-container">
-    <p class="article-meta">March 7, 2026 &middot; Alex Potanin</p>
+    <p class="article-meta">March 10, 2026 &middot; Alex Potanin</p>
     <h1>How to Get sel4test Running on NVIDIA Jetson Orin Nano 8GB</h1>
     <p class="subtitle">
       A complete step-by-step guide for porting the seL4 microkernel to the
@@ -594,7 +594,7 @@ ln -sf tools/seL4/cmake-tool/griddle griddle</code></pre>
         <tr>
           <td><code>tools/seL4/</code></td>
           <td><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4_tools</a></td>
-          <td>Elfloader: EFI boot, BPMP UARTC clock enable, cache flush to PoC</td>
+          <td>Elfloader: EFI boot, BPMP UARTC clock enable, cache flush to PoC, Normal memory identity mapping</td>
         </tr>
         <tr>
           <td><code>projects/seL4_libs/</code></td>
@@ -744,13 +744,21 @@ ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</co
       AON power domain &mdash; clock stays alive without keepalive.
     </p>
 
-    <h3>9.6 Cache Maintenance</h3>
+    <h3>9.6 Cache Maintenance and Identity Mapping</h3>
     <p>
       The T234 has a 4 MB System-Level Cache (SLC / L4). <code>dc cisw</code>
       (clean/invalidate by set/way) only reaches L1/L2/L3, <strong>not the SLC</strong>.
       The elfloader uses <code>dc cvac</code> (clean by VA to Point of Coherence).
       For PTE writes, the kernel uses <code>dc civac + dsb</code> (clean AND invalidate
       + full system barrier).
+    </p>
+    <p>
+      The elfloader's identity mapping uses <strong>MT_NORMAL</strong> memory type
+      (attribute index 4) instead of the default DEVICE_nGnRnE (index 0). This follows
+      upstream commit <code>ee7435b</code> and prevents speculative accesses to
+      device/secure memory regions during the MMU transition. With Normal memory,
+      instruction fetch after MMU enable is architecturally valid, and no RAS errors
+      are triggered by speculative accesses.
     </p>
 
     <h3>9.7 Key Build Configuration</h3>
