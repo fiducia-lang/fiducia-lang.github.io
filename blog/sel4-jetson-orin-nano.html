@@ -296,8 +296,9 @@
     </p>
 
     <p>
-      The port required changes across 5 seL4 repositories plus a custom build of
+      The port required changes across 4 seL4 repositories plus a custom build of
       NVIDIA's BL31 (ARM Trusted Firmware) to handle a T234-specific RAS issue.
+      The test suite (sel4test) runs unmodified from upstream.
       All code is published on GitHub.
     </p>
 
@@ -572,9 +573,9 @@ pip3 install --user pyfdt pyelftools libarchive-c jinja2</code></pre>
 
     <h3>6.2 Clone Repositories</h3>
     <p>
-      The port lives across 5 forked repositories under
+      The port lives across 4 forked repositories under
       <a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>,
-      all on the <code>orin-nano</code> branch:
+      all on the <code>orin-nano</code> branch, plus upstream sel4test (unmodified):
     </p>
     <pre><code>mkdir -p ~/jetson/potanin-git && cd ~/jetson/potanin-git
 
@@ -584,10 +585,10 @@ mkdir -p tools
 git clone -b orin-nano https://github.com/potanin/seL4_tools.git tools/seL4
 mkdir -p projects
 git clone -b orin-nano https://github.com/potanin/seL4_libs.git projects/seL4_libs
-git clone -b orin-nano https://github.com/potanin/sel4test.git projects/sel4test
 git clone -b orin-nano https://github.com/potanin/util_libs.git projects/util_libs
 
 # Upstream repos (pinned commits)
+git clone https://github.com/seL4/sel4test.git projects/sel4test
 git clone https://github.com/seL4/musllibc.git projects/musllibc
 git clone https://github.com/seL4/sel4_projects_libs.git projects/sel4_projects_libs
 git clone https://github.com/seL4/sel4runtime.git projects/sel4runtime
@@ -617,11 +618,6 @@ ln -sf tools/seL4/cmake-tool/griddle griddle</code></pre>
           <td><code>projects/seL4_libs/</code></td>
           <td><a href="https://github.com/potanin/seL4_libs/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4_libs</a></td>
           <td>VKA error path fix, serial initialization</td>
-        </tr>
-        <tr>
-          <td><code>projects/sel4test/</code></td>
-          <td><a href="https://github.com/potanin/sel4test/tree/orin-nano" target="_blank" rel="noopener">potanin/sel4test</a></td>
-          <td>Test adjustments for Orin Nano platform</td>
         </tr>
         <tr>
           <td><code>projects/util_libs/</code></td>
