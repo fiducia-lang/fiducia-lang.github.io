@@ -261,7 +261,7 @@
         <li><a href="#overview">Overview</a></li>
         <li><a href="#hardware">Hardware Requirements</a></li>
         <li><a href="#serial">Serial Console (UARTC on J14)</a></li>
-        <li><a href="#jetpack">Installing JetPack Linux</a></li>
+        <li><a href="#jetpack">Prerequisites</a></li>
         <li><a href="#build">Building seL4</a></li>
         <li><a href="#boot">Booting seL4</a></li>
         <li><a href="#output">Expected Output</a></li>
@@ -311,9 +311,8 @@
         <tr><td><strong>MicroSD card (32GB+)</strong></td><td>For JetPack Linux installation and as the UEFI boot medium.</td></tr>
         <tr><td><strong>Ethernet cable</strong></td><td>Connects the Jetson to your LAN for HTTP boot.</td></tr>
         <tr><td><strong>HDMI monitor + USB keyboard</strong></td><td>For initial UEFI configuration. Not needed after one-time setup.</td></tr>
-        <tr><td><strong>Micro-USB cable</strong></td><td>For USB recovery mode (initial JetPack installation).</td></tr>
         <tr><td><strong>DC power supply</strong></td><td>5V/4A barrel jack (included with Dev Kit), or USB-C PD.</td></tr>
-        <tr><td><strong>Host machine</strong></td><td>Linux x86_64 (Ubuntu 22.04 recommended). For building seL4 and flashing firmware.</td></tr>
+        <tr><td><strong>Host machine</strong></td><td>Linux x86_64 (Ubuntu 22.04 recommended). For cross-compiling seL4.</td></tr>
         <tr><td><strong>Dupont jumper wires</strong></td><td>3 female-to-female wires for the serial console.</td></tr>
       </tbody>
     </table>
@@ -361,45 +360,16 @@
     </p>
 
     <!-- 4. JetPack -->
-    <h2 id="jetpack">4. Installing JetPack Linux</h2>
+    <h2 id="jetpack">4. Prerequisites</h2>
 
     <p>
-      Before flashing custom firmware, the Jetson must have stock NVIDIA JetPack/L4T
-      Linux installed. This ensures the QSPI flash has the correct firmware chain.
+      The Jetson must have stock NVIDIA JetPack/L4T firmware on QSPI (R36.4.4 or later).
+      New Dev Kits ship with this pre-installed. If needed, flash using
+      <a href="https://developer.nvidia.com/sdk-manager" target="_blank" rel="noopener">NVIDIA SDK Manager</a>
+      or the command-line BSP tools from
+      <a href="https://developer.nvidia.com/embedded/jetson-linux" target="_blank" rel="noopener">developer.nvidia.com/embedded/jetson-linux</a>.
+      No custom firmware modifications are required &mdash; stock BL31 works unmodified.
     </p>
-
-    <h3>4.1 Download BSP</h3>
-    <p>
-      Download from
-      <a href="https://developer.nvidia.com/embedded/jetson-linux" target="_blank" rel="noopener">developer.nvidia.com/embedded/jetson-linux</a>
-      (R36.4.4 or later):
-    </p>
-    <ul>
-      <li><code>Jetson_Linux_R36.4.4_aarch64.tbz2</code> (BSP, ~712 MB)</li>
-      <li><code>Tegra_Linux_Sample-Root-Filesystem_R36.4.4_aarch64.tbz2</code> (rootfs, ~1.8 GB)</li>
-    </ul>
-
-    <h3>4.2 Extract and Prepare</h3>
-    <pre><code>mkdir -p ~/jetson/linux && cd ~/jetson/linux
-
-# Extract BSP
-tar xjf Jetson_Linux_R36.4.4_aarch64.tbz2
-
-# Extract root filesystem
-sudo tar xjf Tegra_Linux_Sample-Root-Filesystem_R36.4.4_aarch64.tbz2 \
-    -C Linux_for_Tegra/rootfs/
-
-# Apply NVIDIA binaries
-cd Linux_for_Tegra
-sudo ./apply_binaries.sh
-
-# Create default user
-sudo ./tools/l4t_create_default_user.sh -u nvidia -p nvidia -a</code></pre>
-
-    <h3>4.3 Flash</h3>
-    <pre><code>cd ~/jetson/linux/Linux_for_Tegra
-sudo ./flash.sh jetson-orin-nano-devkit mmcblk0p1</code></pre>
-    <p>This flashes both the QSPI firmware and writes the rootfs to the SD card.</p>
 
     <!-- 5. Building seL4 -->
     <h2 id="build">5. Building seL4</h2>
