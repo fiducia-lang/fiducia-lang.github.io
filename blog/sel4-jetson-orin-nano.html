@@ -330,13 +330,11 @@
       to set up your Dev Kit. Stock firmware works unmodified.
     </p>
 
-    <h3>Install Build Dependencies</h3>
-    <pre><code>sudo apt install \
-    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-    cmake ninja-build python3 python3-pip \
-    device-tree-compiler libxml2-utils ccache
-
-pip3 install --user pyfdt pyelftools libarchive-c jinja2</code></pre>
+    <p>
+      Install build dependencies per the seL4
+      <a href="https://docs.sel4.systems/projects/buildsystem/host-dependencies.html" target="_blank" rel="noopener">host dependencies</a>
+      guide, including the AArch64 cross-compiler (<code>gcc-aarch64-linux-gnu</code>).
+    </p>
 
     <h3>Clone Repositories</h3>
     <p>
