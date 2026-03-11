@@ -258,50 +258,25 @@
     <div class="toc">
       <h4>Contents</h4>
       <ol>
-        <li><a href="#overview">Overview</a></li>
-        <li><a href="#hardware">Hardware Requirements</a></li>
-        <li><a href="#serial">Serial Console (UARTC on J14)</a></li>
-        <li><a href="#jetpack">Prerequisites</a></li>
+        <li><a href="#hardware">Hardware</a></li>
+        <li><a href="#serial">Serial Console</a></li>
         <li><a href="#build">Building seL4</a></li>
-        <li><a href="#boot">Booting seL4</a></li>
-        <li><a href="#output">Expected Output</a></li>
+        <li><a href="#boot">Booting</a></li>
         <li><a href="#technical">Technical Details</a></li>
         <li><a href="#repos">Repository Structure</a></li>
       </ol>
     </div>
 
-    <!-- 1. Overview -->
-    <h2 id="overview">1. Overview</h2>
-
     <p>
-      This project ports the <a href="https://sel4.systems/" target="_blank" rel="noopener">seL4 microkernel</a>
-      to the NVIDIA Jetson Orin Nano 8GB Developer Kit, built around the Tegra T234 SoC
-      (6-core Cortex-A78AE, ARMv8.2-A). seL4 boots bare-metal from UEFI as an EFI
-      application, running the complete sel4test test suite.
+      The port changes 3 seL4 repositories
+      (<a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>,
+      <code>orin-nano</code> branch).
+      Stock NVIDIA firmware works unmodified.
+      sel4test and seL4_libs run unmodified from upstream.
     </p>
 
-    <p>
-      <strong>What works:</strong> 141 out of 141 compiled tests pass. 42 tests are disabled
-      at compile time (16 MCS-only, 7 SMP-only, 1 multi-domain, 1 permanently disabled,
-      1 VCPU/VM, and others not applicable to this non-MCS, non-SMP, single-domain
-      configuration).
-    </p>
-
-    <p>
-      <strong>What you will end up with:</strong> A Jetson Orin Nano that boots seL4 from
-      UEFI (via HTTP boot or SD card), runs the full sel4test suite, and prints results
-      over a serial console.
-    </p>
-
-    <p>
-      The port required changes across 3 seL4 repositories.
-      No custom firmware is needed &mdash; stock NVIDIA BL31 works unmodified.
-      The test suite (sel4test) and seL4_libs run unmodified from upstream.
-      All code is published on GitHub.
-    </p>
-
-    <!-- 2. Hardware -->
-    <h2 id="hardware">2. Hardware Requirements</h2>
+    <!-- 1. Hardware -->
+    <h2 id="hardware">1. Hardware</h2>
 
     <table>
       <thead><tr><th>Item</th><th>Notes</th></tr></thead>
@@ -317,20 +292,13 @@
       </tbody>
     </table>
 
-    <!-- 3. Serial -->
-    <h2 id="serial">3. Serial Console: UARTC on J14 Button Header</h2>
+    <!-- 2. Serial -->
+    <h2 id="serial">2. Serial Console</h2>
 
     <p>
       The serial console uses <strong>UARTC</strong> on the <strong>J14 button header</strong> &mdash;
-      the small header near the three buttons on the carrier board. It is <em>not</em>
-      the 40-pin GPIO header.
+      the small header near the three buttons on the carrier board (not the 40-pin GPIO header).
     </p>
-
-    <div class="callout-warn callout">
-      <strong>Important:</strong> UARTC is in the always-on (AON) power domain. Unlike UARTA
-      on the 40-pin header, UARTC's clock does not die when BPMP power-gates the peripheral.
-      This is why UARTC was chosen.
-    </div>
 
     <table>
       <thead><tr><th>J14 Pin</th><th>Signal</th><th>Wire Color</th><th>Connect to Adapter</th></tr></thead>
@@ -359,22 +327,17 @@
       <code>/dev/ttyACM0</code>. Use <code>dmesg | tail</code> after plugging in the adapter.)
     </p>
 
-    <!-- 4. JetPack -->
-    <h2 id="jetpack">4. Prerequisites</h2>
+    <!-- 3. Building seL4 -->
+    <h2 id="build">3. Building seL4</h2>
 
     <p>
-      The Jetson must have JetPack 6.x firmware on QSPI (R36.4.4 or later).
+      The Jetson must have JetPack 6.x firmware on QSPI.
       Follow NVIDIA's
       <a href="https://developer.nvidia.com/embedded/learn/get-started-jetson-orin-nano-devkit" target="_blank" rel="noopener">Getting Started guide</a>
-      to set up your Dev Kit, including any firmware update required for JetPack 6.x
-      compatibility. No custom firmware modifications are required &mdash; stock BL31
-      works unmodified.
+      to set up your Dev Kit. Stock firmware works unmodified.
     </p>
 
-    <!-- 5. Building seL4 -->
-    <h2 id="build">5. Building seL4</h2>
-
-    <h3>5.1 Install Build Dependencies</h3>
+    <h3>Install Build Dependencies</h3>
     <pre><code>sudo apt install \
     gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
     cmake ninja-build python3 python3-pip \
@@ -382,11 +345,11 @@
 
 pip3 install --user pyfdt pyelftools libarchive-c jinja2</code></pre>
 
-    <h3>5.2 Clone Repositories</h3>
+    <h3>Clone Repositories</h3>
     <p>
-      The port lives across 3 forked repositories under
-      <a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>,
-      all on the <code>orin-nano</code> branch, plus upstream dependencies (unmodified):
+      3 forked repos
+      (<a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>,
+      <code>orin-nano</code> branch) plus upstream dependencies:
     </p>
     <pre><code>mkdir -p ~/jetson/potanin-git && cd ~/jetson/potanin-git
 
@@ -411,29 +374,7 @@ ln -sf projects/sel4test/easy-settings.cmake easy-settings.cmake
 ln -sf tools/seL4/cmake-tool/init-build.sh init-build.sh
 ln -sf tools/seL4/cmake-tool/griddle griddle</code></pre>
 
-    <h3>Forked Repositories</h3>
-    <table>
-      <thead><tr><th>Directory</th><th>GitHub Repo</th><th>Role</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><code>kernel/</code></td>
-          <td><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4</a></td>
-          <td>seL4 kernel with Orin Nano platform port: T234 device tree, UARTC serial driver, cache maintenance fixes, low-address reservation</td>
-        </tr>
-        <tr>
-          <td><code>tools/seL4/</code></td>
-          <td><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4_tools</a></td>
-          <td>Elfloader: EFI boot, BPMP UARTC clock enable, cache flush to PoC, Normal memory identity mapping</td>
-        </tr>
-        <tr>
-          <td><code>projects/util_libs/</code></td>
-          <td><a href="https://github.com/potanin/util_libs/tree/orin-nano" target="_blank" rel="noopener">potanin/util_libs</a></td>
-          <td>Platform stub headers, timer fix</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>5.3 Build</h3>
+    <h3>Build</h3>
     <pre><code>cd ~/jetson/potanin-git
 mkdir build-orin && cd build-orin
 
@@ -455,8 +396,8 @@ ninja</code></pre>
       <code>rm -rf build-orin</code> and re-run init-build.sh + ninja.
     </div>
 
-    <!-- 6. Booting -->
-    <h2 id="boot">6. Booting seL4</h2>
+    <!-- 4. Booting -->
+    <h2 id="boot">4. Booting</h2>
 
     <h3>Option A: HTTP Boot (Recommended)</h3>
     <p>
@@ -482,18 +423,9 @@ sudo cp build-orin/images/sel4test-driver-image-arm-orin-nano \
         /mnt/sd/EFI/BOOT/BOOTAA64.EFI
 sudo umount /mnt/sd</code></pre>
 
-    <!-- 7. Expected Output -->
-    <h2 id="output">7. Expected Output</h2>
-
+    <h3>Expected Output</h3>
     <pre><code>ELF-loader started on CPU: ARM Ltd. Cortex-A78AE r0p1
   paddr=[0x90000000..0x906dffff]
-ELF-loading image 'kernel' to 0x80000000
-  paddr=[0x80000000..0x8003ffff]
-  vaddr=[0x8080000000..0x808003ffff]
-ELF-loading image 'sel4test-driver' to 0x80040000
-  paddr=[0x80040000..0x80578fff]
-  vaddr=[0x400000..0x938fff]
-Enabling hypervisor MMU and paging
 Jumping to kernel-image entry point...
 
 Bootstrapping kernel
@@ -504,30 +436,15 @@ seL4 Test
 Test suite passed. 141 tests passed. 42 tests disabled.
 All is well in the universe</code></pre>
 
-    <!-- 8. Technical Details -->
-    <h2 id="technical">8. Technical Details</h2>
+    <!-- 5. Technical Details -->
+    <h2 id="technical">5. Technical Details</h2>
 
-    <h3>8.1 Boot Chain</h3>
-    <pre><code>BROM (on-chip ROM, EL3)
-  &rarr; MB1 (first-stage bootloader, NVIDIA proprietary, EL3)
-    &rarr; MB2 (second-stage bootloader, EL3)
-      &rarr; BL31 / ATF (ARM Trusted Firmware, EL3 -- stays resident)
-        &rarr; UEFI (NVIDIA EDK2-based, EL2)
-          &rarr; elfloader (seL4 EFI application, EL2)
-            &rarr; seL4 kernel (EL2) + root task (EL1)</code></pre>
     <p>
-      UEFI runs at EL2, not EL1. seL4 must be built with <code>ARM_HYP=ON</code>.
-      Stock NVIDIA BL31 stays resident at EL3 handling SMC calls (PSCI) for the system's lifetime.
+      UEFI boots to EL2 (not EL1), so seL4 must build with <code>ARM_HYP=ON</code>.
+      The T234 has 6 Cortex-A78AE cores (ARMv8.2-A); seL4 runs single-core (non-SMP).
     </p>
 
-    <h3>8.2 CPU</h3>
-    <ul>
-      <li>6 Cortex-A78AE cores (ARMv8.2-A), silicon revision r0p1</li>
-      <li>2 clusters: Cluster 0 (cores 0-3), Cluster 1 (cores 4-5)</li>
-      <li>seL4 runs single-core (core 0 only, non-SMP configuration)</li>
-    </ul>
-
-    <h3>8.3 Memory Map</h3>
+    <h3>Memory Map</h3>
     <table>
       <thead><tr><th>Region</th><th>Start</th><th>End</th><th>Size</th></tr></thead>
       <tbody>
@@ -543,20 +460,7 @@ All is well in the universe</code></pre>
       untypeds covering firmware-protected addresses.
     </p>
 
-    <h3>8.4 GIC and Timer</h3>
-    <p>
-      GICv3 (GIC-600AE): GICD at <code>0x0f400000</code>, GICR at <code>0x0f440000</code>.
-      ARM Generic Timer at 31.25 MHz, PPIs: Secure=13, NS=14, Virtual=11, Hyp=10.
-    </p>
-
-    <h3>8.5 UART</h3>
-    <p>
-      UARTC at <code>0x0c280000</code>, 8250-compatible, 32-bit register spacing.
-      Clock ID 157, enabled once by elfloader via BPMP IPC.
-      AON power domain &mdash; clock stays alive without keepalive.
-    </p>
-
-    <h3>8.6 Cache Maintenance and Identity Mapping</h3>
+    <h3>Cache Maintenance and Identity Mapping</h3>
     <p>
       The T234 has a 4 MB System-Level Cache (SLC / L4). <code>dc cisw</code>
       (clean/invalidate by set/way) only reaches L1/L2/L3, <strong>not the SLC</strong>.
@@ -573,7 +477,7 @@ All is well in the universe</code></pre>
       are triggered by speculative accesses.
     </p>
 
-    <h3>8.7 SDRAM-Only Physical Memory Window</h3>
+    <h3>SDRAM-Only Physical Memory Window</h3>
     <p>
       The upstream kernel's <code>map_kernel_window()</code> maps the entire physical
       address range (<code>PADDR_BASE</code> to <code>PADDR_TOP</code>) as Normal
@@ -590,16 +494,8 @@ All is well in the universe</code></pre>
       <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>.
     </p>
 
-    <h3>8.8 Key Build Configuration</h3>
-    <pre><code>PLATFORM=orin-nano
-AARCH64=TRUE
-ARM_HYP=ON                          # UEFI boots to EL2
-SIMULATION=FALSE
-RELEASE=FALSE                       # Enables debug output
-KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
-
-    <!-- 9. Repos -->
-    <h2 id="repos">9. Repository Structure</h2>
+    <!-- 6. Repos -->
+    <h2 id="repos">6. Repository Structure</h2>
 
     <h3>Key Modified Files</h3>
     <table>
