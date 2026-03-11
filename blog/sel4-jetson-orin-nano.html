@@ -295,9 +295,9 @@
     </p>
 
     <p>
-      The port required changes across 4 seL4 repositories.
+      The port required changes across 3 seL4 repositories.
       No custom firmware is needed &mdash; stock NVIDIA BL31 works unmodified.
-      The test suite (sel4test) runs unmodified from upstream.
+      The test suite (sel4test) and seL4_libs run unmodified from upstream.
       All code is published on GitHub.
     </p>
 
@@ -415,9 +415,9 @@ pip3 install --user pyfdt pyelftools libarchive-c jinja2</code></pre>
 
     <h3>5.2 Clone Repositories</h3>
     <p>
-      The port lives across 4 forked repositories under
+      The port lives across 3 forked repositories under
       <a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>,
-      all on the <code>orin-nano</code> branch, plus upstream sel4test (unmodified):
+      all on the <code>orin-nano</code> branch, plus upstream dependencies (unmodified):
     </p>
     <pre><code>mkdir -p ~/jetson/potanin-git && cd ~/jetson/potanin-git
 
@@ -426,10 +426,10 @@ git clone -b orin-nano https://github.com/potanin/seL4.git kernel
 mkdir -p tools
 git clone -b orin-nano https://github.com/potanin/seL4_tools.git tools/seL4
 mkdir -p projects
-git clone -b orin-nano https://github.com/potanin/seL4_libs.git projects/seL4_libs
 git clone -b orin-nano https://github.com/potanin/util_libs.git projects/util_libs
 
 # Upstream repos (pinned commits)
+git clone https://github.com/seL4/seL4_libs.git projects/seL4_libs
 git clone https://github.com/seL4/sel4test.git projects/sel4test
 git clone https://github.com/seL4/musllibc.git projects/musllibc
 git clone https://github.com/seL4/sel4_projects_libs.git projects/sel4_projects_libs
@@ -455,11 +455,6 @@ ln -sf tools/seL4/cmake-tool/griddle griddle</code></pre>
           <td><code>tools/seL4/</code></td>
           <td><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4_tools</a></td>
           <td>Elfloader: EFI boot, BPMP UARTC clock enable, cache flush to PoC, Normal memory identity mapping</td>
-        </tr>
-        <tr>
-          <td><code>projects/seL4_libs/</code></td>
-          <td><a href="https://github.com/potanin/seL4_libs/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4_libs</a></td>
-          <td>VKA error path fix, serial initialization</td>
         </tr>
         <tr>
           <td><code>projects/util_libs/</code></td>
@@ -680,7 +675,6 @@ KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
         <tr><td><code>kernel/src/arch/arm/kernel/boot.c</code></td><td>Low-address reservation for T234</td></tr>
         <tr><td><code>kernel/src/arch/arm/64/kernel/vspace.c</code></td><td>SDRAM-only physical memory window mapping</td></tr>
         <tr><td><code>tools/seL4/elfloader-tool/src/arch-arm/sys_boot.c</code></td><td>BPMP UARTC clock enable, cache flush</td></tr>
-        <tr><td><code>projects/seL4_libs/libsel4utils/src/process.c</code></td><td>VKA error path cleanup fix</td></tr>
       </tbody>
     </table>
 
