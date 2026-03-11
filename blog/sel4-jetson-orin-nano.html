@@ -451,38 +451,24 @@ All is well in the universe</code></pre>
       untypeds covering firmware-protected addresses.
     </p>
 
-    <h3>Cache Maintenance and Identity Mapping</h3>
+    <h3>T234 Cache (SLC)</h3>
     <p>
       The T234 has a 4 MB System-Level Cache (SLC / L4). <code>dc cisw</code>
-      (clean/invalidate by set/way) only reaches L1/L2/L3, <strong>not the SLC</strong>.
-      The elfloader uses <code>dc cvac</code> (clean by VA to Point of Coherence).
-      For PTE writes, the kernel uses <code>dc civac + dsb</code> (clean AND invalidate
-      + full system barrier).
-    </p>
-    <p>
-      The elfloader's identity mapping uses <strong>MT_NORMAL</strong> memory type
-      (attribute index 4) instead of the default DEVICE_nGnRnE (index 0). This follows
-      upstream commit <code>ee7435b</code> and prevents speculative accesses to
-      device/secure memory regions during the MMU transition. With Normal memory,
-      instruction fetch after MMU enable is architecturally valid, and no RAS errors
-      are triggered by speculative accesses.
+      (clean/invalidate by set/way) only reaches L1&ndash;L3, <strong>not the SLC</strong>.
+      The elfloader uses <code>dc cvac</code> (clean by VA to PoC) instead.
     </p>
 
-    <h3>SDRAM-Only Physical Memory Window</h3>
+    <h3>SDRAM-Only Kernel Window</h3>
     <p>
-      The upstream kernel's <code>map_kernel_window()</code> maps the entire physical
-      address range (<code>PADDR_BASE</code> to <code>PADDR_TOP</code>) as Normal
-      memory using 2 MiB large pages. On the T234 with a 40-bit PA, this covers ~510 GiB
-      &mdash; most of which is not DRAM but device registers and firmware-protected regions.
-      Speculative accesses to these addresses trigger RAS errors.
-    </p>
-    <p>
-      Our port modifies <code>map_kernel_window()</code> to iterate over
-      <code>avail_p_regs[]</code> (the SDRAM regions from the device tree) and only
-      maps those ranges. Non-DRAM physical addresses remain unmapped in the kernel's
-      physical window, so speculative accesses fault harmlessly rather than hitting
-      device/firmware memory. This is noted as a FIXME in upstream
-      <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>.
+      Upstream <code>map_kernel_window()</code> maps the entire physical range
+      (<code>PADDR_BASE</code>&ndash;<code>PADDR_TOP</code>) as Normal memory.
+      On the T234 (40-bit PA) this includes device registers and firmware-protected
+      regions; speculative accesses to these trigger RAS errors. Our port maps only
+      the actual SDRAM regions (<code>avail_p_regs[]</code>) so non-DRAM addresses
+      stay unmapped. Upstream
+      <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
+      addresses kernel virtual layout but does not yet restrict the physical window
+      to SDRAM.
     </p>
 
     <!-- 6. Repos -->
