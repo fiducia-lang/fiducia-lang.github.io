@@ -528,7 +528,7 @@ All is well in the universe</code></pre>
     <!-- 7. Repos -->
     <h2 id="repos">7. Repository Structure</h2>
 
-    <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (15 files)</h3>
+    <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (12 files)</h3>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
@@ -542,11 +542,8 @@ All is well in the universe</code></pre>
         <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/64/kernel/vspace.c" target="_blank" rel="noopener"><code>src/arch/arm/64/kernel/vspace.c</code></a></td><td>Map only SDRAM regions in kernel window instead of full PA range; prevents speculative RAS errors</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/kernel/boot.c" target="_blank" rel="noopener"><code>src/arch/arm/kernel/boot.c</code></a></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/include/arch/arm/arch/machine.h" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/include/arch/arm/arch/64/mode/machine.h" target="_blank" rel="noopener"><code>include/arch/arm/arch/64/mode/machine.h</code></a></td><td>Full TLB invalidation (tlbi alle1) after VTTBR write to flush stale walk cache entries</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/64/object/objecttype.c" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/config.cmake" target="_blank" rel="noopener"><code>src/arch/arm/config.cmake</code></a></td><td>PA size override mechanism; fix S2_START_L1 cmake variable name bug</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/64/head.S" target="_blank" rel="noopener"><code>src/arch/arm/64/head.S</code></a></td><td>ISB after SCTLR write; debug UART macro for early boot diagnostics</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/64/traps.S" target="_blank" rel="noopener"><code>src/arch/arm/64/traps.S</code></a></td><td>SDEI handler stub for T234 RAS errors (acknowledges and resumes)</td></tr>
       </tbody>
     </table>
 
