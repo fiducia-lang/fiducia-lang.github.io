@@ -253,6 +253,7 @@
       <ol>
         <li><a href="#hardware">Hardware</a></li>
         <li><a href="#serial">Serial Console</a></li>
+        <li><a href="#linux">Jetson Linux</a></li>
         <li><a href="#build">Building seL4</a></li>
         <li><a href="#boot">Booting</a></li>
         <li><a href="#technical">Technical Details</a></li>
@@ -320,15 +321,56 @@
       <code>/dev/ttyACM0</code>. Use <code>dmesg | tail</code> after plugging in the adapter.)
     </p>
 
-    <!-- 3. Building seL4 -->
-    <h2 id="build">3. Building seL4</h2>
+    <!-- 3. Jetson Linux -->
+    <h2 id="linux">3. Jetson Linux</h2>
 
     <p>
-      The Jetson must have JetPack 6.x firmware on QSPI.
-      Follow NVIDIA's
+      Before building seL4 you need JetPack 6.x on the Jetson. Follow NVIDIA's
       <a href="https://developer.nvidia.com/embedded/learn/get-started-jetson-orin-nano-devkit" target="_blank" rel="noopener">Getting Started guide</a>
-      to set up your Dev Kit. Stock firmware works unmodified.
+      to flash your Dev Kit. Stock firmware works unmodified.
     </p>
+
+    <p>
+      Once Linux is running, extract the hardware device tree and other reference
+      information used to create the seL4 platform port:
+    </p>
+
+    <pre><code># Copy the device tree blob from the running Jetson
+sudo cat /sys/firmware/fdt > tegra234-orin-nano.dtb
+
+# Decompile to human-readable DTS (on host or Jetson)
+dtc -I dtb -O dts -o tegra234-orin-nano.dts tegra234-orin-nano.dtb
+
+# Save the kernel config (useful reference for clocks, drivers, etc.)
+zcat /proc/config.gz > kernel-config
+
+# Dump the memory map
+cat /proc/iomem > iomem.txt</code></pre>
+
+    <p>
+      The DTS in the seL4 kernel repo (<code>tools/dts/orin-nano.dts</code>, 11,514 lines)
+      is the verbatim output of this extraction. The seL4 overlay
+      (<code>overlay-orin-nano.dts</code>) selects the relevant nodes &mdash; UART, GIC,
+      timer, and memory regions &mdash; from this full device tree.
+    </p>
+
+    <p>
+      Key information extracted from Linux:
+    </p>
+    <ul>
+      <li><strong>Memory regions</strong> &mdash; <code>/proc/iomem</code> shows DRAM at
+        <code>0x80000000</code>&ndash;<code>0xbe000000</code> and
+        <code>0xc2000000</code>&ndash;<code>0x100000000</code>, with the 64 MB firmware
+        carve-out gap between them</li>
+      <li><strong>UARTC address</strong> &mdash; <code>0x0c280000</code>, clock ID 157,
+        in the always-on (AON) power domain</li>
+      <li><strong>GIC addresses</strong> &mdash; GICD at <code>0x0f400000</code>,
+        GICR at <code>0x0f440000</code></li>
+      <li><strong>Timer PPIs</strong> &mdash; Secure=13, Non-secure=14, Virtual=11, Hyp=10</li>
+    </ul>
+
+    <!-- 4. Building seL4 -->
+    <h2 id="build">4. Building seL4</h2>
 
     <p>
       Install build dependencies per the seL4
@@ -387,8 +429,8 @@ ninja</code></pre>
       <code>rm -rf build-orin</code> and re-run init-build.sh + ninja.
     </div>
 
-    <!-- 4. Booting -->
-    <h2 id="boot">4. Booting</h2>
+    <!-- 5. Booting -->
+    <h2 id="boot">5. Booting</h2>
 
     <h3>Option A: HTTP Boot (Recommended)</h3>
     <p>
@@ -427,8 +469,8 @@ seL4 Test
 Test suite passed. 141 tests passed. 42 tests disabled.
 All is well in the universe</code></pre>
 
-    <!-- 5. Technical Details -->
-    <h2 id="technical">5. Technical Details</h2>
+    <!-- 6. Technical Details -->
+    <h2 id="technical">6. Technical Details</h2>
 
     <p>
       UEFI boots to EL2 (not EL1), so seL4 must build with <code>ARM_HYP=ON</code>.
@@ -471,8 +513,8 @@ All is well in the universe</code></pre>
       to SDRAM.
     </p>
 
-    <!-- 6. Repos -->
-    <h2 id="repos">6. Repository Structure</h2>
+    <!-- 7. Repos -->
+    <h2 id="repos">7. Repository Structure</h2>
 
     <h3>kernel/ &mdash; <a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">potanin/seL4</a> (15 files)</h3>
     <table>
