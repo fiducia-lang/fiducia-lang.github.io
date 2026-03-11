@@ -278,7 +278,7 @@
         <tr><td><strong>USB-UART adapter (3.3V)</strong></td><td>CP2102, FTDI FT232R, or CH340. Must be 3.3V logic &mdash; 5V will damage the Jetson.</td></tr>
         <tr><td><strong>MicroSD card (32GB+)</strong></td><td>For JetPack Linux installation and as the UEFI boot medium.</td></tr>
         <tr><td><strong>Ethernet cable</strong></td><td>Connects the Jetson to your LAN for HTTP boot.</td></tr>
-        <tr><td><strong>HDMI monitor + USB keyboard</strong></td><td>For initial UEFI configuration. Not needed after one-time setup.</td></tr>
+        <tr><td><strong>DisplayPort monitor + USB keyboard</strong></td><td>For initial UEFI configuration. Not needed after one-time setup.</td></tr>
         <tr><td><strong>DC power supply</strong></td><td>5V/4A barrel jack (included with Dev Kit), or USB-C PD.</td></tr>
         <tr><td><strong>Host machine</strong></td><td>Linux x86_64 (Ubuntu 22.04 recommended). For cross-compiling seL4.</td></tr>
         <tr><td><strong>Dupont jumper wires</strong></td><td>3 female-to-female wires for the serial console.</td></tr>
@@ -403,7 +403,7 @@ cp build-orin/images/sel4test-driver-image-arm-orin-nano /srv/tftp/sel4.efi
 cd /srv/tftp && python3 -m http.server 8080</code></pre>
 
     <p>
-      <strong>One-time UEFI setup:</strong> Connect HDMI + keyboard. Press ESC during
+      <strong>One-time UEFI setup:</strong> Connect DisplayPort + keyboard. Press ESC during
       boot to enter UEFI Setup. Add an HTTP boot entry pointing to
       <code>http://&lt;host-ip&gt;:8080/sel4.efi</code>. Set it as the first boot option.
     </p>
