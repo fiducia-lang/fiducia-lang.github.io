@@ -266,7 +266,6 @@
         <li><a href="#boot">Booting seL4</a></li>
         <li><a href="#output">Expected Output</a></li>
         <li><a href="#technical">Technical Details</a></li>
-        <li><a href="#troubleshooting">Troubleshooting</a></li>
         <li><a href="#repos">Repository Structure</a></li>
       </ol>
     </div>
@@ -629,40 +628,8 @@ SIMULATION=FALSE
 RELEASE=FALSE                       # Enables debug output
 KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
 
-    <!-- 9. Troubleshooting -->
-    <h2 id="troubleshooting">9. Troubleshooting</h2>
-
-    <h3>No serial output</h3>
-    <ul>
-      <li>Check wiring: J14 Pin 3 = RXD (adapter TX), Pin 4 = TXD (adapter RX), Pin 7 = GND.</li>
-      <li>Try swapping TX and RX.</li>
-      <li>Verify 115200 baud and 3.3V adapter (not 5V).</li>
-      <li>Ensure you're using J14, not the 40-pin GPIO header.</li>
-    </ul>
-
-    <h3>USB flash hangs</h3>
-    <ul>
-      <li>Try a different USB port / bus on the host machine.</li>
-      <li>Ensure SD card is inserted in the Jetson.</li>
-      <li>Verify recovery mode: <code>lsusb | grep -i nvidia</code>.</li>
-    </ul>
-
-    <h3>UEFI doesn't HTTP boot</h3>
-    <ul>
-      <li>Verify HTTP server: <code>curl http://&lt;host-ip&gt;:8080/sel4.efi</code>.</li>
-      <li>Check same network / subnet.</li>
-      <li>Check UEFI boot order.</li>
-    </ul>
-
-    <h3>Variable test counts (13&ndash;127 instead of 141)</h3>
-    <p>
-      Ensure you are using the forked repositories with the cache maintenance and
-      SDRAM-only memory window fixes. A clean build (<code>rm -rf build-orin</code>)
-      may be needed after switching branches.
-    </p>
-
-    <!-- 10. Repos -->
-    <h2 id="repos">10. Repository Structure</h2>
+    <!-- 9. Repos -->
+    <h2 id="repos">9. Repository Structure</h2>
 
     <h3>Key Modified Files</h3>
     <table>
