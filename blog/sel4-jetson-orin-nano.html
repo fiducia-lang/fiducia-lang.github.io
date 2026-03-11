@@ -524,13 +524,13 @@ All is well in the universe</code></pre>
         <tr><td><code>src/plat/orin-nano/overlay-orin-nano.dts</code></td><td>Device tree overlay: UARTC, dual memory regions with 64 MB carve-out gap</td></tr>
         <tr><td><code>tools/dts/orin-nano.dts</code></td><td>Full device tree extracted from running Linux on the hardware</td></tr>
         <tr><td><code>tools/hardware.yml</code></td><td>Register orin-nano platform in seL4 hardware database</td></tr>
-        <tr><td><code>libsel4/.../constants.h</code></td><td>Platform constants header (required by build system)</td></tr>
+        <tr><td><code>libsel4/sel4_plat_include/orin-nano/sel4/plat/api/constants.h</code></td><td>Platform constants header (required by build system)</td></tr>
         <tr><td><code>src/drivers/serial/tegra_omap3_dwapb.c</code></td><td>8250-style UART driver shared with other Tegra/OMAP/DW-APB platforms</td></tr>
         <tr><td><code>src/drivers/serial/config.cmake</code></td><td>Wire orin-nano to the tegra_omap3_dwapb serial driver</td></tr>
         <tr><td><code>src/arch/arm/64/kernel/vspace.c</code></td><td>Map only SDRAM regions in kernel window instead of full PA range; prevents speculative RAS errors</td></tr>
         <tr><td><code>src/arch/arm/kernel/boot.c</code></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory</td></tr>
-        <tr><td><code>include/.../machine.h</code></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
-        <tr><td><code>include/.../mode/machine.h</code></td><td>Full TLB invalidation (tlbi alle1) after VTTBR write to flush stale walk cache entries</td></tr>
+        <tr><td><code>include/arch/arm/arch/machine.h</code></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
+        <tr><td><code>include/arch/arm/arch/64/mode/machine.h</code></td><td>Full TLB invalidation (tlbi alle1) after VTTBR write to flush stale walk cache entries</td></tr>
         <tr><td><code>src/arch/arm/64/object/objecttype.c</code></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
         <tr><td><code>src/arch/arm/config.cmake</code></td><td>PA size override mechanism; fix S2_START_L1 cmake variable name bug</td></tr>
         <tr><td><code>src/arch/arm/64/head.S</code></td><td>ISB after SCTLR write; debug UART macro for early boot diagnostics</td></tr>
@@ -542,15 +542,16 @@ All is well in the universe</code></pre>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><code>elfloader/.../sys_boot.c</code></td><td>Enable UARTC clock via BPMP IPC doorbell; flush page tables with dc cvac (bypasses SLC)</td></tr>
-        <tr><td><code>elfloader/.../mmu-hyp.S</code></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
-        <tr><td><code>elfloader/.../mmu.c</code></td><td>Use 1 GiB identity mapping entries (remove unused PMD level)</td></tr>
-        <tr><td><code>elfloader/.../efi_init.c</code></td><td>UEFI ConOut putchar for DisplayPort output before ExitBootServices</td></tr>
-        <tr><td><code>elfloader/.../assembler.h</code></td><td>Fix CCSIDR parsing for FEAT_CCIDX (A78AE uses 64-bit format, not 32-bit)</td></tr>
-        <tr><td><code>elfloader/.../8250-uart.c</code></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
-        <tr><td><code>elfloader/.../elf_aarch64_efi.lds</code></td><td>Add _end symbol required by EFI loader</td></tr>
-        <tr><td><code>elfloader/.../structures.h/.c</code></td><td>Remove unused PMD-level identity map page table (now using 1 GiB entries)</td></tr>
-        <tr><td><code>cmake-tool/.../application_settings.cmake</code></td><td>Add orin-nano to EFI boot platform list</td></tr>
+        <tr><td><code>elfloader-tool/src/arch-arm/sys_boot.c</code></td><td>Enable UARTC clock via BPMP IPC doorbell; flush page tables with dc cvac (bypasses SLC)</td></tr>
+        <tr><td><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
+        <tr><td><code>elfloader-tool/src/arch-arm/64/mmu.c</code></td><td>Use 1 GiB identity mapping entries (remove unused PMD level)</td></tr>
+        <tr><td><code>elfloader-tool/src/binaries/efi/efi_init.c</code></td><td>UEFI ConOut putchar for DisplayPort output before ExitBootServices</td></tr>
+        <tr><td><code>elfloader-tool/include/arch-arm/64/mode/assembler.h</code></td><td>Fix CCSIDR parsing for FEAT_CCIDX (A78AE uses 64-bit format, not 32-bit)</td></tr>
+        <tr><td><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
+        <tr><td><code>elfloader-tool/src/binaries/efi/gnuefi/elf_aarch64_efi.lds</code></td><td>Add _end symbol required by EFI loader</td></tr>
+        <tr><td><code>elfloader-tool/include/arch-arm/64/mode/structures.h</code></td><td>Remove unused PMD-level identity map page table declaration</td></tr>
+        <tr><td><code>elfloader-tool/src/arch-arm/64/structures.c</code></td><td>Remove unused PMD-level identity map page table definition</td></tr>
+        <tr><td><code>cmake-tool/helpers/application_settings.cmake</code></td><td>Add orin-nano to EFI boot platform list</td></tr>
       </tbody>
     </table>
 
@@ -558,10 +559,10 @@ All is well in the universe</code></pre>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><code>libplatsupport/.../orin-nano/clock.h</code></td><td>Platform stub header (required by build system)</td></tr>
-        <tr><td><code>libplatsupport/.../orin-nano/i2c.h</code></td><td>Platform stub header (required by build system)</td></tr>
-        <tr><td><code>libplatsupport/.../orin-nano/serial.h</code></td><td>Platform serial configuration: UARTC address and parameters</td></tr>
-        <tr><td><code>libplatsupport/.../orin-nano/timer.h</code></td><td>Platform timer configuration: NV timer addresses and interrupt routing</td></tr>
+        <tr><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></td><td>Platform stub header (required by build system)</td></tr>
+        <tr><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></td><td>Platform stub header (required by build system)</td></tr>
+        <tr><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></td><td>Platform serial configuration: UARTC address and parameters</td></tr>
+        <tr><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></td><td>Platform timer configuration: NV timer addresses and interrupt routing</td></tr>
         <tr><td><code>libplatsupport/src/mach/nvidia/timer.c</code></td><td>Enable timer interrupt routing for orin-nano (same as TX2)</td></tr>
       </tbody>
     </table>
