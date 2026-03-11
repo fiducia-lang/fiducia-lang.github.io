@@ -6,7 +6,7 @@
   <title>How to Get sel4test Running on NVIDIA Jetson Orin Nano 8GB - Fiducia Blog</title>
   <meta name="description" content="Complete step-by-step guide for porting the seL4 microkernel to the NVIDIA Jetson Orin Nano 8GB Developer Kit. 141/141 tests pass.">
   <meta property="og:title" content="seL4 on NVIDIA Jetson Orin Nano - Fiducia Blog">
-  <meta property="og:description" content="Complete guide for running sel4test on Jetson Orin Nano. Custom BL31 firmware, serial console, UEFI boot. 141/141 tests pass.">
+  <meta property="og:description" content="Complete guide for running sel4test on Jetson Orin Nano. Serial console, UEFI boot. 141/141 tests pass with stock firmware.">
   <meta property="og:url" content="https://fiducia-lang.github.io/blog/sel4-jetson-orin-nano.html">
   <meta property="og:type" content="article">
   <style>
@@ -249,8 +249,8 @@
     <p class="subtitle">
       A complete step-by-step guide for porting the seL4 microkernel to the
       NVIDIA Jetson Orin Nano 8GB Developer Kit. Covers hardware setup, serial console
-      wiring, building a custom BL31 firmware to fix T234 RAS errors, cross-compiling
-      sel4test, and booting from UEFI. All 141 compiled tests pass deterministically.
+      wiring, cross-compiling sel4test, and booting from UEFI. All 141 compiled tests
+      pass deterministically with stock NVIDIA firmware.
     </p>
 
     <div class="result-badge">141 / 141 tests pass &middot; 42 disabled &middot; 0 failures</div>
@@ -262,7 +262,6 @@
         <li><a href="#hardware">Hardware Requirements</a></li>
         <li><a href="#serial">Serial Console (UARTC on J14)</a></li>
         <li><a href="#jetpack">Installing JetPack Linux</a></li>
-        <li><a href="#bl31">Custom BL31 Firmware (Required)</a></li>
         <li><a href="#build">Building seL4</a></li>
         <li><a href="#boot">Booting seL4</a></li>
         <li><a href="#output">Expected Output</a></li>
@@ -296,8 +295,8 @@
     </p>
 
     <p>
-      The port required changes across 4 seL4 repositories plus a custom build of
-      NVIDIA's BL31 (ARM Trusted Firmware) to handle a T234-specific RAS issue.
+      The port required changes across 4 seL4 repositories.
+      No custom firmware is needed &mdash; stock NVIDIA BL31 works unmodified.
       The test suite (sel4test) runs unmodified from upstream.
       All code is published on GitHub.
     </p>
@@ -313,7 +312,7 @@
         <tr><td><strong>MicroSD card (32GB+)</strong></td><td>For JetPack Linux installation and as the UEFI boot medium.</td></tr>
         <tr><td><strong>Ethernet cable</strong></td><td>Connects the Jetson to your LAN for HTTP boot.</td></tr>
         <tr><td><strong>HDMI monitor + USB keyboard</strong></td><td>For initial UEFI configuration. Not needed after one-time setup.</td></tr>
-        <tr><td><strong>Micro-USB cable</strong></td><td>For USB recovery mode (firmware flashing).</td></tr>
+        <tr><td><strong>Micro-USB cable</strong></td><td>For USB recovery mode (initial JetPack installation).</td></tr>
         <tr><td><strong>DC power supply</strong></td><td>5V/4A barrel jack (included with Dev Kit), or USB-C PD.</td></tr>
         <tr><td><strong>Host machine</strong></td><td>Linux x86_64 (Ubuntu 22.04 recommended). For building seL4 and flashing firmware.</td></tr>
         <tr><td><strong>Dupont jumper wires</strong></td><td>3 female-to-female wires for the serial console.</td></tr>
@@ -403,167 +402,10 @@ sudo ./tools/l4t_create_default_user.sh -u nvidia -p nvidia -a</code></pre>
 sudo ./flash.sh jetson-orin-nano-devkit mmcblk0p1</code></pre>
     <p>This flashes both the QSPI firmware and writes the rootfs to the SD card.</p>
 
-    <!-- 5. Custom BL31 -->
-    <h2 id="bl31">5. Custom BL31 Firmware (Required)</h2>
+    <!-- 5. Building seL4 -->
+    <h2 id="build">5. Building seL4</h2>
 
-    <h3>5.1 Why This Is Necessary</h3>
-
-    <p>
-      The T234 firmware chain (MB1, MB2, BL31, UEFI) leaves dirty cache lines in the
-      System-Level Cache (SLC / L4) at protected physical addresses (notably paddr 0x0
-      and 0xda0). These are firmware-owned addresses that seL4 never uses.
-    </p>
-
-    <p>
-      Under cache pressure, the SLC evicts these dirty lines. The writeback hits the
-      IOB (I/O Bridge), which generates a <strong>RAS</strong> (Reliability, Availability,
-      Serviceability) error. This becomes an SError exception routed to EL3.
-    </p>
-
-    <p>
-      <strong>Stock NVIDIA BL31</strong> treats all uncorrectable RAS errors as fatal:
-      it powers off the CPU core. This is appropriate for automotive ASIL-D safety but
-      fatal for seL4 &mdash; it kills the only running core and the system hangs.
-    </p>
-
-    <p>
-      <strong>Custom BL31</strong> logs the error (it has already been cleared from the
-      hardware error registers) and resumes execution. The error is harmless because the
-      addresses involved are firmware-owned and never read by seL4.
-    </p>
-
-    <div class="callout">
-      <strong>Error path:</strong> SLC dirty line eviction &rarr; writeback &rarr;
-      SCF &rarr; IOB &rarr; CBB bus error &rarr; IOB generates RAS &rarr;
-      SError routed to EL3 &rarr; custom BL31 logs + clears + resumes.
-    </div>
-
-    <h3>5.2 Clone ATF Source</h3>
-    <pre><code>cd ~/jetson
-git clone -b jetson_36.4.3 \
-    https://nv-tegra.nvidia.com/tegra/optee-src/atf.git
-cd atf/arm-trusted-firmware</code></pre>
-
-    <h3>5.3 Modify the RAS Handler</h3>
-
-    <p>
-      Edit <code>plat/nvidia/tegra/soc/t234/plat_ras.c</code>. Find the
-      <code>tegra234_ras_handler()</code> function. At the bottom, there is a block that
-      checks <code>system_is_not_recoverable</code> and powers off the core.
-    </p>
-
-    <p><strong>Stock code (remove this):</strong></p>
-    <pre><code>if (system_is_not_recoverable) {
-    ERROR("Powering off core\n");
-    (void)mce_command_handler(
-        (uint64_t)MCE_CMD_ENTER_CSTATE,
-        (uint64_t)CSTATE_CCPLEX_C7, ...);
-    while (true) {
-        wfi();
-    }
-}</code></pre>
-
-    <p><strong>Replace with:</strong></p>
-    <pre><code>/* For uncorrectable errors: log but do NOT power off the core.
- *
- * Stock NVIDIA BL31 powers off the core here, which is appropriate
- * for automotive safety (ASIL-D) but fatal for our seL4 use case.
- *
- * T234 firmware leaves dirty cache lines in the SLC (L4) at
- * protected addresses (paddr 0x0, 0xda0). When cache pressure
- * evicts them, writebacks trigger IOB RAS errors. These are
- * harmless -- the addresses are firmware-owned and we never
- * read them. The error has been logged and cleared above. */
-if (system_is_not_recoverable) {
-    ERROR("RAS: uncorrectable error handled, "
-          "NOT powering off core (custom BL31)\n");
-}
-return 0;</code></pre>
-
-    <h3>5.4 Add Startup Banner (Optional)</h3>
-    <p>
-      Edit <code>plat/nvidia/tegra/common/tegra_bl31_setup.c</code>. After the call to
-      <code>plat_enable_console()</code>, add:
-    </p>
-    <pre><code>NOTICE("BL31: custom build (RAS no-kill)\n");</code></pre>
-
-    <h3>5.5 Build BL31</h3>
-    <pre><code>sudo apt install gcc-aarch64-linux-gnu
-
-cd ~/jetson/atf/arm-trusted-firmware
-
-make BUILD_BASE=./build-t234 \
-     CROSS_COMPILE=aarch64-linux-gnu- \
-     TARGET_SOC=t234 \
-     DEBUG=0 \
-     LOG_LEVEL=20 \
-     PLAT=tegra \
-     SPD=opteed \
-     BRANCH_PROTECTION=3 \
-     ARM_ARCH_MINOR=3 \
-     LDFLAGS="--no-warn-rwx-segments" \
-     -j$(nproc) \
-     bl31</code></pre>
-    <p>Output: <code>build-t234/tegra/t234/release/bl31.bin</code> (~95 KB).</p>
-
-    <h3>5.6 Generate TOS Image</h3>
-    <p>
-      The QSPI "secure-os" partition contains a TOS (Trusted OS) image that bundles
-      BL31, OP-TEE, and a DTB. Rebuild using NVIDIA's <code>gen_tos_part_img.py</code>:
-    </p>
-    <pre><code># Back up the stock image first
-cp ~/jetson/linux/Linux_for_Tegra/bootloader/tos_t234.img \
-   ~/jetson/linux/Linux_for_Tegra/bootloader/tos_t234.img.stock
-
-# Rebuild with custom BL31 + stock OP-TEE + DTB
-python3 ~/jetson/linux/Linux_for_Tegra/nv_tegra/tos-scripts/gen_tos_part_img.py \
-    --monitor build-t234/tegra/t234/release/bl31.bin \
-    --os &lt;path-to-stock-optee.bin&gt; \
-    --dtb &lt;path-to-stock-tos.dtb&gt; \
-    --tostype optee \
-    ~/jetson/atf/tos-custom_t234.img</code></pre>
-
-    <h3>5.7 Flash to QSPI</h3>
-
-    <h4>Enter USB Recovery Mode</h4>
-    <ol>
-      <li>Power off the Jetson.</li>
-      <li>Hold the <strong>Force Recovery</strong> button (middle button on the carrier board).</li>
-      <li>Power on while holding Force Recovery.</li>
-      <li>Release after 2 seconds.</li>
-      <li>Verify: <code>lsusb | grep -i nvidia</code> &mdash; should show "NVIDIA Corp. APX".</li>
-    </ol>
-
-    <div class="callout-warn callout">
-      <strong>SD card must be inserted</strong> during flashing &mdash; MB2 initializes
-      all storage including the SD card. Without it, flash hangs.
-    </div>
-
-    <h4>Flash Both A and B Slots</h4>
-    <p>
-      NVIDIA uses A/B redundant boot. <strong>Both slots must be updated</strong> or the
-      device may boot from the unmodified slot.
-    </p>
-    <pre><code># Install custom TOS image
-cp ~/jetson/atf/tos-custom_t234.img \
-   ~/jetson/linux/Linux_for_Tegra/bootloader/tos_t234.img
-
-cd ~/jetson/linux/Linux_for_Tegra
-
-# Flash Slot A
-sudo ./flash.sh -k A_secure-os jetson-orin-nano-devkit mmcblk0p1
-
-# Re-enter recovery mode, then flash Slot B
-sudo ./flash.sh -k B_secure-os jetson-orin-nano-devkit mmcblk0p1</code></pre>
-
-    <h4>Verify</h4>
-    <p>Power cycle. On the serial console, look for:</p>
-    <pre><code>NOTICE: BL31: custom build (RAS no-kill)</code></pre>
-
-    <!-- 6. Building seL4 -->
-    <h2 id="build">6. Building seL4</h2>
-
-    <h3>6.1 Install Build Dependencies</h3>
+    <h3>5.1 Install Build Dependencies</h3>
     <pre><code>sudo apt install \
     gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
     cmake ninja-build python3 python3-pip \
@@ -571,7 +413,7 @@ sudo ./flash.sh -k B_secure-os jetson-orin-nano-devkit mmcblk0p1</code></pre>
 
 pip3 install --user pyfdt pyelftools libarchive-c jinja2</code></pre>
 
-    <h3>6.2 Clone Repositories</h3>
+    <h3>5.2 Clone Repositories</h3>
     <p>
       The port lives across 4 forked repositories under
       <a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>,
@@ -627,7 +469,7 @@ ln -sf tools/seL4/cmake-tool/griddle griddle</code></pre>
       </tbody>
     </table>
 
-    <h3>6.3 Build</h3>
+    <h3>5.3 Build</h3>
     <pre><code>cd ~/jetson/potanin-git
 mkdir build-orin && cd build-orin
 
@@ -649,8 +491,8 @@ ninja</code></pre>
       <code>rm -rf build-orin</code> and re-run init-build.sh + ninja.
     </div>
 
-    <!-- 7. Booting -->
-    <h2 id="boot">7. Booting seL4</h2>
+    <!-- 6. Booting -->
+    <h2 id="boot">6. Booting seL4</h2>
 
     <h3>Option A: HTTP Boot (Recommended)</h3>
     <p>
@@ -676,8 +518,8 @@ sudo cp build-orin/images/sel4test-driver-image-arm-orin-nano \
         /mnt/sd/EFI/BOOT/BOOTAA64.EFI
 sudo umount /mnt/sd</code></pre>
 
-    <!-- 8. Expected Output -->
-    <h2 id="output">8. Expected Output</h2>
+    <!-- 7. Expected Output -->
+    <h2 id="output">7. Expected Output</h2>
 
     <pre><code>ELF-loader started on CPU: ARM Ltd. Cortex-A78AE r0p1
   paddr=[0x90000000..0x906dffff]
@@ -698,17 +540,10 @@ seL4 Test
 Test suite passed. 141 tests passed. 42 tests disabled.
 All is well in the universe</code></pre>
 
-    <p>
-      You may see RAS error messages during boot &mdash; this is normal with the custom BL31:
-    </p>
-    <pre><code>ERROR: RAS Uncorrectable Error in IOB, base=0xd230000:
-...
-ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</code></pre>
+    <!-- 8. Technical Details -->
+    <h2 id="technical">8. Technical Details</h2>
 
-    <!-- 9. Technical Details -->
-    <h2 id="technical">9. Technical Details</h2>
-
-    <h3>9.1 Boot Chain</h3>
+    <h3>8.1 Boot Chain</h3>
     <pre><code>BROM (on-chip ROM, EL3)
   &rarr; MB1 (first-stage bootloader, NVIDIA proprietary, EL3)
     &rarr; MB2 (second-stage bootloader, EL3)
@@ -718,17 +553,17 @@ ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</co
             &rarr; seL4 kernel (EL2) + root task (EL1)</code></pre>
     <p>
       UEFI runs at EL2, not EL1. seL4 must be built with <code>ARM_HYP=ON</code>.
-      BL31 stays resident at EL3 handling SMC calls (PSCI, RAS) for the system's lifetime.
+      Stock NVIDIA BL31 stays resident at EL3 handling SMC calls (PSCI) for the system's lifetime.
     </p>
 
-    <h3>9.2 CPU</h3>
+    <h3>8.2 CPU</h3>
     <ul>
       <li>6 Cortex-A78AE cores (ARMv8.2-A), silicon revision r0p1</li>
       <li>2 clusters: Cluster 0 (cores 0-3), Cluster 1 (cores 4-5)</li>
       <li>seL4 runs single-core (core 0 only, non-SMP configuration)</li>
     </ul>
 
-    <h3>9.3 Memory Map</h3>
+    <h3>8.3 Memory Map</h3>
     <table>
       <thead><tr><th>Region</th><th>Start</th><th>End</th><th>Size</th></tr></thead>
       <tbody>
@@ -744,20 +579,20 @@ ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</co
       untypeds covering firmware-protected addresses.
     </p>
 
-    <h3>9.4 GIC and Timer</h3>
+    <h3>8.4 GIC and Timer</h3>
     <p>
       GICv3 (GIC-600AE): GICD at <code>0x0f400000</code>, GICR at <code>0x0f440000</code>.
       ARM Generic Timer at 31.25 MHz, PPIs: Secure=13, NS=14, Virtual=11, Hyp=10.
     </p>
 
-    <h3>9.5 UART</h3>
+    <h3>8.5 UART</h3>
     <p>
       UARTC at <code>0x0c280000</code>, 8250-compatible, 32-bit register spacing.
       Clock ID 157, enabled once by elfloader via BPMP IPC.
       AON power domain &mdash; clock stays alive without keepalive.
     </p>
 
-    <h3>9.6 Cache Maintenance and Identity Mapping</h3>
+    <h3>8.6 Cache Maintenance and Identity Mapping</h3>
     <p>
       The T234 has a 4 MB System-Level Cache (SLC / L4). <code>dc cisw</code>
       (clean/invalidate by set/way) only reaches L1/L2/L3, <strong>not the SLC</strong>.
@@ -774,7 +609,7 @@ ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</co
       are triggered by speculative accesses.
     </p>
 
-    <h3>9.7 SDRAM-Only Physical Memory Window</h3>
+    <h3>8.7 SDRAM-Only Physical Memory Window</h3>
     <p>
       The upstream kernel's <code>map_kernel_window()</code> maps the entire physical
       address range (<code>PADDR_BASE</code> to <code>PADDR_TOP</code>) as Normal
@@ -791,7 +626,7 @@ ERROR: RAS: uncorrectable error handled, NOT powering off core (custom BL31)</co
       <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>.
     </p>
 
-    <h3>9.8 Key Build Configuration</h3>
+    <h3>8.8 Key Build Configuration</h3>
     <pre><code>PLATFORM=orin-nano
 AARCH64=TRUE
 ARM_HYP=ON                          # UEFI boots to EL2
@@ -799,13 +634,8 @@ SIMULATION=FALSE
 RELEASE=FALSE                       # Enables debug output
 KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
 
-    <!-- 10. Troubleshooting -->
-    <h2 id="troubleshooting">10. Troubleshooting</h2>
-
-    <h3>"Powering off core" &mdash; system hangs</h3>
-    <p>
-      Stock NVIDIA BL31 is running. Flash the custom BL31 (Section 5).
-    </p>
+    <!-- 9. Troubleshooting -->
+    <h2 id="troubleshooting">9. Troubleshooting</h2>
 
     <h3>No serial output</h3>
     <ul>
@@ -831,12 +661,13 @@ KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
 
     <h3>Variable test counts (13&ndash;127 instead of 141)</h3>
     <p>
-      Custom BL31 is not properly installed. Verify both A and B slots are flashed.
-      Look for the banner message on boot.
+      Ensure you are using the forked repositories with the cache maintenance and
+      SDRAM-only memory window fixes. A clean build (<code>rm -rf build-orin</code>)
+      may be needed after switching branches.
     </p>
 
-    <!-- 11. Repos -->
-    <h2 id="repos">11. Repository Structure</h2>
+    <!-- 10. Repos -->
+    <h2 id="repos">10. Repository Structure</h2>
 
     <h3>Key Modified Files</h3>
     <table>
@@ -852,26 +683,6 @@ KernelPlatformPASizeBitsOverride=40  # 40-bit PA (not default 44)</code></pre>
         <tr><td><code>projects/seL4_libs/libsel4utils/src/process.c</code></td><td>VKA error path cleanup fix</td></tr>
       </tbody>
     </table>
-
-    <h3>Custom ATF Files</h3>
-    <table>
-      <thead><tr><th>File</th><th>Purpose</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><code>plat/nvidia/tegra/soc/t234/plat_ras.c</code></td>
-          <td>RAS handler: log and continue instead of powering off core</td>
-        </tr>
-        <tr>
-          <td><code>plat/nvidia/tegra/common/tegra_bl31_setup.c</code></td>
-          <td>Startup version banner</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p style="margin-top:40px;color:var(--text-dim);font-size:0.85rem;">
-      ATF source: cloned from <code>nv-tegra.nvidia.com/tegra/optee-src/atf.git</code>
-      tag <code>jetson_36.4.3</code>.
-    </p>
 
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:40px;font-size:0.95rem;">
       <strong style="color:var(--text);">Join the discussion</strong>
