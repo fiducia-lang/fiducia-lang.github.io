@@ -513,6 +513,18 @@ All is well in the universe</code></pre>
       to SDRAM.
     </p>
 
+    <h3>NVIDIA UEFI PE/COFF Sensitivity</h3>
+    <p>
+      NVIDIA's T234 UEFI PE/COFF loader is sensitive to the elfloader binary layout.
+      Upstream seL4_tools uses <code>init_downpages()</code> with 2 MiB PMD-level identity
+      map entries. Reverting to this upstream code causes Synchronous Exceptions inside
+      UEFI (at addresses like <code>0x25DEDF7AC</code>) before the elfloader's
+      <code>main()</code> even runs. Even removing unrelated code (e.g. 42 lines of
+      ConOut support) shifts the binary layout enough to trigger the crash. The workaround
+      is to use 1 GiB PUD-level block entries for the identity mapping, which eliminates
+      the PMD page table and produces a binary layout that NVIDIA's loader accepts.
+    </p>
+
     <!-- 7. Repos -->
     <h2 id="repos">7. Repository Structure</h2>
 
