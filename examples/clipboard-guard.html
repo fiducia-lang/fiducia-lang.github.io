@@ -92,8 +92,8 @@
   Managed Cross-Domain Clipboard
   ==============================
 
-  +-----------+    high_to_guard    +-----------+    guard_to_low    +-----------+
-  |  domain   | ------ ch1 ------> | clipboard |  --- ch2 -------> |  domain   |
+  +-----------+    high_to_guard    +-----------+    guard_to_low   +-----------+
+  |  domain   | ------ ch1 ------>  | clipboard |  --- ch2 -------> |  domain   |
   |   HIGH    |                     |   guard   |    (if approved)  |    LOW    |
   | pri = 100 |                     | pri = 200 |                   | pri = 100 |
   +-----------+                     +-----------+                   +-----------+

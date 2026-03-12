@@ -202,25 +202,25 @@
       <div class="arch-box">
         <div class="arch-title">System Topology</div>
 <pre>
-                          +------------------+
-                          |    keyboard      |
-                          |   (pri 100)      |
-                          +--------+---------+
+                          +-------------------+
+                          |    keyboard       |
+                          |   (pri 100)       |
+                          +--------+----------+
                                    |
                             kbd_to_switch
                                    |
-                          +--------+---------+
-                          |   kbd_switch     |
+                          +--------+----------+
+                          |   kbd_switch      |
                           | (trusted, pri 200)|
-                          +---+----------+---+
+                          +---+----------+----+
                               |          |
                        switch_to_a  switch_to_b
                               |          |
-                    +---------+--+  +----+---------+
-                    |  domain_a  |  |  domain_b    |
+                    +---------+--+  +----+----------+
+                    |  domain_a  |  |  domain_b     |
                     |  (SECRET)  |  | (UNCLASSIFIED)|
-                    |  (pri 100) |  |  (pri 100)   |
-                    +------------+  +--------------+
+                    |  (pri 100) |  |  (pri 100)    |
+                    +------------+  +---------------+
 
   No shared memory between domain_a and domain_b.
   kbd_switch has exclusive routing authority.

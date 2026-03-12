@@ -93,11 +93,11 @@
   Guarantee One-way Data Flow
   ===========================
 
-  +-----------+    high_to_diode    +------------+    diode_to_low    +-----------+
-  |  domain   | ------ ch1 ------> |    data     | ------ ch2 ------> |  domain   |
-  |   HIGH    |                     |    diode    |                     |    LOW    |
-  | pri = 100 |                     |  pri = 200  |                     | pri = 100 |
-  +-----------+                     +------------+                     +-----------+
+  +-----------+    high_to_diode    +-------------+    diode_to_low    +-----------+
+  |  domain   | ------ ch1 -------> |    data     | ------ ch2 ------> |  domain   |
+  |   HIGH    |                     |    diode    |                    |    LOW    |
+  | pri = 100 |                     |  pri = 200  |                    | pri = 100 |
+  +-----------+                     +-------------+                    +-----------+
                                     (TRUSTED)
 
   No shared memory or channel between domain_high and domain_low.

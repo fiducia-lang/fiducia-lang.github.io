@@ -97,11 +97,11 @@
   Asymmetric Multi-Level Security Email
   =====================================
 
-  +-----------+   secret_to_guard   +-----------+  guard_to_official  +-----------+
-  |  domain   | ------  ch1 ------> |   mail    | ------- ch2 ------> |  domain   |
-  |  SECRET   |                     |   guard   |                     | OFFICIAL  |
-  | pri = 100 | &lt;--- guard_to_    | pri = 200 | &lt;--- official_to_ | pri = 100 |
-  +-----------+      secret         +-----------+      guard          +-----------+
+  +-----------+   secret_to_guard   +-----------+  guard_to_official   +-----------+
+  |  domain   | ------  ch1 ------> |   mail    | ------- ch2 ------>  |  domain   |
+  |  SECRET   |                     |   guard   |                      | OFFICIAL  |
+  | pri = 100 | &lt;--- guard_to_   | pri = 200 | &lt;--- official_to_ | pri = 100 |
+  +-----------+      secret         +-----------+      guard           +-----------+
                   (unused: upgrade                  (BLOCKED: upgrade
                    not permitted)                    OFFICIAL->SECRET)
 
