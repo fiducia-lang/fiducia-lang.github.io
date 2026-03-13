@@ -499,7 +499,7 @@ All is well in the universe</code></pre>
     </p>
     <ul>
       <li><strong>SDRAM-only kernel window</strong>
-        (<a href="https://github.com/potanin/seL4/commit/7c1f8d9c3de833985cb068153266fc3faefed14b" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
+        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
         upstream <code>map_kernel_window()</code> maps the entire
         <code>PADDR_BASE</code>&ndash;<code>PADDR_TOP</code> range as Normal memory.
         On any platform where non-DRAM addresses are protected, speculative accesses
@@ -507,17 +507,34 @@ All is well in the universe</code></pre>
         Upstream <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
         addresses kernel virtual layout but does not yet restrict the physical window to SDRAM.</li>
       <li><strong>FEAT_CCIDX CCSIDR parsing</strong>
-        (<a href="https://github.com/potanin/seL4_tools/commit/1e4c0799644743ebe63a1ee3a3d678bbf14b1f2c#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>assembler.h</code></a>) &mdash;
+        (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>assembler.h</code></a>) &mdash;
         the elfloader's cache set/way code assumes 32-bit CCSIDR format. ARMv8.2+ CPUs
         with FEAT_CCIDX (like the A78AE) use a 64-bit format with different field widths.
         Affects any ARMv8.2+ platform.</li>
-      <li><strong>PoU &rarr; PoC cache maintenance</strong>
-        (<a href="https://github.com/potanin/seL4/commit/153bda169a8043fe28bdb92f34895c3e9695b0d3#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>machine.h</code></a>,
-        <a href="https://github.com/potanin/seL4/commit/153bda169a8043fe28bdb92f34895c3e9695b0d3#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>objecttype.c</code></a>) &mdash;
-        page table cleaning uses <code>cleanCacheRange_PoU</code> which may not reach all
-        cache levels. Any platform with a system-level cache beyond Point of Unification needs PoC.</li>
+      <li><strong>PoU &rarr; PoC cache maintenance for page tables</strong>
+        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>machine.h</code></a>,
+        <a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>objecttype.c</code></a>,
+        <a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
+        page table creation uses <code>cleanCacheRange_PoU</code> (<code>dc cvau</code>)
+        and runtime PTE updates use <code>cleanByVA_PoU</code>.
+        These only clean to Point of Unification, which may not reach a system-level cache
+        sitting outside the CPU complex. The hardware page table walker reads from DRAM,
+        so it can miss dirty PTEs stuck in the SLC.
+        Fix: use <code>cleanCacheRange_RAM</code> (<code>dc cvac</code>, to PoC) for page table
+        creation and <code>cleanInvalByVA</code> (<code>dc civac</code>) for PTE updates.
+        Affects any platform with a system-level cache beyond PoU (e.g. ARM DSU-AE + external LLC).</li>
+      <li><strong>Elfloader set/way flush does not reach system-level caches</strong>
+        (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0fec65efa0edbc5f4b074086d5093e7d9b2ae4ab21d0a5dbb469a34108e362c2" target="_blank" rel="noopener"><code>sys_boot.c</code></a>,
+        <a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>mmu-hyp.S</code></a>) &mdash;
+        the elfloader uses <code>dc cisw</code> (clean+invalidate by set/way) to flush caches
+        before enabling the MMU. Set/way operations only reach CPU-managed caches, not
+        an external system-level cache. Page table entries get stuck in the SLC and the
+        hardware walker reads stale data from DRAM.
+        Fix: flush page tables with <code>dc cvac</code> (to PoC) while caches are still ON,
+        then skip the set/way flush in <code>disable_caches_hyp</code>.
+        Affects any platform with a system-level cache beyond L3.</li>
       <li><strong>S2_START_L1 cmake bug</strong>
-        (<a href="https://github.com/potanin/seL4/commit/153bda169a8043fe28bdb92f34895c3e9695b0d3#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>config.cmake</code></a>) &mdash;
+        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>config.cmake</code></a>) &mdash;
         the <code>AARCH64_VSPACE_S2_START_L1</code> condition checks the wrong variable
         name. Affects any AArch64 platform using stage-2 page tables starting at L1.</li>
     </ul>
