@@ -525,7 +525,7 @@ All is well in the universe</code></pre>
     <!-- 7. Repos -->
     <h2 id="repos">7. Repository Structure</h2>
 
-    <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (<a href="https://github.com/potanin/seL4/compare/master...orin-nano" target="_blank" rel="noopener">13 files</a>)</h3>
+    <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (<a href="https://github.com/potanin/seL4/compare/master...orin-nano" target="_blank" rel="noopener">12 files</a>)</h3>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
@@ -541,17 +541,18 @@ All is well in the universe</code></pre>
         <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>src/arch/arm/config.cmake</code></a></td><td>PA size override mechanism; fix S2_START_L1 cmake variable name bug</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-9cf4ca27836444eebcc66a84167e49a08b0adb06843aace5d1b874f634a86f46" target="_blank" rel="noopener"><code>src/kernel/thread.c</code></a></td><td>Minor MCS cleanup: extract repeated tcbSchedContext to local variable</td></tr>
       </tbody>
     </table>
 
-    <h3><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">tools/seL4/ &mdash; potanin/seL4_tools</a> (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano" target="_blank" rel="noopener">8 files</a>)</h3>
+    <h3><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">tools/seL4/ &mdash; potanin/seL4_tools</a> (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano" target="_blank" rel="noopener">10 files</a>)</h3>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0fec65efa0edbc5f4b074086d5093e7d9b2ae4ab21d0a5dbb469a34108e362c2" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/sys_boot.c</code></a></td><td>Enable UARTC clock via BPMP IPC doorbell; flush page tables with dc cvac (bypasses SLC)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></a></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-8517cc6176675305d1d0ba8922b2e153c808880bf96c0d0d43d7ff12306857a7" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>MT_NORMAL for identity mapping (prevents speculative device accesses during boot)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-8517cc6176675305d1d0ba8922b2e153c808880bf96c0d0d43d7ff12306857a7" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>Replace 2 MiB PMD identity mapping with 1 GiB PUD blocks using MT_NORMAL</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-67c6e7b10764c664f701ba431e21d24d257cf2a6173155e569075b72ad87feff" target="_blank" rel="noopener"><code>elfloader-tool/include/arch-arm/64/mode/structures.h</code></a></td><td>Remove unused _boot_pmd_down declaration (PMD level no longer used)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-3717af8cec77674b5aa384191ef562f3ce34aecc89ca19cd5cd6ac3e9b0d89c6" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/structures.c</code></a></td><td>Remove unused _boot_pmd_down definition (PMD level no longer used)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-935fb166d4b06802afd2581e149c3d7288ea27b3cdb885124c0f7ce5cc2849fd" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/efi_init.c</code></a></td><td>No-op plat_console_putchar override (UEFI doesn't map UART MMIO at 0x0c280000)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>elfloader-tool/include/arch-arm/64/mode/assembler.h</code></a></td><td>Fix CCSIDR parsing for FEAT_CCIDX (A78AE uses 64-bit format, not 32-bit)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-82c867884706d12711ae80d6ed2302cac6c7ef56c62f855ef4e48a99515799e0" target="_blank" rel="noopener"><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></a></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
