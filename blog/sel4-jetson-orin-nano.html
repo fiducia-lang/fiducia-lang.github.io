@@ -493,13 +493,6 @@ All is well in the universe</code></pre>
       untypeds covering firmware-protected addresses.
     </p>
 
-    <h3>T234 Cache (SLC)</h3>
-    <p>
-      The T234 has a 4 MB System-Level Cache (SLC / L4). <code>dc cisw</code>
-      (clean/invalidate by set/way) only reaches L1&ndash;L3, <strong>not the SLC</strong>.
-      The elfloader uses <code>dc cvac</code> (clean by VA to PoC) instead.
-    </p>
-
     <h3>SDRAM-Only Kernel Window</h3>
     <p>
       Upstream <code>map_kernel_window()</code> maps the entire physical range
