@@ -657,25 +657,6 @@ All is well in the universe</code></pre>
       <code>CLK_ENABLE</code> afterward.
     </p>
 
-    <h3><code>dc cisw</code> (set/way flush) does not reach the SLC</h3>
-    <p>
-      The elfloader&rsquo;s <code>dcache_clean_all()</code> used
-      <code>dc cisw</code> to flush caches before jumping to the kernel.
-      On T234, <code>dc cisw</code> only reaches CPU caches (L1/L2/L3),
-      not the 4 MB System Level Cache (L4/SLC). Page table entries sat dirty
-      in the SLC and the kernel read stale data. Fix: replace with
-      <code>dc cvac</code> (clean by VA to Point of Coherence), which pushes
-      data through the SLC to DRAM.
-    </p>
-
-    <h3>PTE maintenance: <code>dc cvac + dmb</code> insufficient</h3>
-    <p>
-      Standard ARM recipe for PTE writes is <code>dc cvac</code> + <code>dmb</code>.
-      On T234, the page table walker requires clean <em>and</em> invalidate.
-      Cleaning alone left stale cache line tags. Fix: <code>dc civac + dsb</code>
-      (clean+invalidate to PoC with full barrier).
-    </p>
-
     <h3>CBB ERD and IOB/ACI ERRCTLR &mdash; masking vs fixing RAS</h3>
     <p>
       We tried masking RAS errors at the bus fabric level. Setting the CBB
