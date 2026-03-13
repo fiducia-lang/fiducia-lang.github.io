@@ -493,18 +493,30 @@ All is well in the universe</code></pre>
       untypeds covering firmware-protected addresses.
     </p>
 
-    <h3>SDRAM-Only Kernel Window</h3>
+    <h3>Fixes That Should Go Upstream</h3>
     <p>
-      Upstream <code>map_kernel_window()</code> maps the entire physical range
-      (<code>PADDR_BASE</code>&ndash;<code>PADDR_TOP</code>) as Normal memory.
-      On the T234 (40-bit PA) this includes device registers and firmware-protected
-      regions; speculative accesses to these trigger RAS errors. Our port maps only
-      the actual SDRAM regions (<code>avail_p_regs[]</code>) so non-DRAM addresses
-      stay unmapped. Upstream
-      <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
-      addresses kernel virtual layout but does not yet restrict the physical window
-      to SDRAM.
+      Several of our changes fix issues that affect other platforms, not just the T234:
     </p>
+    <ul>
+      <li><strong>SDRAM-only kernel window</strong> (<code>vspace.c</code>) &mdash;
+        upstream <code>map_kernel_window()</code> maps the entire
+        <code>PADDR_BASE</code>&ndash;<code>PADDR_TOP</code> range as Normal memory.
+        On any platform where non-DRAM addresses are protected, speculative accesses
+        trigger faults. Our port maps only <code>avail_p_regs[]</code>.
+        Upstream <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
+        addresses kernel virtual layout but does not yet restrict the physical window to SDRAM.</li>
+      <li><strong>FEAT_CCIDX CCSIDR parsing</strong> (<code>assembler.h</code>) &mdash;
+        the elfloader's cache set/way code assumes 32-bit CCSIDR format. ARMv8.2+ CPUs
+        with FEAT_CCIDX (like the A78AE) use a 64-bit format with different field widths.
+        Affects any ARMv8.2+ platform.</li>
+      <li><strong>PoU &rarr; PoC cache maintenance</strong> (<code>machine.h</code>,
+        <code>objecttype.c</code>) &mdash; page table cleaning uses
+        <code>cleanCacheRange_PoU</code> which may not reach all cache levels. Any platform
+        with a system-level cache beyond Point of Unification needs PoC.</li>
+      <li><strong>S2_START_L1 cmake bug</strong> (<code>config.cmake</code>) &mdash;
+        the <code>AARCH64_VSPACE_S2_START_L1</code> condition checks the wrong variable
+        name. Affects any AArch64 platform using stage-2 page tables starting at L1.</li>
+    </ul>
 
     <!-- 7. Repos -->
     <h2 id="repos">7. Repository Structure</h2>
