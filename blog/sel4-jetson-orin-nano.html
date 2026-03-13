@@ -258,6 +258,7 @@
         <li><a href="#boot">Booting</a></li>
         <li><a href="#technical">Technical Details</a></li>
         <li><a href="#repos">Repository Structure</a></li>
+        <li><a href="#dead-ends">Dead Ends</a></li>
       </ol>
     </div>
 
@@ -523,6 +524,14 @@ All is well in the universe</code></pre>
         Fix: use <code>cleanCacheRange_RAM</code> (<code>dc cvac</code>, to PoC) for page table
         creation and <code>cleanInvalByVA</code> (<code>dc civac</code>) for PTE updates.
         Affects any platform with a system-level cache beyond PoU (e.g. ARM DSU-AE + external LLC).</li>
+      <li><strong>Non-shareable page tables in UP builds</strong>
+        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
+        upstream uses <code>SMP_TERNARY(SMP_SHARE, 0)</code> for kernel page table shareability,
+        which evaluates to non-shareable in uniprocessor builds.
+        On hardware with a system-level cache, the page table walker participates in the
+        inner shareable domain and may not see PTEs flushed to a non-shareable address.
+        Fix: force inner shareable for kernel page tables regardless of SMP configuration.
+        Affects any UP build on hardware where the page table walker is in the IS domain.</li>
       <li><strong>Elfloader set/way flush does not reach system-level caches</strong>
         (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0fec65efa0edbc5f4b074086d5093e7d9b2ae4ab21d0a5dbb469a34108e362c2" target="_blank" rel="noopener"><code>sys_boot.c</code></a>,
         <a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>mmu-hyp.S</code></a>) &mdash;
@@ -587,6 +596,192 @@ All is well in the universe</code></pre>
         <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td>Enable timer interrupt routing for orin-nano (same as TX2)</td></tr>
       </tbody>
     </table>
+
+    <!-- 8. Dead Ends -->
+    <h2 id="dead-ends">8. Dead Ends</h2>
+    <p>
+      The port took roughly 120 iterations over 15 phases. Many of those iterations
+      explored approaches that turned out to be wrong. Documenting them here so
+      others can avoid the same traps.
+    </p>
+
+    <h3>Wrong UART: UARTA and the BPMP keepalive saga</h3>
+    <p>
+      The biggest time sink. We initially used <strong>UARTA</strong> at
+      <code>0x03100000</code> (40-pin GPIO header), which required a custom
+      pinmux overlay flashed into MB1. It worked at first, but the UARTA clock
+      died after 5&ndash;10 minutes &mdash; BPMP power management aggressively
+      gates clocks when no Linux driver holds a reference.
+    </p>
+    <p>
+      This led to building an entire BPMP IPC keepalive subsystem inside the
+      seL4 kernel: IVC (Inter-VM Communication) protocol, HSP doorbell
+      interrupts, MRQ_CLK messages, timer-tick integration. Over 40 versions
+      (v70&ndash;v112) were spent tuning this. Results were non-deterministic
+      (25 to 122 tests per boot depending on BPMP firmware state). Calling
+      BPMP IPC from the timer interrupt blocked the kernel for ~10 ms
+      and violated real-time scheduling guarantees. A fire-and-forget variant
+      corrupted the IVC TX/RX counters.
+    </p>
+    <p>
+      The fix was trivial: switch to <strong>UARTC</strong> at
+      <code>0x0c280000</code> on the J14 button header. UARTC is in the
+      Always-On (AON) power domain and stays alive without any keepalive.
+      All BPMP kernel code was deleted.
+    </p>
+
+    <h3>TCU (Tegra Combined UART) via USB</h3>
+    <p>
+      Before physical UART worked, we tried using the TCU &mdash; the Orin
+      Nano&rsquo;s default console, which operates as a USB gadget through
+      the XUSB controller. After <code>ExitBootServices</code> the USB stack
+      is gone, so no USB device appears on the host. Dead end.
+    </p>
+
+    <h3>Cross-boot diagnostics via SRAM and IVC shared memory</h3>
+    <p>
+      With no serial output after <code>ExitBootServices</code>, we tried
+      writing diagnostic values to persistent memory (SRAM at
+      <code>0x40010000</code>, IVC shared memory regions) and reading them
+      back on the next boot. SRAM wasn&rsquo;t mapped in UEFI (crashed on access).
+      IVC regions were cleared each boot. EFI <code>SetVariable</code>
+      didn&rsquo;t work after our MMU changes. Each attempt required two power
+      cycles and none persisted reliably.
+    </p>
+
+    <h3>Garbled serial blamed on pinmux</h3>
+    <p>
+      When garbled bytes appeared on UARTA, investigation focused on pinmux
+      configuration. A GPIO bit-bang test toggled pins directly &mdash; no
+      output, because PADCTL is firewalled on T234 (CPU cannot read/write
+      pinmux registers). The actual cause was a baud rate mismatch: UEFI
+      released the UART clock reference at <code>ExitBootServices</code>,
+      changing the effective clock rate. Fix: read UEFI&rsquo;s divisor
+      registers before <code>ExitBootServices</code> and re-send
+      <code>CLK_ENABLE</code> afterward.
+    </p>
+
+    <h3><code>dc cisw</code> (set/way flush) does not reach the SLC</h3>
+    <p>
+      The elfloader&rsquo;s <code>dcache_clean_all()</code> used
+      <code>dc cisw</code> to flush caches before jumping to the kernel.
+      On T234, <code>dc cisw</code> only reaches CPU caches (L1/L2/L3),
+      not the 4 MB System Level Cache (L4/SLC). Page table entries sat dirty
+      in the SLC and the kernel read stale data. Fix: replace with
+      <code>dc cvac</code> (clean by VA to Point of Coherence), which pushes
+      data through the SLC to DRAM.
+    </p>
+
+    <h3>PTE maintenance: <code>dc cvac + dmb</code> insufficient</h3>
+    <p>
+      Standard ARM recipe for PTE writes is <code>dc cvac</code> + <code>dmb</code>.
+      On T234, the page table walker requires clean <em>and</em> invalidate.
+      Cleaning alone left stale cache line tags. Fix: <code>dc civac + dsb</code>
+      (clean+invalidate to PoC with full barrier).
+    </p>
+
+    <h3>CBB ERD and IOB/ACI ERRCTLR &mdash; masking vs fixing RAS</h3>
+    <p>
+      We tried masking RAS errors at the bus fabric level. Setting the CBB
+      (Control Backbone) Error Response Disable register at
+      <code>0x13a3a004</code> converted bus errors into benign responses.
+      But the IOB (I/O Bridge) generates its own RAS error independently of CBB.
+      The error path is: SLC eviction &rarr; writeback &rarr; SCF &rarr; IOB
+      &rarr; RAS. CBB is downstream of where the IOB error fires.
+    </p>
+    <p>
+      Writing directly to IOB/ACI ERRCTLR registers failed too &mdash; they
+      are Secure-only. Writes from NS-EL2 are silently ignored.
+    </p>
+
+    <h3>SDEI handlers to catch RAS</h3>
+    <p>
+      Registered SDEI (Software Delegated Exception Interface) handlers for
+      all 13 RAS events. The handlers were called successfully. But ATF
+      unconditionally powers off the faulting core <em>after</em> dispatching
+      the SDEI event, regardless of the handler&rsquo;s return value. The core
+      was killed anyway.
+    </p>
+
+    <h3>Custom BL31 &mdash; unnecessary in the end</h3>
+    <p>
+      Built custom NVIDIA ATF from source, modifying
+      <code>tegra234_ras_handler()</code> to log errors instead of killing the core.
+      Required a complex QSPI flashing journey (USB Recovery Mode, A/B boot slots,
+      TOS image packing). Achieved deterministic 141/141 pass &mdash; but treated the
+      symptom (core kill) rather than the cause (speculative accesses to protected memory).
+    </p>
+    <p>
+      Three software-only fixes later eliminated the RAS errors entirely:
+      MT_NORMAL identity mapping in the elfloader, SDRAM-only kernel window,
+      and 2 MiB low-address reservation. Stock BL31 restored.
+    </p>
+
+    <h3>XN-only (execute-never) mapping</h3>
+    <p>
+      Mapped the full PA range with UXN=1 instead of leaving non-DRAM unmapped.
+      XN prevents speculative <em>instruction fetches</em> but not speculative
+      <em>data reads</em>. The A78AE still speculatively reads data from
+      Normal-mapped addresses. RAS errors persisted. Only leaving non-DRAM
+      regions completely unmapped works.
+    </p>
+
+    <h3>PE/COFF sensitivity misdiagnosis</h3>
+    <p>
+      Removing UEFI <code>ConOut</code> code from <code>efi_init.c</code>
+      caused a Synchronous Exception. We initially blamed NVIDIA&rsquo;s PE/COFF
+      loader being sensitive to binary layout changes. The actual cause: the
+      default weak <code>plat_console_putchar</code> calls
+      <code>uart_8250_putchar()</code>, which writes to UART MMIO at
+      <code>0x0c280000</code>. UEFI doesn&rsquo;t map that address &rarr; data abort.
+      Fix: override with a no-op (7 lines).
+    </p>
+
+    <h3>Implementation-defined CPU registers</h3>
+    <p>
+      Attempted to modify speculative behavior via ACTLR_EL2 and other
+      implementation-defined registers. On the A78AE (r0p1), ATF traps and
+      silently discards all EL2 writes to these registers. No CPU-level
+      workarounds are possible from EL2.
+    </p>
+
+    <h3>MCE ROC_FLUSH_CACHE SMC calls</h3>
+    <p>
+      Tried T186-era MCE commands (<code>ROC_FLUSH_CACHE</code>,
+      <code>ROC_CLEAN_CACHE</code>) via SMC to flush the SLC. Not supported
+      on T234 &mdash; both return <code>SMC_UNK</code>. The SLC cannot be
+      flushed from NS-EL2 on T234.
+    </p>
+
+    <h3><code>dc ivac</code> to discard dirty SLC lines</h3>
+    <p>
+      Tried <code>dc ivac</code> (invalidate without clean) to discard dirty
+      cache lines at protected addresses without triggering a writeback. The
+      A78AE implementation cleans dirty lines before invalidating &mdash;
+      <code>dc ivac</code> triggers the same writeback as <code>dc civac</code>.
+      IOB RAS fires, core killed.
+    </p>
+
+    <h3>QSPI flash from the running system</h3>
+    <p>
+      During the custom BL31 phase, we tried every approach to write QSPI from
+      a running OS: Linux MTD, <code>/dev/mem</code>, UEFI Shell <code>mm</code>,
+      UEFI FirmwareManagement Protocol, NorFlashDxe, OP-TEE TA. All failed
+      because the T234 CBB firewall blocks all Non-Secure CPU access to the QSPI
+      controller at <code>0x03270000</code>. Only USB Recovery Mode works (BROM
+      exposes USB, MB1/MB2 have Secure access to QSPI).
+    </p>
+
+    <h3>BPMP IPC for UARTC clock enable</h3>
+    <p>
+      After switching to UARTC, we added BPMP IPC code to the elfloader to
+      explicitly enable the UARTC clock (CLK_ENABLE + SET_RATE + RESET_DEASSERT)
+      before <code>ExitBootServices</code>. ~60 lines of shared-memory IPC and
+      doorbell code. Turned out to be completely redundant &mdash; firmware
+      (MB1/MB2/BPMP/SPE) already enables UARTC from power-on (serial output
+      appears at timestamp 0000.066, long before our EFI application loads).
+      Removed.
+    </p>
 
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:40px;font-size:0.95rem;">
       <strong style="color:var(--text);">Join the discussion</strong>
