@@ -498,22 +498,26 @@ All is well in the universe</code></pre>
       Several of our changes fix issues that affect other platforms, not just the T234:
     </p>
     <ul>
-      <li><strong>SDRAM-only kernel window</strong> (<code>vspace.c</code>) &mdash;
+      <li><strong>SDRAM-only kernel window</strong>
+        (<a href="https://github.com/potanin/seL4/commit/7c1f8d9c3de833985cb068153266fc3faefed14b" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
         upstream <code>map_kernel_window()</code> maps the entire
         <code>PADDR_BASE</code>&ndash;<code>PADDR_TOP</code> range as Normal memory.
         On any platform where non-DRAM addresses are protected, speculative accesses
         trigger faults. Our port maps only <code>avail_p_regs[]</code>.
         Upstream <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
         addresses kernel virtual layout but does not yet restrict the physical window to SDRAM.</li>
-      <li><strong>FEAT_CCIDX CCSIDR parsing</strong> (<code>assembler.h</code>) &mdash;
+      <li><strong>FEAT_CCIDX CCSIDR parsing</strong>
+        (<a href="https://github.com/potanin/seL4_tools/commit/1e4c0799644743ebe63a1ee3a3d678bbf14b1f2c#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>assembler.h</code></a>) &mdash;
         the elfloader's cache set/way code assumes 32-bit CCSIDR format. ARMv8.2+ CPUs
         with FEAT_CCIDX (like the A78AE) use a 64-bit format with different field widths.
         Affects any ARMv8.2+ platform.</li>
-      <li><strong>PoU &rarr; PoC cache maintenance</strong> (<code>machine.h</code>,
-        <code>objecttype.c</code>) &mdash; page table cleaning uses
-        <code>cleanCacheRange_PoU</code> which may not reach all cache levels. Any platform
-        with a system-level cache beyond Point of Unification needs PoC.</li>
-      <li><strong>S2_START_L1 cmake bug</strong> (<code>config.cmake</code>) &mdash;
+      <li><strong>PoU &rarr; PoC cache maintenance</strong>
+        (<a href="https://github.com/potanin/seL4/commit/153bda169a8043fe28bdb92f34895c3e9695b0d3#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>machine.h</code></a>,
+        <a href="https://github.com/potanin/seL4/commit/153bda169a8043fe28bdb92f34895c3e9695b0d3#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>objecttype.c</code></a>) &mdash;
+        page table cleaning uses <code>cleanCacheRange_PoU</code> which may not reach all
+        cache levels. Any platform with a system-level cache beyond Point of Unification needs PoC.</li>
+      <li><strong>S2_START_L1 cmake bug</strong>
+        (<a href="https://github.com/potanin/seL4/commit/153bda169a8043fe28bdb92f34895c3e9695b0d3#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>config.cmake</code></a>) &mdash;
         the <code>AARCH64_VSPACE_S2_START_L1</code> condition checks the wrong variable
         name. Affects any AArch64 platform using stage-2 page tables starting at L1.</li>
     </ul>
@@ -525,19 +529,19 @@ All is well in the universe</code></pre>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/plat/orin-nano/config.cmake" target="_blank" rel="noopener"><code>src/plat/orin-nano/config.cmake</code></a></td><td>New platform declaration: Cortex-A78AE (A72 proxy), GICv3, 40-bit PA override</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/plat/orin-nano/overlay-orin-nano.dts" target="_blank" rel="noopener"><code>src/plat/orin-nano/overlay-orin-nano.dts</code></a></td><td>Device tree overlay: UARTC, dual memory regions with 64 MB carve-out gap</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/tools/dts/orin-nano.dts" target="_blank" rel="noopener"><code>tools/dts/orin-nano.dts</code></a></td><td>Full device tree extracted from running Linux on the hardware</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/tools/hardware.yml" target="_blank" rel="noopener"><code>tools/hardware.yml</code></a></td><td>Register orin-nano platform in seL4 hardware database</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/libsel4/sel4_plat_include/orin-nano/sel4/plat/api/constants.h" target="_blank" rel="noopener"><code>libsel4/sel4_plat_include/orin-nano/sel4/plat/api/constants.h</code></a></td><td>Platform constants header (required by build system)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/drivers/serial/tegra_omap3_dwapb.c" target="_blank" rel="noopener"><code>src/drivers/serial/tegra_omap3_dwapb.c</code></a></td><td>8250-style UART driver shared with other Tegra/OMAP/DW-APB platforms</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/drivers/serial/config.cmake" target="_blank" rel="noopener"><code>src/drivers/serial/config.cmake</code></a></td><td>Wire orin-nano to the tegra_omap3_dwapb serial driver</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/64/kernel/vspace.c" target="_blank" rel="noopener"><code>src/arch/arm/64/kernel/vspace.c</code></a></td><td>Map only SDRAM regions in kernel window instead of full PA range; prevents speculative RAS errors</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/kernel/boot.c" target="_blank" rel="noopener"><code>src/arch/arm/kernel/boot.c</code></a></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/include/arch/arm/arch/machine.h" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/64/object/objecttype.c" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/arch/arm/config.cmake" target="_blank" rel="noopener"><code>src/arch/arm/config.cmake</code></a></td><td>PA size override mechanism; fix S2_START_L1 cmake variable name bug</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/blob/orin-nano/src/kernel/thread.c" target="_blank" rel="noopener"><code>src/kernel/thread.c</code></a></td><td>Minor MCS cleanup: extract repeated tcbSchedContext to local variable</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b4a29b517b1670263643a013d34039e95ecacd4437bae368d9230c4d6b836c22" target="_blank" rel="noopener"><code>src/plat/orin-nano/config.cmake</code></a></td><td>New platform declaration: Cortex-A78AE (A72 proxy), GICv3, 40-bit PA override</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ac97ddcbfd707445653d8d5cb3730507c81b494e0ea54722b4a1fa84f9779c3e" target="_blank" rel="noopener"><code>src/plat/orin-nano/overlay-orin-nano.dts</code></a></td><td>Device tree overlay: UARTC, dual memory regions with 64 MB carve-out gap</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-6ce482a5ac7d31120478f153a40ee9cb3ea17480148fdda509bcba85256bfe2a" target="_blank" rel="noopener"><code>tools/dts/orin-nano.dts</code></a></td><td>Full device tree extracted from running Linux on the hardware</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-03f50b80301f03cbe74afa0f123800a1edf7b9a5c0f79b15d3bb8f23d532cd95" target="_blank" rel="noopener"><code>tools/hardware.yml</code></a></td><td>Register orin-nano platform in seL4 hardware database</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-fe00529041e0026a118d08103fdcc7cd67d70e99255ed582d4823f20c09e55fd" target="_blank" rel="noopener"><code>libsel4/sel4_plat_include/orin-nano/sel4/plat/api/constants.h</code></a></td><td>Platform constants header (required by build system)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-1ab5c91d34315907d48dee2e3e86f576da4417a6f77e52d0dc3b6e1953e98ab3" target="_blank" rel="noopener"><code>src/drivers/serial/tegra_omap3_dwapb.c</code></a></td><td>8250-style UART driver shared with other Tegra/OMAP/DW-APB platforms</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b57ee5c830ef97989e73af94224df0c55e50759d5bf5b3aa6d6cbd21865f94a3" target="_blank" rel="noopener"><code>src/drivers/serial/config.cmake</code></a></td><td>Wire orin-nano to the tegra_omap3_dwapb serial driver</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>src/arch/arm/64/kernel/vspace.c</code></a></td><td>Map only SDRAM regions in kernel window instead of full PA range; prevents speculative RAS errors</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-951758e038c3377f24f8ec4bec73efe93d468b9cbda3f952ae6a1bd49e2962de" target="_blank" rel="noopener"><code>src/arch/arm/kernel/boot.c</code></a></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>src/arch/arm/config.cmake</code></a></td><td>PA size override mechanism; fix S2_START_L1 cmake variable name bug</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-9cf4ca27836444eebcc66a84167e49a08b0adb06843aace5d1b874f634a86f46" target="_blank" rel="noopener"><code>src/kernel/thread.c</code></a></td><td>Minor MCS cleanup: extract repeated tcbSchedContext to local variable</td></tr>
       </tbody>
     </table>
 
@@ -545,15 +549,15 @@ All is well in the universe</code></pre>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/arch-arm/sys_boot.c" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/sys_boot.c</code></a></td><td>Enable UARTC clock via BPMP IPC doorbell; flush page tables with dc cvac (bypasses SLC)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></a></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/arch-arm/64/mmu.c" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>MT_NORMAL for identity mapping (prevents speculative device accesses during boot)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/binaries/efi/efi_init.c" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/efi_init.c</code></a></td><td>No-op plat_console_putchar override (UEFI doesn't map UART MMIO at 0x0c280000)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/include/arch-arm/64/mode/assembler.h" target="_blank" rel="noopener"><code>elfloader-tool/include/arch-arm/64/mode/assembler.h</code></a></td><td>Fix CCSIDR parsing for FEAT_CCIDX (A78AE uses 64-bit format, not 32-bit)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/drivers/uart/8250-uart.c" target="_blank" rel="noopener"><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></a></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/binaries/efi/gnuefi/elf_aarch64_efi.lds" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/gnuefi/elf_aarch64_efi.lds</code></a></td><td>Add _end symbol required by EFI loader</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/elfloader-tool/src/arch-arm/smp_boot.c" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/smp_boot.c</code></a></td><td>Remove debug print</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/blob/orin-nano/cmake-tool/helpers/application_settings.cmake" target="_blank" rel="noopener"><code>cmake-tool/helpers/application_settings.cmake</code></a></td><td>Add orin-nano to EFI boot platform list</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0fec65efa0edbc5f4b074086d5093e7d9b2ae4ab21d0a5dbb469a34108e362c2" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/sys_boot.c</code></a></td><td>Enable UARTC clock via BPMP IPC doorbell; flush page tables with dc cvac (bypasses SLC)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></a></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-8517cc6176675305d1d0ba8922b2e153c808880bf96c0d0d43d7ff12306857a7" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>MT_NORMAL for identity mapping (prevents speculative device accesses during boot)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-935fb166d4b06802afd2581e149c3d7288ea27b3cdb885124c0f7ce5cc2849fd" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/efi_init.c</code></a></td><td>No-op plat_console_putchar override (UEFI doesn't map UART MMIO at 0x0c280000)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>elfloader-tool/include/arch-arm/64/mode/assembler.h</code></a></td><td>Fix CCSIDR parsing for FEAT_CCIDX (A78AE uses 64-bit format, not 32-bit)</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-82c867884706d12711ae80d6ed2302cac6c7ef56c62f855ef4e48a99515799e0" target="_blank" rel="noopener"><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></a></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-b2060bbfb449a00b2dc637f2112f49261a5eba7c02d00458e0b024f190ec5206" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/gnuefi/elf_aarch64_efi.lds</code></a></td><td>Add _end symbol required by EFI loader</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0f95820f398cac416f2d71e42247a29566ec69315845d14c0dba30dad59194fd" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/smp_boot.c</code></a></td><td>Remove debug print</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-d704aa0b7efcfa3ad27ee4b44f400ae9c0522b46d1fd0f5d8371162f5d39eb94" target="_blank" rel="noopener"><code>cmake-tool/helpers/application_settings.cmake</code></a></td><td>Add orin-nano to EFI boot platform list</td></tr>
       </tbody>
     </table>
 
@@ -561,11 +565,11 @@ All is well in the universe</code></pre>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/util_libs/blob/orin-nano/libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></a></td><td>Platform stub header (required by build system)</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/blob/orin-nano/libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></a></td><td>Platform stub header (required by build system)</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/blob/orin-nano/libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></a></td><td>Platform serial configuration: UARTC address and parameters</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/blob/orin-nano/libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></a></td><td>Platform timer configuration: NV timer addresses and interrupt routing</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/blob/orin-nano/libplatsupport/src/mach/nvidia/timer.c" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td>Enable timer interrupt routing for orin-nano (same as TX2)</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-fcdfdeeaaac0c9e1d50205740abd75e172164c821f5a70efd7794c8bd1e14824" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></a></td><td>Platform stub header (required by build system)</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-83828dfc9248be296122aa52efc1501f1cd7df39fec3e3dd4497656e1fb9992f" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></a></td><td>Platform stub header (required by build system)</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-145ecd10d70107da6ba32ad3b2942b04a9efc1e3a42b6539833a3753c5fbb877" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></a></td><td>Platform serial configuration: UARTC address and parameters</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-ba8e6c4e1f45b6ecd3b313d28f8e39c5608ad83b467f3a7434be213ff437a0e5" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></a></td><td>Platform timer configuration: NV timer addresses and interrupt routing</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td>Enable timer interrupt routing for orin-nano (same as TX2)</td></tr>
       </tbody>
     </table>
 
