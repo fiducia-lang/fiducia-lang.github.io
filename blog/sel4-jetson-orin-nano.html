@@ -513,17 +513,6 @@ All is well in the universe</code></pre>
       to SDRAM.
     </p>
 
-    <h3>UEFI UART MMIO Fault</h3>
-    <p>
-      Before ExitBootServices, UEFI's page tables do not map the UART MMIO region
-      (<code>0x0c280000</code>). The elfloader's default weak <code>plat_console_putchar</code>
-      calls <code>uart_8250_putchar()</code>, which reads the UART Line Status Register at
-      this unmapped address &mdash; causing a data abort (Synchronous Exception). The fix
-      is a strong no-op override of <code>plat_console_putchar</code> in
-      <code>efi_init.c</code>. After ExitBootServices, the elfloader sets up identity-mapped
-      page tables and the kernel initializes its own UART driver.
-    </p>
-
     <!-- 7. Repos -->
     <h2 id="repos">7. Repository Structure</h2>
 
