@@ -492,7 +492,7 @@ All is well in the universe</code></pre>
 
     <h3>Fixes That Should Go Upstream</h3>
     <p>
-      Several of our changes fix issues that affect other platforms, not just the T234:
+      Several of our changes fix issues that affect other platforms, not just the T234. First the two issues that seem real and need to be fixed upstream:
     </p>
     <ul>
       <li><strong>SDRAM-only kernel window</strong>
@@ -503,6 +503,15 @@ All is well in the universe</code></pre>
         trigger faults. Our port maps only <code>avail_p_regs[]</code>.
         Upstream <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
         addresses kernel virtual layout but does not yet restrict the physical window to SDRAM.</li>
+      <li><strong>S2_START_L1 cmake bug</strong>
+        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>config.cmake</code></a>) &mdash;
+        the <code>AARCH64_VSPACE_S2_START_L1</code> condition checks the wrong variable
+        name. Affects any AArch64 platform using stage-2 page tables starting at L1.</li>
+    </ul>
+    <p>
+      Now the issues suggested by Claude Opus 4.6 that may not be necessary as it may not grasp the architectural details and the actual root causes of the problems:
+    </p>
+    <ul>
       <li><strong>FEAT_CCIDX CCSIDR parsing</strong>
         (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>assembler.h</code></a>) &mdash;
         the elfloader's cache set/way code assumes 32-bit CCSIDR format. ARMv8.2+ CPUs
@@ -538,10 +547,6 @@ All is well in the universe</code></pre>
         Fix: flush page tables with <code>dc cvac</code> (to PoC) while caches are still ON,
         then skip the set/way flush in <code>disable_caches_hyp</code>.
         Affects any platform with a system-level cache beyond L3.</li>
-      <li><strong>S2_START_L1 cmake bug</strong>
-        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>config.cmake</code></a>) &mdash;
-        the <code>AARCH64_VSPACE_S2_START_L1</code> condition checks the wrong variable
-        name. Affects any AArch64 platform using stage-2 page tables starting at L1.</li>
     </ul>
 
     <!-- 7. Repos -->
