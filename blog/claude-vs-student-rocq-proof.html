@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>I Spent $3,000 on Claude Trying to Prove a Theorem. My Student Did It Better in Two Days. - Fiducia Blog</title>
+  <meta name="description" content="A case study on using Claude for Rocq (Coq) proof development: $3,000 in API costs, four failed attempts, and a student who solved it in two days.">
+  <meta property="og:title" content="Claude vs Student: Rocq Proof Development - Fiducia Blog">
+  <meta property="og:description" content="$3,000 in API costs, four failed attempts at a Rocq proof, and a student who solved it in two days. Lessons on LLMs and formal verification.">
+  <meta property="og:url" content="https://fiducia-lang.github.io/blog/claude-vs-student-rocq-proof.html">
+  <meta property="og:type" content="article">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    nav .logo {
+      font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text);
+    }
+    nav .logo span { color: var(--accent); }
+    nav ul { list-style: none; display: flex; gap: 28px; }
+    nav ul a { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    nav ul a:hover { color: var(--text); text-decoration: none; }
+
+    /* Article */
+    .article-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+    .article-meta {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .article-container h1 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .article-container .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      margin-bottom: 40px;
+      line-height: 1.7;
+    }
+    .article-container h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 48px 0 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      letter-spacing: -0.01em;
+    }
+    .article-container h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 32px 0 12px;
+      color: var(--accent);
+    }
+    .article-container h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+    }
+    .article-container p {
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    .article-container ul, .article-container ol {
+      margin: 0 0 16px 24px;
+      font-size: 0.95rem;
+    }
+    .article-container li { margin-bottom: 6px; }
+    .article-container strong { color: var(--text); }
+    .article-container code {
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.85em;
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+    .article-container pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      overflow-x: auto;
+      margin: 0 0 20px;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+    }
+    .article-container pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+    .article-container table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 20px;
+      font-size: 0.9rem;
+    }
+    .article-container th {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 700;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+    .article-container td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .article-container tr:hover td { background: rgba(96, 165, 250, 0.03); }
+    .callout {
+      background: rgba(96, 165, 250, 0.06);
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 0 0 20px;
+      font-size: 0.9rem;
+    }
+    .callout-warn {
+      background: rgba(251, 191, 36, 0.06);
+      border-color: rgba(251, 191, 36, 0.2);
+    }
+    .callout strong { color: var(--accent); }
+    .callout-warn strong { color: var(--amber); }
+    .toc {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 40px;
+    }
+    .toc h4 {
+      margin: 0 0 12px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+    }
+    .toc ol { margin: 0; padding-left: 20px; }
+    .toc li { margin-bottom: 4px; font-size: 0.9rem; }
+    .cost-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(251, 113, 133, 0.1);
+      border: 1px solid rgba(251, 113, 133, 0.3);
+      border-radius: 8px;
+      color: var(--rose);
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 16px 0;
+    }
+    .result-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 8px;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 16px 0;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 640px) {
+      nav ul { gap: 16px; }
+      .article-container { padding: 30px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo" style="text-decoration:none;"><span>F</span>iducia</a>
+      <ul>
+        <li><a href="../index.html#features">Features</a></li>
+        <li><a href="../index.html#use-cases">Use Cases</a></li>
+        <li><a href="../index.html#blog">Blog</a></li>
+        <li><a href="mailto:alex.potanin@anu.edu.au">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <article class="article-container">
+    <p class="article-meta">April 13, 2026 &middot; Alex Potanin</p>
+    <h1>I Spent $3,000 on Claude Trying to Prove a Theorem. My Student Did It Better in Two Days.</h1>
+
+    <p class="subtitle">
+      A case study on using Claude for mechanized proof development in Rocq (formerly Coq).
+      Four attempts, ~$3,000 in API costs, 3,000+ compilation cycles &mdash; and a student
+      who closed every remaining case in two days.
+    </p>
+
+    <div class="cost-badge">~$3,000 USD &middot; 4 days &middot; 5 Admitted lemmas remaining</div>
+    <br>
+    <div class="result-badge">Student: 0 Admitted &middot; 2 days &middot; clean proof</div>
+
+    <div class="toc">
+      <h4>Contents</h4>
+      <ol>
+        <li><a href="#problem">The Problem</a></li>
+        <li><a href="#attempts">What Claude Did: Four Attempts, Zero Clean Proofs</a></li>
+        <li><a href="#cost">The Cost</a></li>
+        <li><a href="#student">What the Student Did</a></li>
+        <li><a href="#why-claude-failed">Why Claude Failed</a></li>
+        <li><a href="#what-claude-was-good-at">What Claude Was Good At</a></li>
+        <li><a href="#lessons">Lessons</a></li>
+        <li><a href="#conclusion">Conclusion</a></li>
+      </ol>
+    </div>
+
+    <!-- The Problem -->
+    <h2 id="problem">The Problem</h2>
+
+    <p>
+      We're building a mechanized proof in Rocq (formerly Coq) that a simulation relation
+      between two styles of Rust borrow semantics is preserved under operand evaluation.
+      The project formalizes how "borrow-centric" and "loan-centric" representations of
+      mutable borrows can simulate each other &mdash; a key result for our partial-borrow research.
+    </p>
+
+    <p>
+      Most of the operand cases (pairs, sums, projections) fell to straightforward proof
+      techniques. But one case &mdash; <strong>move</strong> &mdash; turned into a months-long
+      grind. After a move writes <code>VBot</code> into the source path, you need to show the
+      resulting state still satisfies the simulation relation. This requires reconstructing a
+      two-hole decomposition of the state after an arbitrary write, and our formalization made
+      that extremely hard.
+    </p>
+
+    <p>I thought Claude could crack it. I was wrong.</p>
+
+    <!-- Attempts -->
+    <h2 id="attempts">What Claude Did: Four Attempts, Zero Clean Proofs</h2>
+
+    <h3>Attempt 1: Brute-force the existing representation</h3>
+
+    <p>
+      Claude's first instinct was to work directly with the <code>fill_state2</code> /
+      <code>val_with_two_holes</code> representation. After MMove writes <code>VBot</code>
+      at some path, show the result still decomposes into a two-hole state context with
+      updated fillings.
+    </p>
+
+    <p>
+      This hit a wall immediately. The <code>val_updates</code> function operates on concrete
+      values &mdash; it has no concept of "holes." After a write, the two-hole structure is
+      destroyed. There is no generic way to extract an updated hole context from the post-write
+      state. Claude spent hundreds of compilation cycles trying different induction schemes,
+      case splits, and auxiliary lemmas before I pulled the plug.
+    </p>
+
+    <h3>Attempt 2: Prove injectivity of <code>fill_val</code></h3>
+
+    <p>
+      Claude's next idea was clever in theory: prove that hole-filling is injective
+      (<code>fill_val_vh_unique</code>), which would let us "invert" the fill operation after
+      a write. If you can prove the hole context is uniquely determined by the filled value,
+      you can reconstruct it.
+    </p>
+
+    <p>
+      The proof was 90% done. But the cross-pair cases &mdash; where one context uses
+      <code>VHolePairLeft</code> and the other uses <code>VHolePairRight</code> &mdash;
+      needed a value-size argument to derive a contradiction. Claude tried at least a dozen
+      formulations of this size argument. None compiled. The lemma stayed <code>Admitted</code>.
+    </p>
+
+    <h3>Attempt 3: Case-split everything</h3>
+
+    <p>
+      Claude went for exhaustive case analysis. Split the move proof into whether
+      <code>vl = vr</code> (the move doesn't touch loan/borrow markers) versus a borrow
+      migration case, then further split on <code>S2HSame</code> versus <code>S2HDiff</code>
+      (are both holes in the same variable?).
+    </p>
+
+    <p>
+      This actually made progress. All the <code>S2HDiff</code> sub-cases went through,
+      because when the holes are in different variables, the move only touches one variable
+      and the other stays intact. But the <code>S2HSame</code> sub-cases &mdash; where both
+      holes live in the same variable &mdash; hit the exact same wall as Attempt 1. Claude
+      wrote ~1,200 lines of proof code. Two sub-cases remained stuck.
+    </p>
+
+    <h3>Attempt 4: Reinvent the representation</h3>
+
+    <p>
+      Finally, Claude proposed a path-based refactoring inspired by the Aeneas project.
+      Define <code>dp_set</code>, <code>sset</code>, and a commutativity lemma
+      <code>dp_set_commute</code>, then re-express the simulation relation using paths
+      instead of holes. The key insight: move paths use structural projections
+      (<code>PiProj</code>), while loan/borrow markers live behind
+      <code>PiUnloan</code>/<code>PiUnbor</code>, so they're always disjoint and writes commute.
+    </p>
+
+    <p>
+      This was architecturally sound. Claude wrote ~1,000 lines of infrastructure in a new
+      file <code>DPSetCommute.v</code>. But the bridge lemmas connecting the old hole-based
+      relation to the new path-based relation were fragile, and the final integration &mdash;
+      actually closing all the move sub-cases &mdash; never converged. Claude kept generating
+      proof scripts that were close but never compiled cleanly.
+    </p>
+
+    <!-- Cost -->
+    <h2 id="cost">The Cost</h2>
+
+    <p>
+      Over four days (April 3&ndash;7), I ran Claude in extended sessions, sometimes with
+      multiple parallel agents. The token consumption was staggering:
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>API costs</td>
+          <td><strong>~$3,000 USD</strong> (mostly output tokens)</td>
+        </tr>
+        <tr>
+          <td>Wall-clock time</td>
+          <td>~4 days, including overnight runs</td>
+        </tr>
+        <tr>
+          <td>Compilation cycles</td>
+          <td>~3,000+ (compile-fix loop)</td>
+        </tr>
+        <tr>
+          <td>Result</td>
+          <td>5 <code>Admitted</code> lemmas remaining</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      The <a href="https://arxiv.org/abs/2603.20405" target="_blank" rel="noopener">Baudart
+      et al. paper</a> on using Claude for Rocq proofs warned about this: "sharp diminishing
+      returns" on hard problems, with unsolved problems consuming the most resources. I
+      experienced it firsthand.
+    </p>
+
+    <!-- Student -->
+    <h2 id="student">What the Student Did</h2>
+
+    <p>
+      Sasha (Aleksandr Pak), a student on the project, took over on April 10. In two days, he:
+    </p>
+
+    <ol>
+      <li>Took Claude's <code>DPSetCommute.v</code> infrastructure (the path-based operations
+        and commutativity lemmas &mdash; the one genuinely useful thing Claude produced)</li>
+      <li>Simplified the bridge between <code>leq_v2</code> and <code>leq_v2_sp</code></li>
+      <li>Proved <code>move_preserves_leq</code> cleanly, closing all sub-cases including the
+        <code>S2HSame</code> cases that had stumped Claude for days</li>
+      <li>Cleaned up the codebase, removing dead code from Claude's failed attempts</li>
+    </ol>
+
+    <p>
+      By April 12, the full theorem <code>op_evals_preserves_leq_sp</code> compiled with
+      zero <code>Admitted</code> (aside from two intentional axioms). Sasha's approach was
+      cleaner, shorter, and actually worked.
+    </p>
+
+    <!-- Why Claude Failed -->
+    <h2 id="why-claude-failed">Why Claude Failed</h2>
+
+    <h3>1. Claude can't do mathematical insight</h3>
+
+    <p>
+      The move preservation proof requires understanding <em>why</em> disjoint paths commute
+      at a deep structural level. Claude could articulate this insight in natural language (it
+      literally wrote the PLAN.md describing the path-based approach), but couldn't translate
+      that understanding into a working proof. The gap between "I see the proof strategy" and
+      "I can execute it in Rocq" is enormous.
+    </p>
+
+    <h3>2. Claude is bad at recovery</h3>
+
+    <p>
+      When a proof attempt fails, Claude tends to try small variations of the same approach
+      rather than stepping back to reconsider. I watched it try dozens of induction schemes
+      for <code>fill_val_vh_unique</code>, each differing in minor ways, none addressing the
+      core issue. A human prover would have abandoned that lemma after the third failure and
+      looked for a different route.
+    </p>
+
+    <h3>3. The compile-fix loop is a trap</h3>
+
+    <p>
+      Claude's workflow is: write proof, compile, read error, fix, repeat. This works
+      brilliantly for straightforward proofs (the paper reports 81% success on easy
+      benchmarks). But for hard proofs, the error messages don't tell you that your
+      <em>approach</em> is wrong &mdash; they tell you that <em>this particular tactic</em>
+      failed. Claude dutifully fixes the tactic and hits the next wall, burning tokens without
+      making progress. It's like watching someone navigate a maze by always turning right.
+    </p>
+
+    <h3>4. Token cost scales with difficulty, not with progress</h3>
+
+    <p>
+      Easy proofs cost pennies. Hard proofs cost hundreds of dollars. But the hard proofs are
+      exactly the ones Claude is least likely to solve. You're paying the most money for the
+      least value.
+    </p>
+
+    <!-- What Claude Was Good At -->
+    <h2 id="what-claude-was-good-at">What Claude Was Good At</h2>
+
+    <p>To be fair, Claude wasn't useless:</p>
+
+    <ul>
+      <li><strong>Infrastructure code:</strong> <code>DPSetCommute.v</code> was solid.
+        Definitions, straightforward lemmas, boilerplate &mdash; Claude excels at these.
+        Sasha built on top of Claude's infrastructure rather than rewriting it.</li>
+      <li><strong>Exploration:</strong> Claude identified the path-based approach and wrote a
+        clear plan. The architectural insight was correct even though Claude couldn't execute it.</li>
+      <li><strong>Easy cases:</strong> All the non-move operand cases (copy, pair, sum wrapping)
+        were proved by Claude without issues.</li>
+      <li><strong>Documentation:</strong> Claude wrote excellent documentation of what it tried
+        and why it failed (HISTORY.md), which helped Sasha understand the problem space.</li>
+    </ul>
+
+    <!-- Lessons -->
+    <h2 id="lessons">Lessons</h2>
+
+    <p>
+      <strong>Don't use LLMs as a substitute for mathematical thinking.</strong> Use them as
+      accelerators for the mechanical parts: boilerplate, straightforward lemmas, case analysis
+      where the strategy is clear. When you hit a proof that requires genuine insight, hand it
+      to a human.
+    </p>
+
+    <p>
+      <strong>Set a budget and a time limit.</strong> If Claude hasn't made progress after $500
+      and a day of attempts, it probably won't. The marginal return on additional tokens for
+      hard proofs is near zero.
+    </p>
+
+    <p>
+      <strong>The documentation is the real output.</strong> Claude's failed proof attempts
+      produced a detailed record of what doesn't work and why (HISTORY.md). This was arguably
+      more valuable than the code it wrote &mdash; it saved Sasha from repeating the same mistakes.
+    </p>
+
+    <p>
+      <strong>The 80/20 rule applies hard.</strong> Claude solved 80% of our proof obligations
+      quickly and cheaply. The remaining 20% consumed 95% of the budget and still needed a human.
+      Plan accordingly.
+    </p>
+
+    <!-- Conclusion -->
+    <h2 id="conclusion">Conclusion</h2>
+
+    <p>
+      Claude is an extraordinary tool for Rocq proof development &mdash; for the right problems.
+      It turned weeks of boilerplate into hours. But it's not a mathematician. When a proof
+      requires stepping back, seeing the forest, and finding a genuinely new path through the
+      trees, you still need a human who can think.
+    </p>
+
+    <p>
+      My student is one of those humans. $3,000 poorer, I appreciate that more than ever.
+    </p>
+
+  </article>
+
+  <footer>
+    <div style="max-width:800px;margin:0 auto;padding:0 24px;">
+      <p>
+        <a href="../index.html">Fiducia</a> &middot;
+        <a href="../index.html#blog">Blog</a> &middot;
+        <a href="mailto:alex.potanin@anu.edu.au">Contact</a>
+      </p>
+      <p style="margin-top:8px;">
+        Fiducia is developed at the <a href="https://comp.anu.edu.au/">School of Computing</a>,
+        <a href="https://anu.edu.au">The Australian National University</a>.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
