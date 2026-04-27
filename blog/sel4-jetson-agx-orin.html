@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>seL4, Microkit, and Alpine Linux on the Jetson AGX Orin Devkit - Fiducia Blog</title>
+  <meta name="description" content="Step-by-step guide for running sel4test, the Microkit tutorial, and an Alpine Linux libvmm guest with SSH on the NVIDIA Jetson AGX Orin Developer Kit.">
+  <meta property="og:title" content="seL4 + Microkit + Alpine on NVIDIA Jetson AGX Orin - Fiducia Blog">
+  <meta property="og:description" content="Run sel4test, Microkit parts 1-4, and a libvmm-managed Alpine Linux guest with SSH on the AGX Orin devkit.">
+  <meta property="og:url" content="https://fiducia-lang.github.io/blog/sel4-jetson-agx-orin.html">
+  <meta property="og:type" content="article">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    nav .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
+    nav .logo span { color: var(--accent); }
+    nav ul { list-style: none; display: flex; gap: 28px; }
+    nav ul a { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    nav ul a:hover { color: var(--text); text-decoration: none; }
+    .article-container { max-width: 800px; margin: 0 auto; padding: 60px 24px 100px; }
+    .article-meta { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; }
+    .article-container h1 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 16px;
+    }
+    .article-container .subtitle { font-size: 1.1rem; color: var(--text-dim); margin-bottom: 40px; line-height: 1.7; }
+    .article-container h2 {
+      font-size: 1.5rem; font-weight: 700; margin: 48px 0 16px;
+      padding-top: 16px; border-top: 1px solid var(--border); letter-spacing: -0.01em;
+    }
+    .article-container h3 { font-size: 1.15rem; font-weight: 700; margin: 32px 0 12px; color: var(--accent); }
+    .article-container h4 { font-size: 1rem; font-weight: 600; margin: 24px 0 8px; }
+    .article-container p { margin-bottom: 16px; font-size: 0.95rem; }
+    .article-container ul, .article-container ol { margin: 0 0 16px 24px; font-size: 0.95rem; }
+    .article-container li { margin-bottom: 6px; }
+    .article-container strong { color: var(--text); }
+    .article-container code {
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.85em; background: var(--bg-code); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 6px;
+    }
+    .article-container pre {
+      background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px;
+      padding: 18px; overflow-x: auto; margin: 0 0 20px;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem; line-height: 1.7;
+    }
+    .article-container pre code { background: none; border: none; padding: 0; font-size: inherit; }
+    .article-container table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 0.9rem; }
+    .article-container th {
+      text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--border);
+      font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim);
+    }
+    .article-container td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .article-container tr:hover td { background: rgba(96, 165, 250, 0.03); }
+    .callout { background: rgba(96, 165, 250, 0.06); border: 1px solid rgba(96, 165, 250, 0.2); border-radius: 8px; padding: 16px 20px; margin: 0 0 20px; font-size: 0.9rem; }
+    .callout-warn { background: rgba(251, 191, 36, 0.06); border-color: rgba(251, 191, 36, 0.2); }
+    .callout strong { color: var(--accent); }
+    .callout-warn strong { color: var(--amber); }
+    .toc { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 40px; }
+    .toc h4 { margin: 0 0 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+    .toc ol { margin: 0; padding-left: 20px; }
+    .toc li { margin-bottom: 4px; font-size: 0.9rem; }
+    .result-badge { display: inline-block; padding: 6px 16px; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 8px; color: var(--green); font-weight: 700; font-size: 1rem; margin: 16px 0; }
+    footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; color: var(--text-dim); font-size: 0.85rem; }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+    @media (max-width: 640px) {
+      nav ul { gap: 16px; }
+      .article-container { padding: 30px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo" style="text-decoration:none;"><span>F</span>iducia</a>
+      <ul>
+        <li><a href="../index.html#features">Features</a></li>
+        <li><a href="../index.html#use-cases">Use Cases</a></li>
+        <li><a href="../index.html#blog">Blog</a></li>
+        <li><a href="mailto:alex.potanin@anu.edu.au">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <article class="article-container">
+    <p class="article-meta">April 26, 2026 &middot; updated April 27, 2026 &middot; Alex Potanin</p>
+    <h1>seL4, Microkit, and Alpine Linux on the Jetson AGX Orin Devkit</h1>
+
+    <div class="callout" style="margin-bottom:16px;">
+      <strong>What this post covers &mdash; and what's behind the curtain.</strong> This walkthrough gets <strong>seL4, Microkit, and libvmm</strong> running on the Jetson AGX Orin Devkit with an <strong>sDDF Ethernet driver</strong> mediating the network &mdash; enough to boot Alpine under libvmm with SSH end-to-end. It is a <em>preview</em> of what we can stand up quickly. If you need a <strong>more performant Ethernet driver</strong>, <strong>GPU passthrough</strong>, or support for <strong>additional architectures</strong> (other AArch64 SoCs, RISC-V, etc.), please <a href="mailto:alex.potanin@anu.edu.au">get in touch</a> &mdash; that is the kind of work we do to secure your systems.
+    </div>
+
+    <div class="callout-warn callout" style="margin-bottom:16px;">
+      <strong>Active work in progress.</strong> sel4test, Microkit parts 1&ndash;4, the libvmm + Alpine guest with SSH, and now the <strong>seL4-mediated sDDF network stack (Path B)</strong> all work end-to-end &mdash; same Alpine, same IP, but every packet now flows through a trusted PD instead of bare hardware passthrough. GPU passthrough beyond <code>host1x</code> + VIC and L4T-as-guest are still mid-stream. Repo layout, branch names, and the device-tree shape may shift as those land. Built with <i>Claude Opus 4.7 (1M context)</i>; the 1M context kept multi-hour debug sessions coherent, but the model still over-engineers when it can't see the simpler path and tends to keep adding instead of stepping back. Chronological logs in <code>AUTONOMOUS-*.md</code> in the working tree. Please <a href="mailto:alex.potanin@anu.edu.au">contact me</a> for the unfiltered story. Thanks, Alex.
+    </div>
+
+    <p class="subtitle">
+      Picking up from the
+      <a href="sel4-jetson-orin-nano.html">Orin Nano port</a>: the same
+      Tegra T234 SoC sits in the AGX Orin Developer Kit too. With small
+      additions we run <strong>sel4test</strong> (141/141 pass),
+      <strong>Microkit</strong> (tutorial parts 1&ndash;4 including a tiny
+      bare-metal libvmm guest), and a full <strong>Alpine Linux 3.19 distro
+      under libvmm</strong> with on-board 10 GbE working and keyless SSH from
+      the host PC. Mainline <code>tegra-host1x</code> + <code>tegra-vic</code>
+      bind to passed-through hardware so <code>/dev/dri/card0</code> exists.
+    </p>
+
+    <div class="result-badge">sel4test 141 / 141 &middot; Microkit pt 1&ndash;4 &middot; Alpine + SSH + DRM card &middot; Path B sDDF network</div>
+
+    <div class="toc">
+      <h4>Contents</h4>
+      <ol>
+        <li><a href="#hardware">Hardware</a></li>
+        <li><a href="#boot">Boot setup &mdash; PXE proxyDHCP</a></li>
+        <li><a href="#sel4test">sel4test</a></li>
+        <li><a href="#microkit">Microkit (parts 1&ndash;4)</a></li>
+        <li><a href="#libvmm">libvmm + Alpine Linux + SSH</a></li>
+        <li><a href="#pathb">Path B &mdash; sDDF-mediated network</a></li>
+        <li><a href="#repos">Repository structure</a></li>
+        <li><a href="#next">Coming soon: GPU passthrough &amp; L4T as guest</a></li>
+      </ol>
+    </div>
+
+    <p>
+      All AGX-specific changes live on the <code>orin-agx</code> branches of the
+      <a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>
+      forks (kernel, seL4_tools, util_libs, microkit, libvmm). The Nano port
+      established the hard-won fixes &mdash; SDRAM-only kernel window, MT_NORMAL
+      identity mapping, FEAT_CCIDX cache parsing, etc.; AGX inherits those wholesale.
+    </p>
+
+    <!-- 1. Hardware -->
+    <h2 id="hardware">1. Hardware</h2>
+
+    <p>
+      Compared to the Nano, the AGX Orin Devkit is friendlier for embedded
+      development: the on-board <strong>USB-C debug port</strong> exposes the
+      <strong>Tegra Combined UART (TCU)</strong> through the SPE coprocessor.
+      No external USB-UART adapter, no level-shifting, no soldering &mdash;
+      one cable handles both flashing and serial.
+    </p>
+
+    <table>
+      <thead><tr><th>Item</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Jetson AGX Orin Developer Kit</strong> (P3737 carrier + P3701 module)</td><td>Tegra T234, 12&times; Cortex-A78AE, 32 GB RAM, on-board 10 GbE.</td></tr>
+        <tr><td><strong>USB-C cable</strong></td><td>Host &harr; the small USB-C port labelled <em>Front Type-C</em>. Enumerates four <code>/dev/ttyACMn</code> devices on the host; interface 01 is TCU.</td></tr>
+        <tr><td><strong>Ethernet cable</strong></td><td>To your LAN, for PXE boot and (later) Alpine guest networking.</td></tr>
+        <tr><td><strong>DC barrel jack</strong></td><td>5V supply included with the Devkit. We toggle power via a smart plug + Home Assistant for non-interactive iteration.</td></tr>
+        <tr><td><strong>Linux x86_64 host</strong></td><td>For cross-compiling and running <code>dnsmasq</code> + <code>tftpd-hpa</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      Bidirectional console: host keystrokes reach the guest via the SPE
+      &rarr; HSP (Hardware Synchronization Primitives) mailbox &rarr;
+      <code>tegra-tcu</code> driver in the guest, exposed as
+      <code>/dev/ttyTCU0</code>. The reverse path takes guest output back
+      out the TCU via the AON HSP. We use a tiny host-side
+      <code>tcu-term.py</code> that pads each <kbd>Enter</kbd> to 8 bytes
+      so the SPE's USB-CDC RX batch flushes immediately.
+    </p>
+
+    <!-- 2. Boot -->
+    <h2 id="boot">2. Boot setup &mdash; PXE proxyDHCP</h2>
+
+    <p>
+      The Nano blog used UEFI HTTP boot. The AGX UEFI also supports HTTP boot,
+      but we found <strong>PXE over IPv4</strong> faster to iterate against
+      because the AGX picks up new payloads simply by power-cycling &mdash; no
+      UEFI menu, no SD card.
+    </p>
+
+    <p>
+      The pattern: leave the home router's regular DHCP alone, run a
+      <strong>proxyDHCP</strong> on the dev host that injects PXE options
+      (next-server, boot-file). TFTP is served by stock <code>tftpd-hpa</code>
+      out of <code>/srv/tftp</code>.
+    </p>
+
+    <pre><code>$ sudo apt install dnsmasq tftpd-hpa
+$ sudo systemctl start tftpd-hpa
+$ ./dhcp-sel4test.sh &amp;       # serves agx/sel4test.efi
+$ # or ./dhcp-microkit.sh &amp;   # serves agx/microkit.efi
+$ # or ./dhcp-libvmm-alpine.sh &amp; # serves agx/libvmm-alpine.efi</code></pre>
+
+    <p>
+      Each wrapper just sets <code>BOOTFILE</code> and exec's a shared
+      <code>dhcp.sh</code> that runs <code>dnsmasq --dhcp-range=...,proxy
+      --pxe-service=ARM64_EFI,...</code>. Drop the matching
+      <code>.efi</code> into <code>/srv/tftp/agx/</code> and power-cycle.
+    </p>
+
+    <p>
+      One-time UEFI tweak: connect a DisplayPort monitor + USB keyboard,
+      reboot, hit <kbd>Esc</kbd> on the splash, set <strong>UEFI Boot
+      Order</strong> so the on-board NIC's <em>UEFI PXEv4</em> entry is
+      first. After that the AGX boots the EFI we serve every time.
+    </p>
+
+    <!-- 3. sel4test -->
+    <h2 id="sel4test">3. sel4test</h2>
+
+    <p>
+      The seL4 kernel for AGX is a near-clone of the Nano's <code>orin-nano</code>
+      platform. Same SoC, same UARTC at <code>0x0c280000</code>, same GICv3, same
+      A78AE errata behaviour. The new <code>orin-agx</code> platform entry exists
+      because:
+    </p>
+    <ul>
+      <li>The AGX has more RAM (32 GB vs 8 GB) &mdash; different memory map.</li>
+      <li>Per-platform settings stay decoupled so future divergence (e.g. AGX's
+        12 cores vs the Nano's 6) doesn't have to be guarded with conditionals.</li>
+    </ul>
+
+    <p>The kernel and elfloader changes from <code>orin-nano</code> apply unchanged.</p>
+
+    <h3>Build</h3>
+    <pre><code>cd ~/jetson-agx-orin/sel4test-src
+mkdir build-orin-agx &amp;&amp; cd build-orin-agx
+
+../init-build.sh \
+    -DPLATFORM=orin-agx \
+    -DAARCH64=TRUE \
+    -DARM_HYP=ON \
+    -DSIMULATION=FALSE \
+    -DRELEASE=FALSE
+
+ninja
+cp images/sel4test-driver-image-arm-orin-agx /srv/tftp/agx/sel4test.efi</code></pre>
+
+    <h3>Boot</h3>
+    <pre><code>$ ./dhcp-sel4test.sh &amp;
+$ ./run-sel4test.sh             # power-cycle + open picocom on /dev/ttyACM0
+...
+Test suite passed. 141 tests passed. 42 tests disabled.
+All is well in the universe</code></pre>
+
+    <!-- 4. Microkit -->
+    <h2 id="microkit">4. Microkit (parts 1&ndash;4)</h2>
+
+    <p>
+      The
+      <a href="https://github.com/au-ts/microkit_tutorial" target="_blank" rel="noopener">au-ts/microkit_tutorial</a>
+      walks four parts: a hello PD on UARTC; two PDs sharing memory rings; a
+      third PD with a separate input UART; finally replacing the bare-metal
+      client with a libvmm guest VM. Adding the AGX as a Microkit board is
+      three small changes:
+    </p>
+
+    <ol>
+      <li><strong><code>build_sdk.py</code></strong> &mdash; new
+        <code>BoardInfo(name="orin_agx", gcc_cpu="cortex-a78ae",
+        loader_link_address=0x88000000, kernel_options={"KernelPlatform":
+        "orin-agx", ...})</code>. The link address is bumped from the default
+        <code>0x80500000</code> to <code>0x88000000</code> (128 MiB into DDR)
+        so the Microkit "initial task" has room for a libvmm payload that
+        embeds a Linux kernel + initrd (~36 MiB).</li>
+      <li><strong><code>loader/src/uart.c</code></strong> &mdash; UARTC at
+        <code>0x0c280000</code> for early loader prints. UEFI has already
+        enabled the clock and divisor, so <code>uart_init</code> is a no-op.</li>
+      <li><strong><code>loader/src/aarch64/util64.S</code></strong> &mdash;
+        in <code>disable_mmu</code>, <em>preserve</em> SCTLR_EL2's
+        <strong>C bit (data cache enable)</strong>. Clearing it on T234
+        triggers writeback of dirty firmware cache lines into protected
+        memory, which the SLC hands to the IOB and which then RAS-faults the
+        core. Same root cause as the cache-maintenance fixes on the Nano,
+        just surfacing in a different code path.</li>
+    </ol>
+
+    <h3>Part 4 &mdash; the tiny libvmm guest</h3>
+    <p>
+      Part 4 was the only one that needed a kernel change beyond the Nano's
+      work: enable <strong><code>HCR_TID3</code></strong> in
+      <code>HCR_VCPU</code> and emulate guest reads of ID-group-3 system
+      registers in the kernel's hypervisor stub. Without this, the guest
+      kernel's CPU-feature probe trips on
+      <code>ID_AA64MMFR0_EL1.PARange</code> (the A78AE reports 44-bit; our
+      stage-2 page tables are configured for 40-bit, the same override we
+      use on Nano). The trap lets the kernel return a sanitised value with
+      <code>PARange = 40</code>.
+    </p>
+
+    <pre><code>// include/arch/arm/armv/armv8-a/64/armv/vcpu.h
+#define HCR_VCPU   ( HCR_COMMON | HCR_TWE | HCR_TWI | HCR_TID3 )</code></pre>
+
+    <p>
+      Plus a small handler that decodes the ESR_EL2.ISS, reads the real
+      hardware ID register, masks the offending field, and writes the
+      sanitised value back into the guest register file. ~80 lines.
+    </p>
+
+    <!-- 5. libvmm + Alpine + SSH -->
+    <h2 id="libvmm">5. libvmm + Alpine Linux + SSH</h2>
+
+    <p>
+      The next step is <strong>swap the toy bare-metal guest from Microkit
+      part 4 for a real Linux distro</strong>. We use
+      <a href="https://github.com/au-ts/libvmm" target="_blank" rel="noopener">au-ts/libvmm</a>'s
+      <code>simple</code> example as a starting point and fork it for the
+      AGX. End state: an Alpine 3.19 guest with on-board 10 GbE, keyless SSH
+      from the host PC, and a working DRM card via mainline
+      <code>tegra-host1x</code> + <code>tegra-vic</code>.
+    </p>
+
+    <h3>What we pass through to the guest</h3>
+    <table>
+      <thead><tr><th>Region / IRQ</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>UARTC</code> @ 0x0c280000 + SPI 114</td><td>earlycon for the guest before <code>tegra-tcu</code> binds.</td></tr>
+        <tr><td><code>HSP top0</code> + <code>HSP AON</code> + 13 SPIs</td><td>Bidirectional TCU console via SPE mailboxes (host /dev/ttyACM0 &harr; guest /dev/ttyTCU0).</td></tr>
+        <tr><td>BPMP shmem (2&times; 4 KiB SYSRAM pages)</td><td>BPMP-FW IPC for clocks / resets / power domains.</td></tr>
+        <tr><td><code>MGBE0</code> (3 reg ranges) + SPI 384</td><td>10 GbE NIC. Mainline <code>tegra-mgbe</code> + Aquantia AQR113C PHY bind directly.</td></tr>
+        <tr><td><code>host1x</code> (3 reg ranges) + 9 SPIs, <code>VIC</code> + SPI 206</td><td>Graphics fabric + 2D blit engine. Mainline <code>tegra-host1x</code> + <code>tegra-drm</code> + <code>tegra-vic</code> bind.</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      DMA worked out of the box without any explicit IOMMU programming: stage-2
+      identity-maps <code>guest_ram</code> (IPA = PA), and the Tegra SMMU defaults
+      to bypass for our stream IDs. <strong>That's the unsafe part</strong>
+      &mdash; this Section 5 path lets the guest's MGBE driver program DMA
+      with arbitrary physical addresses. Section 6 (Path B) fixes this by
+      moving MGBE ownership into a trusted PD; the guest only sees
+      <code>virtio-net</code> with no DMA capability.
+    </p>
+
+    <h3>The vGIC fix</h3>
+    <p>
+      libvmm's vgic_v3 emulator was built and tested against odroid-c4 / qemu;
+      on T234 the guest's first <code>GICR_ISENABLER</code> write fell into a
+      branch that printed <em>"Unknown enable register encoding"</em> and
+      no IRQs were ever delivered. Three small additions to
+      <code>src/arch/aarch64/vgic/vgic_v3.c</code> + headers fix it; the
+      changes are board-agnostic and should go upstream.
+    </p>
+
+    <h3>Initrd: Alpine + bake-in openssh + pinned MAC</h3>
+    <p>
+      <code>build-initrd.sh</code> takes Alpine's
+      <a href="https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/aarch64/" target="_blank" rel="noopener">aarch64 minirootfs</a>
+      tarball and packs it through Linux's <code>gen_init_cpio</code>. At
+      build time we also chroot into the rootfs (under <code>sudo chroot</code>;
+      <code>binfmt_misc</code>'s <code>qemu-aarch64</code> with the F flag
+      handles the ABI swap transparently) to:
+    </p>
+    <ul>
+      <li><code>apk add openssh-server</code> &mdash; bake sshd in</li>
+      <li><code>ssh-keygen -A</code> &mdash; bake host keys</li>
+      <li><code>chpasswd root:libvmm</code> &mdash; bake the demo password</li>
+      <li>copy <code>~/.ssh/id_rsa.pub</code> to <code>/root/.ssh/authorized_keys</code></li>
+    </ul>
+    <p>
+      We also pin the guest MAC in the device tree
+      (<code>local-mac-address = [02 c2 0a 00 01 01]</code>) so DHCP returns
+      the same lease across reboots. <code>mini-init.sh</code> on first boot
+      mounts <code>devpts</code>, brings <code>eth0</code> up, runs
+      <code>udhcpc</code>, starts <code>sshd</code>, and prints the IP on TCU.
+    </p>
+
+    <h3>Boot &amp; SSH in</h3>
+    <pre><code>$ ./run-libvmm-alpine.sh
+[l4t] building libvmm + wrapping into EFI...
+[l4t] deploying to /srv/tftp/agx/libvmm-alpine.efi...
+[l4t] starting dhcp-libvmm-alpine.sh in background...
+[l4t] power-cycling jetson...
+[l4t] opening /dev/ttyACM0 with tcu-term.py...
+...
+&gt;&gt;&gt; Alpine shell on /dev/ttyTCU0 — welcome &lt;&lt;&lt;
+~ # uname -a
+Linux (none) 6.6.1 #9 SMP PREEMPT aarch64 Linux
+~ # cat /etc/alpine-release
+3.19.1
+&gt;&gt;&gt; sshd up: ssh root@192.168.100.180 (key or pw: libvmm)
+
+# from the host:
+$ ssh root@192.168.100.180   # keyless, your pubkey is baked in
+~ # ls /dev/dri/
+card0  renderD128
+~ # drm_info /dev/dri/card0 | head
+Driver: tegra (NVIDIA Tegra graphics) version 1.0.0
+Device: host1x nvidia,tegra234-host1x</code></pre>
+
+    <!-- 6. Path B -->
+    <h2 id="pathb">6. Path B &mdash; sDDF-mediated network <span style="font-size:0.6em;color:var(--text-dim);">(NEW Apr 27)</span></h2>
+
+    <p>
+      Section 5 above gets <strong>Alpine on the wire</strong> by
+      <em>directly passing through</em> MGBE0 to the guest: the guest's
+      mainline <code>tegra-mgbe</code> driver writes the MAC controller
+      registers, the AQR113C PHY autonegotiates, the guest's own DMA
+      engine moves packets. That works &mdash; you've seen the SSH demo
+      &mdash; but it has a fundamental security problem:
+    </p>
+
+    <ul>
+      <li><strong>MGBE has a DMA master.</strong> The guest programs
+        descriptors with arbitrary physical addresses. Without an SMMU
+        context configured by something trusted, that DMA engine can
+        read or write <em>anywhere in physical RAM</em> &mdash; seL4
+        kernel memory, other PD memory, libvmm's own pages. seL4's
+        stage-2 isolation is meaningless against a peripheral the guest
+        controls.</li>
+      <li><strong>No traffic mediation.</strong> Packets flow directly
+        between guest and wire. The seL4 side has zero visibility &mdash;
+        can't firewall, can't sniff, can't pause. The whole "trusted base
+        sees what the guest does on the network" research point
+        disappears.</li>
+      <li><strong>BPMP/clock access leaks.</strong> Bring-up needs
+        BPMP IPC for clocks/resets/power-domains. Hand BPMP to the guest
+        and it can also turn off the GPU, the display, or other CPU
+        clusters &mdash; anything the BPMP firmware controls.</li>
+    </ul>
+
+    <p>
+      <strong>Path B</strong> moves all of that into a trusted protection
+      domain. The guest now sees a plain <code>virtio-net</code> device.
+      The full PD layout looks like this:
+    </p>
+
+    <pre><code>                ┌─────────────────────────────────────┐
+                │  CLIENT_VMM (prio 100)              │
+                │   client_vmm.elf                    │
+                │   ┌───────────────────────────────┐ │
+                │   │ client_linux  (VirtualMachine)│ │
+                │   │   guest sees:                 │ │
+                │   │     virtio-net@160000         │ │
+                │   │     MAC 02:c2:0a:00:01:01     │ │
+                │   │     192.168.100.180           │ │
+                │   └───────────────────────────────┘ │
+                └────────────────▲────────────────────┘
+                                 │  virtio queues
+                                 ▼
+                ┌─────────────────────────────────────┐
+                │  client0_net_copier (prio 200)      │
+                │   network_copy.elf  [stock sDDF]    │
+                └────────────────▲────────────────────┘
+                                 │ sDDF net queues
+                   ┌─────────────┴─────────────┐
+                   ▼                           ▼
+       ┌────────────────────┐       ┌────────────────────┐
+       │ net_virt_rx (200)  │       │ net_virt_tx (200)  │
+       │ network_virt_rx.elf│       │ network_virt_tx.elf│
+       │   [stock sDDF]     │       │   [stock sDDF]     │
+       └─────────▲──────────┘       └──────────┬─────────┘
+                 │                             │
+                 └──────────────┬──────────────┘
+                                ▼
+                ┌─────────────────────────────────────┐
+                │  eth_driver (prio 200)              │
+                │   eth_driver.elf  ← NEW (Path B)    │
+                │                                     │
+                │   maps into PD vaddr space:         │
+                │     0x50000000  bpmp_tx  (shmem)    │
+                │     0x50001000  bpmp_rx  (shmem)    │
+                │     0x50002000  hsp_dbell           │
+                │   plus MGBE MMIO + IRQ              │
+                │                                     │
+                │   talks to: BPMP (clk/reset MRQs)   │
+                │             AQR113C PHY (MDIO C45)  │
+                │             XPCS UPHY (init only)   │
+                └────────────────▲────────────────────┘
+                                 │
+                                 ▼
+                        ┌────────────────┐
+                        │  T234 MGBE0    │
+                        │  + AQR113C PHY │
+                        │  + RJ45        │
+                        └────────────────┘</code></pre>
+
+    <p>
+      The <code>eth_driver</code> PD is the only thing in the system that
+      touches MGBE registers, BPMP shmem, or the HSP doorbell. The guest
+      has no DMA capability beyond its own RAM, no view of MAC registers,
+      no BPMP access. <code>net_virt_rx</code>, <code>net_virt_tx</code>
+      and <code>network_copy</code> are stock upstream sDDF binaries
+      &mdash; we only had to write <code>eth_driver</code>. A future
+      "firewall PD" or "sniffer PD" slots in cleanly between
+      <code>net_virt_rx</code> and the copier without touching the guest
+      at all.
+    </p>
+
+    <h3>What had to be written</h3>
+    <p>
+      sDDF doesn't ship a Tegra MGBE driver. We wrote one (~1,700 LOC of
+      BSD-2 across <code>ethernet.c</code>, <code>bpmp.c</code>,
+      <code>aquantia.c</code>, <code>xpcs_pcs.c</code>) using
+      <a href="https://github.com/OE4T/nvethernetrm" target="_blank"
+        rel="noopener">OE4T's <code>nvethernetrm</code></a> register
+      headers (MIT) for the MGBE/XGMAC core, with a clean-room clause-45
+      driver for the AQR113C and a clean-room BPMP IVC client. The
+      driver does its own:
+    </p>
+    <ul>
+      <li>BPMP IPC handshake to gate 8 MGBE0 clocks + cycle 2 resets
+        (<code>bpmp.c</code>; same wire protocol as ATF's
+        <code>bpmp_ipc/</code>);</li>
+      <li>XPCS UPHY lane bring-up &mdash; the ~130-LOC sequence from
+        mainline's <code>dwmac-tegra.c</code>, rewritten clean-room;</li>
+      <li>AQR113C clause-45 autoneg with vendor advertisement registers
+        (<code>aquantia.c</code>, designed to drop into
+        <code>dep/sddf/drivers/network/phy/aquantia/</code> later);</li>
+      <li>Live link supervisor in <code>handle_irq()</code> that reacts
+        to <code>MAC_ISR.LSI</code>, decodes the negotiated speed, and
+        keeps MAC TMCR aligned.</li>
+    </ul>
+
+    <h3>The five bugs that took the longest</h3>
+    <p>
+      "Driver compiles, link comes up, packets flow" took five
+      register-level fixes that no amount of reading vendor headers would
+      have surfaced. The unblocking diagnostic was to boot the
+      <em>working</em> Linux kernel (Section 5's passthrough Alpine), ssh
+      in, dump every relevant MGBE register via a small
+      <code>mmap("/dev/mem")</code>-based reader, then diff against our
+      driver's writes. Highlights:
+    </p>
+    <ol>
+      <li><strong>Wrong ring-length register offsets.</strong>
+        <code>MGBE_DMA_CHX_TDRL</code> and <code>RDRL</code> are at
+        <code>0x3130</code> and <code>0x3134</code> in real MGBE/XGMAC2
+        (matches upstream Linux <code>dwxgmac2.h</code>), not
+        <code>0x3128</code>/<code>0x3130</code> as the offsets I was
+        deriving suggested. The result: RX ring length register held
+        <code>0x20000000</code> (low 10 bits = 0), MGBE thought the ring
+        had zero descriptors and silently dropped almost all received
+        packets.</li>
+      <li><strong>Misleading vendor macro names.</strong>
+        <code>nvethernetrm</code>'s <code>MGBE_DMA_CHX_TX_CNTRL2</code>
+        and <code>RX_CNTRL2</code> macros target the <em>same</em>
+        offsets as the ring-length registers above. Writing the
+        <code>ORRQ</code>/<code>OWRQ</code> values they suggest stomped
+        the ring lengths.</li>
+      <li><strong>SPH (Split Header) bit on by default.</strong>
+        Alpine's working <code>CHX_CTRL = 0x01010000</code> includes bit
+        24, which makes MGBE write each frame across <em>two</em>
+        descriptors (header in one, payload in the next). Linux's
+        stmmac handles SPH; sDDF's flat <code>net_buff_desc_t</code>
+        doesn't. Disabled it.</li>
+      <li><strong>Driver MAC didn't match guest virtio-net MAC.</strong>
+        sdfgen auto-generates a MAC for each virtio-net device;
+        <code>net_virt_rx</code> routes inbound packets by destination
+        MAC. The driver's pinned <code>02:c2:0a:00:01:01</code> and the
+        guest's auto-MAC didn't match, so unicast packets had no client
+        to route to and got dropped. Fix: pin both ends to the same MAC
+        in <code>meta.py</code>.</li>
+      <li><strong>Half a dozen smaller register-state diffs.</strong>
+        <code>DMA_SBUS</code>, <code>CHX_TX_CTRL</code>,
+        <code>CHX_RX_CTRL</code>, <code>CHX_INTREN</code> &mdash; all
+        had values the docs would let you choose, but the working
+        Linux kernel had picked specific bit patterns we needed to
+        match (notably <code>TIE</code> for TX completion IRQ, which we
+        had been omitting in favour of just the <code>NIE</code>
+        umbrella).</li>
+    </ol>
+
+    <p>
+      The "diff against a working kernel via /dev/mem" technique unlocked
+      everything in one session. Vendor docs and even mainline driver
+      source are useful, but neither tells you what <em>your specific
+      board firmware</em> ended up programming &mdash; the live state of
+      a working kernel does.
+    </p>
+
+    <h3>Result</h3>
+    <pre><code>$ ssh root@192.168.100.180
+Linux (none) 6.6.1 #9 SMP PREEMPT aarch64
+Alpine Linux 3.19.1
+~ # ip addr show eth0
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 02:c2:0a:00:01:01 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.100.180/24 brd 192.168.100.255 scope global eth0</code></pre>
+    <p>
+      Same Alpine, same IP, same MAC as Section 5's passthrough variant
+      &mdash; but the route the bytes take is now seL4-mediated. The
+      guest has <em>zero</em> direct hardware capability beyond what its
+      virtio-net device exposes. The same trusted-driver pattern carries
+      over unchanged to the L4T-as-guest plan in Section 7: keep
+      GPU/HDMI passthrough for CUDA &amp; display, but route eth0
+      through Path B.
+    </p>
+
+    <!-- 7. Repos -->
+    <h2 id="repos">7. Repository Structure</h2>
+
+    <p>
+      All AGX changes live on <code>orin-agx</code> branches in the
+      <a href="https://github.com/potanin" target="_blank" rel="noopener">github.com/potanin</a>
+      forks. Each repo's branch is small &mdash; the heavy lifting was done on
+      <code>orin-nano</code>; AGX adds a sibling platform plus the libvmm-only
+      <code>HCR_TID3</code> trap.
+    </p>
+
+    <h3><a href="https://github.com/potanin/seL4/tree/orin-agx" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (<a href="https://github.com/potanin/seL4/compare/master...orin-agx" target="_blank" rel="noopener">6 files</a>)</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-5d084c6b5b2de54173748f94912629101aa0e7ce8110e983797897de9dd440d5" target="_blank" rel="noopener"><code>src/plat/orin-agx/config.cmake</code></a></td><td>New platform declaration: A78AE (A72 proxy), GICv3, 40-bit PA override.</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-3bb37007957be3d893fa1190e8e9e0efca69b50116ecee18adee0cd17c78c703" target="_blank" rel="noopener"><code>src/plat/orin-agx/overlay-orin-agx.dts</code></a></td><td>Device tree overlay: UARTC, dual memory bank with 64 MiB carve-out gap at 0xbe000000.</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-cbcaddc0f4bcebb2bbdfd7f66d5e7ae1701695cd79d1d4d4281ea685ac573910" target="_blank" rel="noopener"><code>tools/dts/orin-agx.dts</code></a></td><td>Full device tree dumped from running L4T on the AGX hardware.</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-03f50b80301f03cbe74afa0f123800a1edf7b9a5c0f79b15d3bb8f23d532cd95" target="_blank" rel="noopener"><code>tools/hardware.yml</code></a></td><td>Register orin-agx in the seL4 hardware database.</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-ec6ea26946a2d662d96641e0a01846c44c9032408a97f275294309c481508900" target="_blank" rel="noopener"><code>libsel4/sel4_plat_include/orin-agx/sel4/plat/api/constants.h</code></a></td><td>Platform constants header (required by build system).</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-a0308c95c70fef9279be65bf57709373ac2e0a503d28fa218f48c545094ed11d" target="_blank" rel="noopener"><code>include/arch/arm/armv/armv8-a/64/armv/vcpu.h</code></a></td><td>Add <code>HCR_TID3</code> to <code>HCR_VCPU</code>; emulate ID-group-3 register reads in <code>armv_handle_id_trap</code>. Required by libvmm Linux guests on A78AE.</td></tr>
+      </tbody>
+    </table>
+
+    <h3><a href="https://github.com/potanin/seL4_tools/tree/orin-agx" target="_blank" rel="noopener">tools/seL4/ &mdash; potanin/seL4_tools</a> (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-agx" target="_blank" rel="noopener">2 files</a>)</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/pull/1/files#diff-d704aa0b7efcfa3ad27ee4b44f400ae9c0522b46d1fd0f5d8371162f5d39eb94" target="_blank" rel="noopener"><code>cmake-tool/helpers/application_settings.cmake</code></a></td><td>Add <code>orin-agx</code> to the EFI boot platform list.</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4_tools/pull/1/files#diff-7b9b113831b9f601a0c60fdd03a0e61ee8a024b41432ff3591ed41af3c02238b" target="_blank" rel="noopener"><code>cmake-tool/helpers/nanopb.cmake</code></a></td><td>Link nanopb against muslc so it picks up <code>stdint.h</code> under <code>-nostdinc</code>. Generic fix; surfaces on T234 because we exercise nanopb-using libs.</td></tr>
+      </tbody>
+    </table>
+
+    <h3><a href="https://github.com/potanin/util_libs/tree/orin-agx" target="_blank" rel="noopener">projects/util_libs/ &mdash; potanin/util_libs</a> (<a href="https://github.com/potanin/util_libs/compare/master...orin-agx" target="_blank" rel="noopener">5 files</a>)</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/potanin/util_libs/pull/1/files#diff-bce8c4571aa4f1d70f3e4b6d20f255a4b520e556ca9a9b19646c1c90a8fef04c" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-agx/platsupport/plat/clock.h</code></a></td><td>Platform stub header (required by build system).</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/pull/1/files#diff-ad3bce5ee3686e796defb8638faa67f98ca634cc3855525d8e5172d13b9af2a8" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-agx/platsupport/plat/i2c.h</code></a></td><td>Platform stub header.</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/pull/1/files#diff-828f83d622b4b6c66fc3377928d1b06b8a84aa8972954a9fcc5a5dbe96de2fdd" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-agx/platsupport/plat/serial.h</code></a></td><td>UARTC address and parameters.</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/pull/1/files#diff-c618011b6d6cb623066848c7d4219a8d3230371c6566ef3aa0dcb49aa6e45068" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-agx/platsupport/plat/timer.h</code></a></td><td>NV timer addresses and interrupt routing.</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/pull/1/files#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td>Route the timer interrupt through the shared register, same code path as TX2 / orin-nano.</td></tr>
+      </tbody>
+    </table>
+
+    <h3><a href="https://github.com/potanin/microkit/tree/orin-agx" target="_blank" rel="noopener">microkit &mdash; potanin/microkit</a> (<a href="https://github.com/potanin/microkit/compare/main...orin-agx" target="_blank" rel="noopener">3 files</a>)</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/potanin/microkit/pull/1/files#diff-0db7b47594be4cfc68a7b5e24d011ea452e4da4bb5533bdfecd77a7d3d543c37" target="_blank" rel="noopener"><code>build_sdk.py</code></a></td><td>Add <code>BoardInfo(name="orin_agx", ...)</code> with <code>loader_link_address=0x88000000</code> (and <code>orin_nano</code>).</td></tr>
+        <tr><td><a href="https://github.com/potanin/microkit/pull/1/files#diff-333d6f44fab744d34dee38a78ea382dd51a097466c4da129d82eea8680aff99e" target="_blank" rel="noopener"><code>loader/src/uart.c</code></a></td><td>Add <code>orin-agx</code> / <code>orin-nano</code> case using UARTC at <code>0x0c280000</code>.</td></tr>
+        <tr><td><a href="https://github.com/potanin/microkit/pull/1/files#diff-224134299a2fafd493acd447f50fd68f695c84a1540e8a640b9563e6e0664af7" target="_blank" rel="noopener"><code>loader/src/aarch64/util64.S</code></a></td><td>Preserve SCTLR_EL2 C bit in <code>disable_mmu</code>; drop set/way <code>dc cisw</code> in <code>flush_dcache</code> &mdash; same RAS root cause as Nano.</td></tr>
+      </tbody>
+    </table>
+
+    <h3><a href="https://github.com/potanin/libvmm/tree/orin-agx" target="_blank" rel="noopener">libvmm &mdash; potanin/libvmm</a> (<a href="https://github.com/potanin/libvmm/compare/main...orin-agx" target="_blank" rel="noopener">10 files</a>)</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-d4496d76c757a4b695c1d8b7b34127cd9c45898c4cc4af49c385a30addfaf1ca" target="_blank" rel="noopener"><code>examples/simple/board/orin_agx/simple.system</code></a></td><td>Microkit system description: <code>guest_ram</code> + UARTC + HSP top0/AON + BPMP shmem + MGBE0 + host1x/VIC memory regions and IRQ channels.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-6e7455b3d1f4ac2352179104a1941035deb33d8bd55b4938ceb06edf3888f253" target="_blank" rel="noopener"><code>examples/simple/board/orin_agx/linux.dts</code></a></td><td>Minimal handwritten guest DTS: GICv3, UARTC, hsp_top0/aon, tcu, bpmp, mgbe0+AQR113C PHY, host1x+VIC. Pinned <code>local-mac-address</code>.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-6125ac609933b9e547667c5e87942064729f8491831cb8310de361ea9b5a4e35" target="_blank" rel="noopener"><code>examples/simple/board/orin_agx/mini-init.sh</code></a></td><td>The <code>/init</code> for the Alpine guest: mount /dev /proc /sys /dev/pts, spawn shell on /dev/ttyTCU0, bring up eth0 + udhcpc + sshd in background.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-de3dab2916b0654c3e3f3994f4cba8b514bd6ab100e6717d90bcdaec295e9aae" target="_blank" rel="noopener"><code>examples/simple/board/orin_agx/build-initrd.sh</code></a></td><td>Builds the cpio initrd from Alpine minirootfs, bakes in <code>openssh-server</code>, host keys, root password, and the host's <code>~/.ssh/id_rsa.pub</code> via <code>sudo chroot</code>.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-1f0fcc4d3f143d6b5f154062b948710968efdcbb443efc1401e68a5491ca4f0a" target="_blank" rel="noopener"><code>examples/simple/vmm.c</code></a></td><td><code>BOARD_orin_agx</code> case: 768 MiB <code>guest_ram</code> at 0xc2000000, HSP / MGBE / host1x / VIC IRQ passthrough table (channels 2&ndash;25).</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-3aa1de323a9e651f02c2abfe06e227db56bdc7888fa12b5036250002206fe816" target="_blank" rel="noopener"><code>include/libvmm/arch/aarch64/vgic/vgic.h</code></a></td><td>Add CONFIG_PLAT_ORIN_AGX case with GICv3 dist/redist addresses (0x0f400000 / 0x0f440000).</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-c962157d12b626220554b9bfa3708d8cece3bc2d7a4b3f5110452e5fa7ea9b23" target="_blank" rel="noopener"><code>include/libvmm/arch/aarch64/vgic/vdist.h</code></a></td><td>vgic distributor: handle the GICR_ISENABLER write encoding the guest uses on its first IRQ enable.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-80e77ece73e1cda7b3f7b5785be2aec5e7ad4c2ca73ac9838f9ec97934a4831c" target="_blank" rel="noopener"><code>src/arch/aarch64/vgic/vgic_v3.c</code></a></td><td>Fix for <em>"Unknown enable register encoding"</em> on the guest's first GICR_ISENABLER write. Board-agnostic; should go upstream.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-c021bd913701342d87707b28bc414afba5c397172b12a25f54f004efe8fe25e2" target="_blank" rel="noopener"><code>src/arch/aarch64/linux.c</code></a></td><td>Minor: clearer guest-boot diagnostics; log kernel/initrd/DTB placement.</td></tr>
+        <tr><td><a href="https://github.com/potanin/libvmm/pull/1/files#diff-c855749a56d93c17e50fca1af9d8aca3ef918e403515ff991fc4b75cdb9ab1f9" target="_blank" rel="noopener"><code>src/arch/aarch64/fault.c</code></a></td><td>Minor: log faulting IPA on stage-2 faults to make passthrough mistakes obvious in dmesg.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 7. Coming soon -->
+    <h2 id="next">8. Coming soon &mdash; GPU passthrough &amp; L4T as guest</h2>
+
+    <p>
+      Section 6 already showed the seL4-mediated network working with
+      Alpine. The remaining piece is the <em>graphics</em> stack &mdash;
+      bringing CUDA, NVDISPLAY/HDMI, and the rest of the L4T stack online
+      under libvmm with the same trusted-base story.
+    </p>
+
+    <h3>Phase 2 (started) &mdash; mainline graphics stack</h3>
+    <p>
+      <code>tegra-host1x</code> and <code>tegra-vic</code> already bind under
+      our minimal libvmm; <code>/dev/dri/card0</code> exists. The actual GA10B
+      Ampere GPU has no upstream driver in mainline today &mdash; Nouveau
+      doesn't yet support Tegra Ampere &mdash; so a real GPU device is
+      blocked on upstream Nouveau work.
+    </p>
+
+    <h3>Phase 3 (started) &mdash; L4T as the libvmm guest</h3>
+    <p>
+      For CUDA / HDMI / proper GPU we need NVIDIA's downstream stack, which
+      means running L4T's kernel and userspace under libvmm. First milestone
+      reached: <strong>L4T's <code>5.15.148-tegra</code> kernel boots
+      successfully under our libvmm</strong>, runs init, drops to a shell, and
+      <code>nvethernet</code> / <code>nvgpu</code> modules load (binding still
+      requires extracting the rich <code>nvidia,*</code> properties from
+      L4T's NV-DTB into our guest device tree).
+    </p>
+
+    <p>
+      The end-state target: pass GPU + NVDISPLAY through to the L4T guest
+      directly, but route eth0 through Section 6's
+      <a href="https://github.com/au-ts/sddf" target="_blank" rel="noopener">sDDF</a>
+      stack &mdash; the same trusted-driver pattern that already works for
+      Alpine. Once the L4T guest boots far enough to bring up the network,
+      it'll inherit the seL4-mediated path for free, and a small "firewall
+      PD" can slot in between <code>net_virt_rx</code> and the copier.
+      Future post when GPU passthrough lands.
+    </p>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:40px;font-size:0.95rem;">
+      <strong style="color:var(--text);">Discussion</strong>
+      <p style="margin-top:6px;color:var(--text-dim);">
+        Questions or feedback? <a href="mailto:alex.potanin@anu.edu.au">Email Alex</a>.
+        See also the
+        <a href="sel4-jetson-orin-nano.html">Orin Nano post</a> for the
+        underlying T234 fixes that AGX inherits.
+      </p>
+    </div>
+
+  </article>
+
+  <footer>
+    <div style="max-width:800px;margin:0 auto;padding:0 24px;">
+      <p>
+        <a href="../index.html">Fiducia</a> &middot;
+        <a href="../index.html#blog">Blog</a> &middot;
+        <a href="mailto:alex.potanin@anu.edu.au">Contact</a>
+      </p>
+      <p style="margin-top:8px;">
+        Fiducia is developed at the <a href="https://comp.anu.edu.au/">School of Computing</a>,
+        <a href="https://anu.edu.au">The Australian National University</a>.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
