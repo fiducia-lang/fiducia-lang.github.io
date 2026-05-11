@@ -1,0 +1,1212 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The Fiducia Language Reference</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "searchindex-ae190c7a.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-24a59eb4.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Fiducia Language Reference</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/fiducia-lang/fic" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>This is the reference for <strong>Fiducia</strong>, the source language consumed by the
+<a href="https://github.com/fiducia-lang/fic"><code>fic</code></a> compiler. A Fiducia source tree
+describes a <a href="https://github.com/seL4/microkit"><code>seL4 Microkit</code></a> system: its
+memory regions, protection domains, channels, the per-PD program logic, and
+the communication / computation events those programs orchestrate.</p>
+<p>The reference is organised after the <a href="https://doc.rust-lang.org/reference/">Rust Reference</a>: each chapter pairs a
+formal grammar production with the prose semantics that surround it, then
+expands per syntactic feature with focused subsections and short examples.
+Where the surface syntax is still in flight, the chapter calls out the
+incomplete forms with a 🚧 marker so the reference stays honest about what
+the parser actually accepts today.</p>
+<h2 id="source-surfaces"><a class="header" href="#source-surfaces">Source surfaces</a></h2>
+<p>A Fiducia project is two parallel surfaces that the compiler reads together:</p>
+<ul>
+<li><strong>System description (<code>.fis</code>)</strong> — the static topology: memory regions,
+protection domains, channels, the system composition. One per project.</li>
+<li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
+C / Rust files, memory mappings, the constructor block, global variable
+declarations, and the <code>Events:</code> and <code>Process:</code> sections covered by this
+reference. One per protection domain.</li>
+</ul>
+<p>The two are linked by name: a <code>Mapping</code> in a <code>.fi</code> file refers to a
+<code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a process
+expression resolves against the <code>.fis</code> channel declarations; a computation
+event referenced by name from a process is declared in the same <code>.fi</code>’s
+<code>Events:</code> section.</p>
+<h2 id="scope-of-this-revision"><a class="header" href="#scope-of-this-revision">Scope of this revision</a></h2>
+<p>This revision covers the three constructs that participate in the Fiducia
+process algebra:</p>
+<ul>
+<li><a href="#event-blocks"><strong>Event Blocks</strong></a> — the <code>Events:</code> section that
+declares computation events, plus the inline channel and IRQ events used
+on the left of a process prefix.</li>
+<li><a href="#process-blocks"><strong>Process Blocks</strong></a> — the <code>Process:</code> section
+that declares CSP-style processes composed from events, guards, choices,
+and sequential composition.</li>
+<li><a href="#expressions"><strong>Expressions</strong></a> — the expression language available to
+carriers, guards, send payloads, and (eventually) constructor RHS.</li>
+</ul>
+<p>Other surfaces (lexical structure, system items, types, validation, the
+type system) belong in chapters that have not yet been ported into this
+revision; they remain in the inline <code>///</code> doc comments in <code>src/parser/</code>
+and on their tracking issues until the corresponding chapters land.</p>
+<h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
+<ul>
+<li>Production blocks use the BNF dialect documented in <a href="#notation">Notation</a>
+— the same conventions as the Rust Reference.</li>
+<li>Examples render in <code>text</code> blocks; Fiducia is not Rust, and <code>text</code> keeps
+mdBook’s syntax-highlight neutral.</li>
+<li>Keywords and identifiers are written with backticks in prose (<code>Event</code>,
+<code>eth.send_frame</code>) and as bare tokens inside grammar productions.</li>
+<li>An em-dash (—) separates parenthetical asides, matching the existing
+module-doc style.</li>
+<li>Cross-references to the parser source use repository-relative paths
+(<code>src/parser/event.rs</code>); cross-references to other chapters use plain
+Markdown links (e.g. <a href="#event-blocks">Event Blocks</a>).</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="notation"><a class="header" href="#notation">Notation</a></h1>
+<p>This reference uses a BNF dialect for grammar productions. The notation is
+intentionally close to the <a href="https://doc.rust-lang.org/reference/notation.html">Rust Reference</a> so readers
+familiar with Rust documentation can read it without a separate primer.</p>
+<h2 id="grammar-productions"><a class="header" href="#grammar-productions">Grammar productions</a></h2>
+<p>A production has the form <code>LHS ::= RHS</code>, where the right-hand side is a
+sequence of terminals, non-terminals, and meta-operators. Productions are
+written in <code>text</code>-tagged code blocks:</p>
+<pre><code class="language-text">EventDecl ::= 'Event' ident carriers? ':' stmt* 'end'
+carriers  ::= carrier_group+
+carrier_group ::= '.' '|' param (',' param)* '|'
+param     ::= ident ':' type
+</code></pre>
+<h2 id="meta-operators"><a class="header" href="#meta-operators">Meta-operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Form</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>'literal'</code></td><td>A literal token (keyword, symbol). Matches verbatim.</td></tr>
+<tr><td><code>ident</code></td><td>An identifier, defined in the lexical structure chapter.</td></tr>
+<tr><td><code>X?</code></td><td>Zero or one of <code>X</code>.</td></tr>
+<tr><td><code>X*</code></td><td>Zero or more of <code>X</code>.</td></tr>
+<tr><td><code>X+</code></td><td>One or more of <code>X</code>.</td></tr>
+<tr><td>`X</td><td>Y`</td></tr>
+<tr><td><code>(X Y)</code></td><td>Grouping; otherwise meta-operators bind tighter than juxtaposition.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Whitespace between symbols in a production is significant only when called
+out — most productions allow inter-token whitespace and comments, exactly
+as the lexer does.</p>
+<h2 id="inline-references"><a class="header" href="#inline-references">Inline references</a></h2>
+<ul>
+<li>A <em>non-terminal</em> in prose is written in italics (e.g. <em>event</em>, <em>process</em>).</li>
+<li>A <em>literal token</em> in prose is written in backticks (e.g. <code>Event</code>, <code>-&gt;</code>).</li>
+<li>A <em>type-level</em> reference into the AST uses backticks plus the Rust path
+fragment when it disambiguates (<code>Event::CPEvent</code>,
+<code>Process::Choice { branches, default }</code>).</li>
+</ul>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<p>Examples render in <code>text</code>-tagged code blocks, not <code>rust</code>-tagged: the Fiducia
+source language is not Rust, and <code>text</code> keeps mdBook’s syntax-highlighter
+neutral. Example:</p>
+<pre><code class="language-text">Event handle_irq:
+    eth.handle_irq();
+end
+</code></pre>
+<p>Where an example references symbols declared elsewhere (a channel from the
+<code>.fis</code> file, a function from an imported <code>.c</code> file, a process declared in
+the same section), the surrounding prose names the dependency.</p>
+<h2 id="stability-markers"><a class="header" href="#stability-markers">Stability markers</a></h2>
+<p>A construct flagged with the 🚧 marker is <strong>not yet implemented</strong> by the
+parser. The form appears in the reference because it is part of the
+designed grammar, but the parser will reject it today. The marker links to
+the tracking issue:</p>
+<blockquote>
+<p>🚧 <em>Not yet implemented</em> — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="memory-region-declarations"><a class="header" href="#memory-region-declarations">Memory Region Declarations</a></h1>
+<pre><code class="language-text">MemoryRegionDecl ::= SecurityLabel? 'MemoryRegion' ident '(' size (',' page_size)? (',' phys_addr)? ')' ';'
+size             ::= hex
+page_size        ::= hex      // '0x1000' (4 KiB) | '0x200000' (2 MiB)
+phys_addr        ::= hex
+SecurityLabel    ::= 'High' | 'Low'
+</code></pre>
+<p>A <em>memory region declaration</em> introduces one named region of physical or
+virtual memory that protection domains can later <a href="#imports-and-mappings">map</a> into their
+address space. <code>MemoryRegion</code> declarations live in <code>.fis</code> system files;
+they are pure topology and carry no per-PD program logic.</p>
+<h2 id="fields"><a class="header" href="#fields">Fields</a></h2>
+<ul>
+<li><strong>Security label</strong> (optional, defaults to <code>Low</code>). Tags information-flow
+level. <code>High</code> regions can be mapped only into PDs that themselves carry
+flow restrictions consistent with the <code>flows_to</code> lattice — see
+<a href="types/information-flow-labels.html">Information-Flow Labels</a>.</li>
+<li><strong>Name</strong> — <code>snake_case</code> identifier; the same name is referenced from
+<code>Mapping</code> declarations in <code>.fi</code> files.</li>
+<li><strong>Size</strong> — required, hex literal, in bytes. Must be a multiple of the
+region’s page size (validation runs post-parse and reports a <code>size not aligned</code> error if not).</li>
+<li><strong>Page size</strong> — optional, defaults to <code>0x1000</code> (4 KiB). The other accepted
+value is <code>0x200000</code> (2 MiB / Large). See <a href="types/primitive-types.html#page-sizes">Page sizes</a>.</li>
+<li><strong>Physical address</strong> — optional. When present, must be aligned to the
+region’s page size. Used for device MMIO regions (clock controller,
+ethernet registers) where the seL4 loader maps a fixed physical frame
+rather than allocating one.</li>
+</ul>
+<h2 id="security-label-and-ordering"><a class="header" href="#security-label-and-ordering">Security label and ordering</a></h2>
+<p>The label, if present, comes <strong>before</strong> the <code>MemoryRegion</code> keyword. Omitting
+it is equivalent to writing <code>Low</code>:</p>
+<pre><code class="language-text">MemoryRegion ring_buffer_outer(0x1000, 0x1000);          // Low (default)
+Low MemoryRegion eth0(0x10000, 0x10000, 0x5b040000);     // explicit Low
+High MemoryRegion ring_buffer_inner(0x1000, 0x1000);     // High
+High MemoryRegion eth_clk(0x1000, 0x1000, 0x5b200000);   // High MMIO
+</code></pre>
+<h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
+<p>The following checks run after parsing:</p>
+<ol>
+<li><code>size</code> is a positive multiple of <code>page_size</code>.</li>
+<li><code>phys_addr</code> (if present) is aligned to <code>page_size</code>.</li>
+<li>The region name is unique within the system file.</li>
+</ol>
+<p>A region is referenced from <code>.fi</code> files by its name; the validator confirms
+each <code>Mapping</code>’s <code>mem_region</code> points at a declared <code>MemoryRegion</code>.</p>
+<h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
+<pre><code class="language-text">// Anonymous shared buffer, default 4 KiB page, allocator-assigned phys_addr.
+MemoryRegion ring_buffer_outer(0x1000, 0x1000);
+
+// 2 MiB region — large pages, allocator-assigned phys_addr.
+MemoryRegion packet_buffer_outer(0x200000, 0x200000);
+
+// Memory-mapped device (4 KiB MMIO, fixed physical address).
+Low MemoryRegion eth_outer_register(0x1000, 0x1000, 0xf000000);
+
+// 64 KiB device register window.
+Low MemoryRegion eth0(0x10000, 0x10000, 0x5b040000);
+
+// High-side region (any access from a Low PD will be rejected by the
+// information-flow check).
+High MemoryRegion eth_clk(0x1000, 0x1000, 0x5b200000);
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="protection-domain-declarations"><a class="header" href="#protection-domain-declarations">Protection Domain Declarations</a></h1>
+<pre><code class="language-text">ProtectionDomainDecl ::= 'ProtectionDomain' ident '(' priority (',' irq)? (',' budget)? (',' period)? ')' ';'
+priority             ::= integer_literal       // 0 ≤ p ≤ 254
+irq                  ::= integer_literal       // 0 ≤ irq ≤ 159
+budget               ::= integer_literal       // microseconds, default 1000
+period               ::= integer_literal       // microseconds, default = budget
+</code></pre>
+<p>A <em>protection-domain declaration</em> introduces one named seL4 Microkit
+protection domain (PD): an isolated thread of execution with its own
+address space, scheduling parameters, and (optionally) one IRQ binding.
+Each <code>ProtectionDomain</code> listed in a <code>.fis</code> system file pairs with one
+<code>.fi</code> program file by name.</p>
+<h2 id="fields-1"><a class="header" href="#fields-1">Fields</a></h2>
+<ul>
+<li><strong>Name</strong> — <code>snake_case</code> identifier. The matching <code>&lt;name&gt;.fi</code> file holds
+the PD’s mappings, constructor block, events, and processes.</li>
+<li><strong>Priority</strong> — required, range <code>0..=254</code>. Out-of-range values are
+rejected with a parse-time error. Higher numbers run first under the
+Microkit fixed-priority scheduler.</li>
+<li><strong>IRQ</strong> — optional, range <code>0..=159</code>. When present, the PD is wired to
+receive that hardware interrupt on the reserved <code>irq</code> channel and can
+observe it via <a href="#hardware-interrupt-events"><code>irq?N</code> / <code>irq!N</code></a>
+events.</li>
+<li><strong>Budget</strong> — optional, microseconds; defaults to <code>1000</code>. Microkit
+schedules the PD for at most <code>budget</code> microseconds out of every
+<code>period</code>.</li>
+<li><strong>Period</strong> — optional, microseconds; defaults to whatever <code>budget</code> was
+set to. Setting <code>period &gt; budget</code> produces a sub-rate scheduling policy.</li>
+</ul>
+<p>The trailing fields are positional: to pin only the period, both <code>irq</code>
+<em>and</em> <code>budget</code> must precede it.</p>
+<h2 id="validation-1"><a class="header" href="#validation-1">Validation</a></h2>
+<ul>
+<li><code>priority</code> must be in <code>0..=254</code>.</li>
+<li>A PD name is unique within the system file.</li>
+<li>A PD that is referenced from a <code>Channel</code> or from the <code>System =</code>
+composition must be declared.</li>
+<li>A PD without a corresponding <code>&lt;name&gt;.fi</code> is rejected at link time (not
+at parse time).</li>
+</ul>
+<h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
+<pre><code class="language-text">// Three PDs with distinct priorities; IRQ on the outer driver only.
+ProtectionDomain eth_outer(99, 159);
+ProtectionDomain dd(150);
+ProtectionDomain eth_inner(199, 155);
+
+// A simulator with a low priority and no IRQ binding.
+ProtectionDomain simulate(50);
+
+// Explicit budget / period pair (sub-rate scheduling).
+ProtectionDomain monitor(120, 0, 200, 1000);  // priority 120, IRQ 0, 200 µs / 1 ms
+</code></pre>
+<h2 id="system-composition"><a class="header" href="#system-composition">System composition</a></h2>
+<p>A <code>.fis</code> file ends with a <code>System = ...</code> clause that names the PDs to
+include and their composition operator (currently always <code>|||</code>,
+interleave). Every PD referenced in <code>System</code> must be declared above:</p>
+<pre><code class="language-text">System = eth_outer ||| dd ||| eth_inner ||| simulate;
+</code></pre>
+<p>PDs declared but omitted from <code>System</code> are dead code and currently produce
+no error; this may tighten in a future revision.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="channel-declarations"><a class="header" href="#channel-declarations">Channel Declarations</a></h1>
+<pre><code class="language-text">ChannelDecl       ::= SyncChannelDecl | AsyncChannelDecl
+
+SyncChannelDecl   ::= 'Sync' 'Chan' ident '=' ident '--&gt;' ident ';'?
+
+AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident ('&lt;-&gt;' | '--&gt;') ident ViaClause? ';'?
+
+ViaClause         ::= 'via' ident ('&lt;' Type '&gt;')?
+</code></pre>
+<p>A <em>channel declaration</em> introduces one named communication endpoint between
+two protection domains. Channels carry the events that show up inside a
+process expression — <code>c?x</code> (receive) and <code>c!e</code> (send). They live in <code>.fis</code>
+system files; the <code>.fi</code> files reference channels by name only.</p>
+<h2 id="channel-kinds"><a class="header" href="#channel-kinds">Channel kinds</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Kind</th><th>Direction</th><th>Notation</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Synchronous call/reply; only the unidirectional shape is allowed.</td></tr>
+<tr><td><code>AsyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Notification-only; no payload acknowledgement.</td></tr>
+<tr><td><code>AsyncBi</code></td><td>Bidirectional</td><td><code>pd_a &lt;-&gt; pd_b</code></td><td>Each side can send and receive on the same channel.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>Async</code> keyword may be omitted — a <code>Chan</code> without a leading <code>Sync</code> is
+asynchronous by default. The default arrow is <code>&lt;-&gt;</code>. Only <code>Sync</code> channels
+require the unidirectional <code>--&gt;</code> form.</p>
+<h2 id="fields-2"><a class="header" href="#fields-2">Fields</a></h2>
+<ul>
+<li><strong>Name</strong> — <code>snake_case</code> identifier. The same name appears in process
+expressions on the LHS of <code>?</code> / <code>!</code>.</li>
+<li><strong>Endpoints</strong> — two protection-domain names. Both must be declared in
+the same <code>.fis</code> file.</li>
+<li><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
+channel’s payload buffer, optionally annotated with a typed slot:
+<code>via packet_buffer_outer&lt;int&gt;</code>. Without <code>via</code>, the channel is treated
+as a pure synchronisation point with no shared payload buffer.</li>
+</ul>
+<p>The optional trailing semicolon is accepted but not required.</p>
+<h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
+<pre><code class="language-text">// Synchronous unidirectional — outer PD calls into the diode.
+Sync Chan o2d = eth_outer --&gt; dd;
+
+// Asynchronous bidirectional — `Async` is the default, can be omitted.
+Chan d2i = dd &lt;-&gt; eth_inner;
+Async Chan s2o = simulate &lt;-&gt; eth_outer;
+
+// Buffer-backed channel, typed slot.
+Chan packet = eth_outer &lt;-&gt; eth_inner via packet_buffer_outer&lt;int&gt;;
+
+// Buffer-backed, untyped (slot type defaults later).
+Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer;
+</code></pre>
+<h2 id="channel-events-in-process-bodies"><a class="header" href="#channel-events-in-process-bodies">Channel events in process bodies</a></h2>
+<p>Inside a process, channel events are written <code>chan_name '?' ident</code> (receive)
+and <code>chan_name '!' ident</code> (send). The names must match exactly; the
+validator resolves each event back to the declared <code>ChannelDecl</code> to check
+direction and payload type.</p>
+<p>See <a href="#channel-events">Event Blocks → Channel events</a>
+for the inline event grammar and <a href="#process-blocks">Process Blocks</a>
+for how channel events sit in a process expression.</p>
+<h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
+<ul>
+<li>Slot types in the <code>via</code> clause currently accept only <a href="types/primitive-types.html">primitive types</a>;
+struct slot types parse but are gated by the type-system work tracked
+separately. The corresponding test is marked <code>#[ignore]</code>.</li>
+<li>The <code>Sync</code> modifier rejects bidirectional <code>&lt;-&gt;</code> syntactically; sync
+bidirectional channels would require a richer call/reply protocol than
+the current implementation supports.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="imports-and-mappings"><a class="header" href="#imports-and-mappings">Imports and Mappings</a></h1>
+<p>Two declarations sit at the top of every <code>.fi</code> file: <code>import</code> brings an
+external C or Rust source file into scope under a chosen alias, and
+<code>Mapping</code> puts a <a href="#memory-region-declarations">memory region</a> declared in
+the <code>.fis</code> into the protection domain’s address space.</p>
+<h2 id="imports"><a class="header" href="#imports">Imports</a></h2>
+<pre><code class="language-text">ImportDecl ::= 'import' '"' FilePath '"' 'as' ident ';'
+FilePath   ::= ident '.' ('c' | 'rs')
+</code></pre>
+<p>An <em>import declaration</em> names the external implementation that backs the
+PD’s <a href="#event-blocks">computation events</a>. The path is a single bare file
+name (no directories) ending in <code>.c</code> or <code>.rs</code>; the parser dispatches on
+the extension to record it as a C or Rust source. The alias becomes the
+prefix on every external call inside the PD.</p>
+<pre><code class="language-text">import "eth.c" as eth;             // call: eth.send_frame(...)
+import "dd.c" as dd;               // call: dd.forward_packet(...)
+import "driver.rs" as driver;      // Rust source — same call shape
+</code></pre>
+<p>Multiple imports are allowed, and they may interleave with mappings —
+order does not matter for parsing. Each alias must be unique within the
+file.</p>
+<h2 id="mappings"><a class="header" href="#mappings">Mappings</a></h2>
+<pre><code class="language-text">MappingDecl ::= SecurityLabel? 'Mapping' ident '(' region (',' vaddr)? ',' perms (',' cached)? ')' ';'
+
+region      ::= ident                      // a MemoryRegion declared in .fis
+vaddr       ::= hex                        // explicit virtual address (optional)
+perms       ::= string_literal             // 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
+cached      ::= bool_literal               // default: false
+</code></pre>
+<p>A <em>mapping declaration</em> installs a <code>MemoryRegion</code> into the PD’s address
+space. The mapping’s name becomes a globally-visible symbol inside the PD;
+the <a href="#constructor-block">Constructor block</a> can then reference its
+<code>.vaddr</code>, <code>.paddr</code>, or <code>.size</code>.</p>
+<h3 id="fields-3"><a class="header" href="#fields-3">Fields</a></h3>
+<ul>
+<li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. The mapping
+inherits the region’s confidentiality; the type-checker rejects a <code>Low</code>
+mapping over a <code>High</code> region. See
+<a href="items/information-flow-labels">Information-Flow Labels</a> below.</li>
+<li><strong>Name</strong> — the mapping’s own identifier. Distinct from the region’s name;
+one region can have multiple mappings under different names.</li>
+<li><strong>Region</strong> — the <code>MemoryRegion</code> declared in the <code>.fis</code> file.</li>
+<li><strong>Vaddr</strong> (optional) — pin the mapping at a specific virtual address. If
+omitted, the loader allocates one. Hex literal.</li>
+<li><strong>Permissions</strong> — a quoted string of <code>r</code>/<code>w</code>/<code>x</code> characters. Order and
+case are insensitive: <code>"rw"</code> and <code>"WR"</code> are equivalent. Write-only is
+rejected; at least <code>r</code> or <code>x</code> must be present. The accepted set is
+<code>r</code>, <code>rw</code>, <code>rx</code>, <code>rwx</code>, <code>x</code>, <code>wx</code>.</li>
+<li><strong>Cached</strong> (optional, default <code>false</code>) — whether the mapping is cached
+in the CPU MMU. Device MMIO regions are typically <code>false</code>.</li>
+</ul>
+<h3 id="examples-4"><a class="header" href="#examples-4">Examples</a></h3>
+<pre><code class="language-text">// Anonymous shared buffer at allocator-chosen vaddr, read-write, uncached.
+Low Mapping ring_buffer(ring_buffer_outer, "rw", false);
+
+// Same region, default cached flag (false).
+Mapping packet_buffer(packet_buffer_outer, "rw");
+
+// Pinned vaddr — useful for debugging or for binding two PDs to a
+// shared layout that pre-allocates virtual addresses.
+Low Mapping eth0(eth0, 0x2_000_000, "rw");
+
+// High-side mapping. Backed by a High MemoryRegion; rejected if the PD
+// or the region's label disagrees.
+High Mapping eth_clk(eth_clk, 0x2_200_000, "rw");
+
+// Read-only mapping (data-diode input).
+Low Mapping input_buf(eth_outer_output, "r");
+</code></pre>
+<h2 id="information-flow-labels"><a class="header" href="#information-flow-labels">Information-flow labels</a></h2>
+<p>Both <code>MemoryRegion</code> and <code>Mapping</code> declarations may carry a <code>High</code> or <code>Low</code>
+prefix. The two-level lattice is:</p>
+<pre><code class="language-text">flows_to(Low,  Low)  = true
+flows_to(Low,  High) = true       // upgrade is fine
+flows_to(High, Low)  = false      // downgrade is rejected
+flows_to(High, High) = true
+</code></pre>
+<p>In source: <code>Low</code> is the default — omitting the prefix is equivalent to
+writing <code>Low</code>. Place the prefix <strong>before</strong> the <code>MemoryRegion</code> / <code>Mapping</code>
+keyword; placing it elsewhere is a parse error.</p>
+<p>The validator runs after parsing and rejects any mapping that violates
+<code>flows_to(region.label, mapping.label)</code>. The data-diode demo uses this to
+enforce one-way information flow at the type-checker.</p>
+<h2 id="validation-2"><a class="header" href="#validation-2">Validation</a></h2>
+<ul>
+<li>Each <code>Mapping</code>’s <code>region</code> must reference a declared <code>MemoryRegion</code>.</li>
+<li>Permission strings must contain at least one of <code>r</code> or <code>x</code>. <code>"w"</code> alone
+is rejected.</li>
+<li>A pinned <code>vaddr</code> must be aligned to the region’s page size.</li>
+<li>Mapping names are unique within the same <code>.fi</code> file.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="constructor-block"><a class="header" href="#constructor-block">Constructor Block</a></h1>
+<pre><code class="language-text">ConstructorBlock ::= '(' ')' ':' '{' Assign* '}'
+Assign           ::= ident '=' RHS ';'
+RHS              ::= ident '.' MappingField
+                   | &lt;anything up to the terminating ';'&gt;
+MappingField     ::= 'vaddr' | 'paddr' | 'size'
+</code></pre>
+<p>The <em>constructor block</em> is the per-PD initialiser that runs before the
+PD’s first event. It binds globals declared in the imported <code>.c</code> /
+<code>.rs</code> file to either:</p>
+<ul>
+<li>a <em>mapping field</em> — <code>mapping.vaddr</code>, <code>mapping.paddr</code>, or <code>.size</code> —
+in which case the value is patched into the binary by the seL4 Microkit
+loader before the PD starts (via the <code>setvar</code> mechanism); or</li>
+<li>an <em>opaque expression</em> — anything up to the terminating <code>;</code> — in which
+case the assignment runs at PD-init time inside the imported source’s
+<code>init()</code> function.</li>
+</ul>
+<p>There is at most one constructor block per <code>.fi</code> file. Its leading <code>():</code>
+borrows the empty-parameter-list shape; the parens are required even
+though there are no parameters yet.</p>
+<h2 id="mapping-field-rhs"><a class="header" href="#mapping-field-rhs">Mapping-field RHS</a></h2>
+<p>The compiler classifies the RHS as a <em>mapping field</em> only when it is
+exactly <code>mapping.field</code>, with nothing between the field name and the
+terminating <code>;</code> (whitespace excepted). The matched fields are:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.vaddr</code></td><td>Virtual address where the mapping was installed.</td></tr>
+<tr><td><code>.paddr</code></td><td>Physical address backing the mapping (only valid for regions with explicit <code>phys_addr</code>).</td></tr>
+<tr><td><code>.size</code></td><td>Mapping size in bytes.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each matched assignment becomes one SDF <code>setvar</code> entry in the lowered
+output. The Microkit loader patches the named symbol in the PD’s ELF
+before launch.</p>
+<pre><code class="language-text">(): {
+    rbd = ring_buffer.vaddr;            // setvar "rbd" → vaddr
+    tbd = ring_buffer.size;             // setvar "tbd" → size in bytes
+    pa  = packet_buffer.paddr;          // setvar "pa"  → physical address
+}
+</code></pre>
+<h2 id="opaque-rhs"><a class="header" href="#opaque-rhs">Opaque RHS</a></h2>
+<p>Any RHS that is not exactly <code>mapping.field</code> is recorded as an opaque blob
+and emitted into the PD’s runtime init code rather than as <code>setvar</code>. The
+parser consumes verbatim up to the next <code>;</code>.</p>
+<pre><code class="language-text">(): {
+    tbd = ring_buffer.vaddr + (sizeof(struct rbd) * RBD_COUNT);  // opaque
+    irq_ack_index = 0;                                            // opaque
+}
+</code></pre>
+<p>This split exists because <code>setvar</code> only supports literal-substitution
+patching: it cannot evaluate arithmetic. Anything more elaborate than a
+direct field read is deferred to runtime initialisation in the imported
+source file.</p>
+<blockquote>
+<p>🚧 <em>Constructor block is being unified with the broader <a href="#variable-declarations">statement
+grammar</a> and the <a href="#expressions">expression
+grammar</a> — see <a href="https://github.com/fiducia-lang/fic/issues/128">#128</a>. Once that lands, the
+mapping-field / opaque distinction moves out of the AST and the
+constructor body becomes a plain sequence of statements.</em></p>
+</blockquote>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<pre><code class="language-text">import "eth.c" as eth;
+
+Low Mapping ring_buffer(ring_buffer_outer, "rw");
+Low Mapping packet_buffer(packet_buffer_outer, "rw");
+
+(): {
+    ring_buffer_vaddr  = ring_buffer.vaddr;       // setvar
+    packet_buffer_vaddr = packet_buffer.vaddr;    // setvar
+    ring_buffer_paddr  = ring_buffer.paddr;       // setvar
+    packet_buffer_paddr = packet_buffer.paddr;    // setvar
+
+    rbd_count = RBD_COUNT;                         // opaque (runtime init)
+}
+</code></pre>
+<h2 id="validation-3"><a class="header" href="#validation-3">Validation</a></h2>
+<ul>
+<li>The mapping referenced on the left of <code>.vaddr</code> / <code>.paddr</code> / <code>.size</code> must
+exist in the same <code>.fi</code> file.</li>
+<li><code>.paddr</code> is rejected if the underlying <code>MemoryRegion</code> was declared
+without an explicit physical address.</li>
+<li>Only one constructor block per <code>.fi</code>; a second <code>():</code> block is a parse
+error.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="variable-declarations"><a class="header" href="#variable-declarations">Variable Declarations</a></h1>
+<pre><code class="language-text">VarDecl ::= Type ident ';'
+Type    ::= PrimitiveType | 'ptr' '&lt;' Type '&gt;' | StructName
+</code></pre>
+<p>A <em>variable declaration</em> introduces one named value at PD-global scope or
+inside an <a href="#event-blocks">event body</a>. The bare <code>Type ident;</code> form is
+the only shape supported today; an initialiser (<code>Type ident = expr;</code>) is
+reserved but not yet parsed.</p>
+<blockquote>
+<p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed — see
+<a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. For now, initialise locals from inside the body, and globals
+from the <a href="#constructor-block">Constructor block</a> or the imported
+source’s <code>init()</code> function.</em></p>
+</blockquote>
+<h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
+<p>Variables can appear in two positions inside a <code>.fi</code> file:</p>
+<ul>
+<li><strong>Global</strong> — at the top level of the file, alongside <code>Mapping</code> and
+<code>import</code> declarations. Globals are visible everywhere in the PD,
+read/write inside event bodies and the constructor.</li>
+<li><strong>Local</strong> — inside a computation <a href="#event-blocks">event body</a>, between
+the <code>:</code> and <code>end</code>. Locals shadow globals of the same name. Their scope
+ends with the <code>end</code> of the enclosing event.</li>
+</ul>
+<p>Process bodies cannot declare variables; any state needed by guards or
+process expressions must be promoted to a global.</p>
+<p>The full scope-resolution order inside an event body is:</p>
+<pre><code class="language-text">local → carrier → global
+</code></pre>
+<p>Carriers are the read-only inputs declared in the event header — see
+<a href="#carriers">Event Blocks</a>.</p>
+<h2 id="primitive-types"><a class="header" href="#primitive-types">Primitive types</a></h2>
+<p>The primitive types accepted in declarations are:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Group</th><th>Tokens</th></tr>
+</thead>
+<tbody>
+<tr><td>Signed integers</td><td><code>int</code>, <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code></td></tr>
+<tr><td>Unsigned integers</td><td><code>uint</code>, <code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td></tr>
+<tr><td>Boolean</td><td><code>bool</code></td></tr>
+<tr><td>Byte alias</td><td><code>byte</code> (8-bit)</td></tr>
+<tr><td>Empty type</td><td><code>void</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>int</code> and <code>uint</code> without a width default to 32-bit. <code>byte</code> is an alias
+for <code>uint8</code>.</p>
+<h2 id="pointer-and-struct-types"><a class="header" href="#pointer-and-struct-types">Pointer and struct types</a></h2>
+<pre><code class="language-text">ptr&lt;int&gt;            // pointer to int
+ptr&lt;ptr&lt;int&gt;&gt;       // pointer to pointer
+struct rbd          // user-defined struct (parser support pending)
+</code></pre>
+<p>Pointer parsing exists in the grammar as <code>'ptr' '&lt;' Type '&gt;'</code>; struct
+type parsing is reserved for a later revision and is gated on the
+struct-declaration grammar.</p>
+<h2 id="examples-5"><a class="header" href="#examples-5">Examples</a></h2>
+<pre><code class="language-text">// Global declarations, top of a .fi file.
+int counter;
+bool ready;
+uint64 last_irq_ts;
+
+// Local declarations inside an event body.
+Event handle_packet.|size: int|:
+    int local_buf;            // local
+    bool ok;                  // local
+    local_buf = eth.alloc();  // assignment uses globals/locals/carriers
+end
+</code></pre>
+<h2 id="validation-4"><a class="header" href="#validation-4">Validation</a></h2>
+<ul>
+<li>A variable name is unique within its enclosing scope (multiple globals
+with the same name are rejected; a local may legally shadow a global).</li>
+<li>The type must be a recognised primitive, a pointer to a recognised
+type, or a declared struct (struct support pending).</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="event-blocks"><a class="header" href="#event-blocks">Event Blocks</a></h1>
+<pre><code class="language-text">EventsSection   ::= 'Events' ':' EventDecl*
+
+EventDecl       ::= 'Event' ident Carriers? ':' Statement* 'end'
+Carriers        ::= ('.' '|' Param (',' Param)* '|')+
+Param           ::= ident ':' Type
+</code></pre>
+<p>An <em>event block</em> is the block of computation events declared at the top
+level of a <code>.fi</code> file under an <code>Events:</code> section header. Each declaration
+binds one named atom of computation that processes can reference by name.
+A <code>.fi</code> file may have zero or more <code>Events:</code> sections; multiple sections
+merge into a single event list at parse time.</p>
+<p>Computation events are one of three event kinds in CoreFi (paper §4.2);
+the other two — <em>channel events</em> (<code>c?x</code> / <code>c!e</code>) and <em>hardware-interrupt
+events</em> (<code>irq?N</code> / <code>irq!N</code>) — are inline atoms that appear in process
+bodies and have no top-level declaration. They are documented at the end
+of this chapter.</p>
+<h2 id="computation-events"><a class="header" href="#computation-events">Computation events</a></h2>
+<p>A computation event is a named, atomic block of <a href="#variable-declarations">statements</a>:
+assignments and external calls, plus optional carrier parameters. The
+block executes as a single transition in the labelled-transition system —
+processes can prefix on it (<code>my_event -&gt; ...</code>) but cannot observe it
+mid-flight.</p>
+<p>Names follow <code>snake_case</code> and start with a lowercase letter. This both
+signals intent and lets the parser disambiguate between a computation
+event reference and a sub-process reference (which uses
+<code>UpperCamelCase</code>).</p>
+<h3 id="carriers"><a class="header" href="#carriers">Carriers</a></h3>
+<pre><code class="language-text">Event handle_packet.|size: int|:                  // single carrier
+Event ack.|chan: int, slot: int|:                 // grouped carriers
+Event ack.|chan: int|.|slot: int|:                // chained carriers (equivalent)
+</code></pre>
+<p><em>Carriers</em> are read-only inputs supplied by the invoking process. The
+syntax uses pipes (<code>.|...|</code>) — chosen over parentheses so the visual
+boundary is distinct from sub-process parameter lists. Multiple carriers
+may be <strong>grouped</strong> in a single <code>.|x: int, y: int|</code> clause or <strong>chained</strong>
+across multiple <code>.|x: int|.|y: int|</code> clauses; both forms parse to the
+same <code>Vec&lt;(Type, String)&gt;</code> and behave identically.</p>
+<p>Carriers are <em>read-only</em> inside the body. Three kinds of variable names
+can appear in an event body:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Kind</th><th>Declared in</th><th>Writable</th></tr>
+</thead>
+<tbody>
+<tr><td>Global</td><td>Top-level of the <code>.fi</code> file</td><td>yes</td></tr>
+<tr><td>Carrier</td><td>The event’s `.</td><td>name: type</td></tr>
+<tr><td>Local</td><td>Inside the body via <code>Type name;</code></td><td>yes</td></tr>
+</tbody>
+</table>
+</div>
+<p>Name resolution searches in order: local → carrier → global. To carry
+mutable state across event invocations, use a <a href="#variable-declarations">global</a>;
+to carry mutable scratch within one invocation, declare a local and
+initialise it from the carrier (<code>int x = carrier;</code> once initialisers
+land).</p>
+<h3 id="body-and-termination"><a class="header" href="#body-and-termination">Body and termination</a></h3>
+<p>Between <code>:</code> and <code>end</code>, the body is a sequence of <a href="#variable-declarations">statements</a>:
+local variable declarations, assignments, and external function calls.
+There is no return value — events emit side effects (memory writes,
+external calls, channel sends are implicit when the event participates
+in a process’s <code>-&gt;</code>).</p>
+<p>The <code>end</code> keyword is the explicit terminator. Implicit termination on the
+next top-level keyword would give weak error messages on a missing <code>;</code>
+inside the body; the explicit <code>end</code> keeps diagnostics local. The same
+keyword terminates <a href="#process-blocks">process</a> sub-bodies for symmetry.</p>
+<h3 id="examples-6"><a class="header" href="#examples-6">Examples</a></h3>
+<pre><code class="language-text">Events:
+    // No carriers — the event is a fixed call.
+    Event setup_eth: eth.eth_setup(); end
+
+    // Single carrier, single-statement body.
+    Event read_frame.|idx: int|: eth.handle_rx(); end
+
+    // Multi-statement body with a local.
+    Event handle_packet.|size: int|:
+        int local_buf;
+        local_buf = eth.alloc();
+        counter = counter + 1;
+    end
+
+    // Multiple carriers, grouped form.
+    Event ack.|chan: int, slot: int|: eth.ack_slot(); end
+
+    // Same event, chained carrier form.
+    Event ack.|chan: int|.|slot: int|: eth.ack_slot(); end
+</code></pre>
+<p>A <code>.fi</code> file may carry multiple <code>Events:</code> sections (for grouping by
+concern); they merge into a single event list:</p>
+<pre><code class="language-text">Events:
+    Event setup_eth: eth.eth_setup(); end
+
+import "more.c" as more;
+
+Events:
+    Event handle_irq: more.handle(); end
+</code></pre>
+<p>Both events become part of <code>Program.events</code>.</p>
+<h3 id="empty-body-events"><a class="header" href="#empty-body-events">Empty-body events</a></h3>
+<p><code>Event noop: end</code> is accepted; the body is just zero statements. This is
+useful as a placeholder while a process expression is being prototyped.</p>
+<h2 id="channel-events"><a class="header" href="#channel-events">Channel events</a></h2>
+<pre><code class="language-text">ChannelEvent ::= ident '?' ident             // c?x — receive
+              |  ident '!' ident             // c!e — send
+</code></pre>
+<p>A <em>channel event</em> is an atomic communication action between two protection
+domains. The channel name on the LHS is resolved against the <a href="#channel-declarations"><code>Chan</code>
+declarations</a> in the surrounding <code>.fis</code>.</p>
+<p>Channel events appear inline inside <a href="#process-blocks">process expressions</a>
+— they have no top-level declaration. The receive form <code>c?x</code> binds the
+incoming value to a local <code>x</code>; the send form <code>c!e</code> transmits the
+expression <code>e</code>.</p>
+<h3 id="no-selective-receive"><a class="header" href="#no-selective-receive">No selective receive</a></h3>
+<p>The RHS of <code>?</code> is always a single identifier (a binder), never a value
+pattern. Traditional CSP / CSP# accepts <code>c?ACK</code> as “wait only for the
+message <code>ACK</code>”, but Fiducia rejects this: it can deadlock when no sender
+ever produces the matching value, conflicting with CoreFi’s deadlock-
+freedom story (paper §4.1 Wf1). The same expressiveness is recovered by
+binding then guarding:</p>
+<pre><code class="language-text">// Recommended.
+c?msg -&gt; [msg == ACK] handle_ack -&gt; Skip [] [msg == NACK] handle_nack -&gt; Skip
+</code></pre>
+<h3 id="send-payload-restriction"><a class="header" href="#send-payload-restriction">Send-payload restriction</a></h3>
+<p>The RHS of <code>!</code> is restricted to value-producing, side-effect-free
+expressions: literals, variable references, arithmetic, and logical
+expressions. <em>Call expressions</em> (<code>eth.get_pkt()</code>) are deliberately
+<strong>rejected</strong> as a send payload — external calls must happen inside a
+<a href="#computation-events">computation event</a>, which preserves the rule that
+channel events stay pure-communication atoms in the LTS. To send the
+result of a call, bind it in a computation event first:</p>
+<pre><code class="language-text">// Rejected
+// c!eth.get_packet()
+
+// Accepted: bind, then send.
+Event get_pkt: pkt = eth.get_packet(); end
+Process p:    get_pkt -&gt; c!pkt -&gt; ...
+</code></pre>
+<h2 id="hardware-interrupt-events"><a class="header" href="#hardware-interrupt-events">Hardware-interrupt events</a></h2>
+<pre><code class="language-text">IRQEvent ::= 'irq' '?' integer_literal       // irq?N — await
+          |  'irq' '!' integer_literal       // irq!N — acknowledge
+</code></pre>
+<p>A <em>hardware-interrupt event</em> is a special-cased channel event on the
+reserved channel name <code>irq</code>. The integer is the IRQ number declared on
+the <a href="#protection-domain-declarations">protection domain</a>. <code>irq?N</code> blocks
+until the IRQ fires; <code>irq!N</code> acknowledges the IRQ back to the kernel.</p>
+<p>Like channel events, IRQ events appear only inside process expressions
+and have no top-level declaration:</p>
+<pre><code class="language-text">Notified() = irq?159 -&gt; Handle_eth() ; irq!159 -&gt; Notified();
+</code></pre>
+<p>The IRQ number here parses as an integer literal — channel events do
+not yet accept integer payloads on either side. This asymmetry exists
+because IRQ numbers are constants from the system topology, while
+general channel payloads will become full <a href="#expressions">expressions</a>
+once the expression grammar lands.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="process-blocks"><a class="header" href="#process-blocks">Process Blocks</a></h1>
+<pre><code class="language-text">ProcessSection ::= 'Process' ':' ProcessDecl+
+
+ProcessDecl    ::= ident '(' (Param (',' Param)*)? ')' '=' ProcessBody ';'
+Param          ::= ident ':' Type
+
+ProcessBody    ::= ProcessExpr (';' ProcessExpr)*
+ProcessExpr    ::= 'Skip'
+                |  'Div'
+                |  Event '-&gt;' ProcessExpr
+                |  '[' Guard ']' ProcessExpr
+                |  ProcessExpr ('[]' ProcessExpr)+ ('default' ProcessExpr)?
+                |  ProcessRef
+                |  '(' ProcessBody ')'
+ProcessRef     ::= ident ('(' (ident (',' ident)*)? ')')?
+Guard          ::= ident | '!' ident
+</code></pre>
+<p>A <em>process block</em> is the orchestration layer of a Fiducia protection
+domain — a CSP-style algebraic expression composed from
+<a href="#event-blocks">events</a>, guards, choices, and sequential composition.
+Each <code>Process:</code> section declares one or more named processes; multiple
+sections in the same <code>.fi</code> merge into a single process list.</p>
+<p>Following CoreFi paper §4.2, a process expression is one of:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Form</th><th>Notation</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td>Successful exit</td><td><code>Skip</code></td><td>Terminates normally.</td></tr>
+<tr><td>Divergence</td><td><code>Div</code></td><td>Infinite-loop terminal (Ω).</td></tr>
+<tr><td>Event prefix</td><td><code>e -&gt; P</code></td><td>Performs event <code>e</code>, then <code>P</code>.</td></tr>
+<tr><td>Guard</td><td><code>[b] P</code></td><td>Performs <code>P</code> only if <code>b</code> holds.</td></tr>
+<tr><td>External choice</td><td><code>P [] Q</code></td><td>Either branch — environment chooses.</td></tr>
+<tr><td>Default arm</td><td><code>(P [] Q) default R</code></td><td><code>R</code> runs when no branch is enabled.</td></tr>
+<tr><td>Sequential</td><td><code>P ; Q</code></td><td><code>P</code> to completion, then <code>Q</code>.</td></tr>
+<tr><td>Reference</td><td><code>Name(args)</code></td><td>Calls another process declaration.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="naming-convention"><a class="header" href="#naming-convention">Naming convention</a></h2>
+<p>Process names start with an <code>UpperCamelCase</code> first letter — this both
+signals intent and lets the parser detect the start of a new declaration
+while consuming a body. The convention also disambiguates:</p>
+<ul>
+<li><code>Reply(pkt)</code> — sub-process call (<code>UpperCamelCase</code>, parses as a process expression).</li>
+<li><code>send_frame(pkt)</code> — computation-event reference (<code>snake_case</code>, parses as an event).</li>
+</ul>
+<p>The disambiguation happens at parse time on the leading character of the
+identifier; do not lowercase a process name or capitalise an event name.</p>
+<h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
+<p>From loosest to tightest:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Precedence</th><th>Operator</th><th>Notation</th><th>Note</th></tr>
+</thead>
+<tbody>
+<tr><td>1 (loosest)</td><td>Sequential</td><td><code>;</code></td><td>Separates body items.</td></tr>
+<tr><td>2</td><td>External choice</td><td><code>[]</code> / <code>default</code></td><td>Each branch must carry a discriminator.</td></tr>
+<tr><td>3</td><td>Guard</td><td><code>[b] P</code></td><td>Guard binds the next expression only.</td></tr>
+<tr><td>4 (tightest)</td><td>Event prefix</td><td><code>-&gt;</code></td><td>Right-associative (Hoare CSP, page 4).</td></tr>
+<tr><td>atoms</td><td><code>Skip</code>, <code>Div</code>, <code>(...)</code>, <code>Name(args)</code></td><td></td><td></td></tr>
+</tbody>
+</table>
+</div>
+<p>Concrete consequences:</p>
+<pre><code class="language-text">e -&gt; P [] e2 -&gt; Q                ≡ Choice([Prefix(e, P), Prefix(e2, Q)])
+e -&gt; P ; Q                       ≡ (e -&gt; P) ; Q
+[b] e -&gt; P [] e2 -&gt; Q            ≡ Choice([Guard(b, Prefix(e, P)), Prefix(e2, Q)])
+p1 ; p2 [] p3                    ≡ p1 ; (p2 [] p3)
+[b] (e -&gt; P [] e2 -&gt; Q)          ≡ Guard(b, Choice(...))   // outer-guard the choice
+</code></pre>
+<p>Parenthesisation cuts through: <code>(...)</code> re-enters at the top of the
+precedence chain.</p>
+<h2 id="choice-and-discriminators"><a class="header" href="#choice-and-discriminators">Choice and discriminators</a></h2>
+<p>Every branch of a <code>[]</code> choice must carry a <em>discriminator</em> — a
+distinguishing prefix that the surrounding environment can pattern-match
+on. The parser checks structurally and recurses into a branch’s first
+sequential item and into nested choices; deferred resolution is required
+only for <code>ProcessRef</code> (the validator follows the name).</p>
+<p>Common discriminator shapes:</p>
+<pre><code class="language-text">e -&gt; P                  // event prefix
+[b] P                   // guard
+c?x -&gt; ...              // channel-event prefix
+</code></pre>
+<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds.
+<code>default</code> and <code>otherwise</code> are both currently accepted as the keyword for
+the default branch; <code>default</code> is the canonical form (paper choice).</p>
+<h3 id="examples-7"><a class="header" href="#examples-7">Examples</a></h3>
+<pre><code class="language-text">// Two branches, no default.
+Dispatch() = [rx] receive -&gt; Skip [] [!rx] cleanup -&gt; Skip;
+
+// Two branches with a fallback.
+Reply(pkt: int) =
+    [pass] o2d!pkt -&gt; Skip
+ [] [!pass] handle_ping -&gt; Skip
+    default Skip ;
+</code></pre>
+<h2 id="guards"><a class="header" href="#guards">Guards</a></h2>
+<pre><code class="language-text">Guard ::= ident | '!' ident
+</code></pre>
+<p>A <em>guard</em> gates the next process expression on a boolean variable. Today
+the parser accepts only <code>[var]</code> (variable read) and <code>[!var]</code> (negation);
+the variable must be a <a href="#variable-declarations">global</a> declared in the
+same <code>.fi</code> file (process bodies cannot declare their own state). The
+guard binds tighter than <code>[]</code> — <code>[b] e -&gt; P [] e2 -&gt; Q</code> guards the first
+branch only.</p>
+<blockquote>
+<p>🚧 <em>Full boolean / relational guard expressions (<code>[x == 3]</code>, <code>[x &amp;&amp; y]</code>,
+etc.) land with the <a href="#expressions">expression grammar</a> — see
+<a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. Until then, decompose with intermediate globals if a guard
+needs richer logic.</em></p>
+</blockquote>
+<h2 id="sequential-composition"><a class="header" href="#sequential-composition">Sequential composition</a></h2>
+<p>Inside a body, <code>;</code> separates items. The body is <strong>not</strong> a list of
+declarations — it is a single process expression with <code>;</code>-composed
+sub-expressions:</p>
+<pre><code class="language-text">Notified() = irq?159 -&gt; Handle_eth() ; irq!159 -&gt; Notified();
+</code></pre>
+<p>The trailing <code>;</code> after <code>Notified()</code> is the <strong>declaration terminator</strong>, not
+the sequential operator. Inside the body, <code>;</code> separates expressions.</p>
+<h2 id="sub-process-calls"><a class="header" href="#sub-process-calls">Sub-process calls</a></h2>
+<pre><code class="language-text">ProcessRef ::= ident ('(' (ident (',' ident)*)? ')')?
+</code></pre>
+<p>A <em>sub-process call</em> references another process declared in the same
+section. The argument list is currently restricted to identifiers (the
+expression grammar will widen this). Argument-less calls may also drop
+the parentheses entirely:</p>
+<pre><code class="language-text">Process:
+    Notified() = irq?159 -&gt; Handle_eth() ; irq!159 -&gt; Notified();
+    Handle_eth() = handle_irq -&gt; Dispatch ;        // empty arg list, no parens
+    Dispatch() = [rx] receive -&gt; Skip [] [!rx] cleanup -&gt; Skip ;
+    Reply(pkt: int) = o2d!pkt -&gt; Skip ;
+</code></pre>
+<p>The validator confirms each <code>ProcessRef</code> resolves to a declared process
+and that the argument count matches the declaration.</p>
+<h2 id="empty-processes"><a class="header" href="#empty-processes">Empty processes</a></h2>
+<p><code>Skip</code> and <code>Div</code> are atomic and self-contained: <code>Skip</code> is successful
+termination, <code>Div</code> is non-termination (Ω). Both stand alone as a body:</p>
+<pre><code class="language-text">Process:
+    NoOp() = Skip;
+    Stuck() = Div;
+</code></pre>
+<h2 id="limitations-1"><a class="header" href="#limitations-1">Limitations</a></h2>
+<ul>
+<li>Argument lists for <code>ProcessRef</code> and computation-event references are
+restricted to identifiers. Channel-receive RHS accepts identifiers <em>or</em>
+integer literals (so <code>irq?159</code> parses).</li>
+<li>Guards accept <code>[var]</code> / <code>[!var]</code> only.</li>
+<li>No variable declarations inside a process body — promote to a global.</li>
+<li>Recursion is modeled as a sub-process call by name, e.g. the trailing
+<code>Notified()</code> in <code>Notified() = ... -&gt; Notified();</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="expressions"><a class="header" href="#expressions">Expressions</a></h1>
+<p>This chapter describes the expression grammar designed for Fiducia and
+the subset that today’s parser actually accepts. Expressions appear as:</p>
+<ul>
+<li>the right-hand side of assignments inside event bodies and the
+constructor block;</li>
+<li>the payload of a <a href="#channel-events">channel send</a> (<code>c!e</code>);</li>
+<li>the body of a <a href="#guards">guard</a> (<code>[b]</code>);</li>
+<li>arguments to sub-process calls and computation-event references.</li>
+</ul>
+<p>The grammar is divided into four sub-languages: arithmetic (integer-
+valued), logical (boolean / relational), boolean (lifted), and call
+expressions. Only call expressions are fully implemented today. The
+others are flagged 🚧 below.</p>
+<pre><code class="language-text">Expr  ::= AExpr | LExpr | BExpr | CExpr
+</code></pre>
+<h2 id="call-expressions-cexpr"><a class="header" href="#call-expressions-cexpr">Call expressions (<a href="https://github.com/fiducia-lang/fic/blob/main/src/parser/expr.rs"><code>CExpr</code></a>)</a></h2>
+<pre><code class="language-text">CExpr ::= ident '.' ident '(' (Expr (',' Expr)*)? ')'
+</code></pre>
+<p>A <em>call expression</em> invokes a function defined in an imported <code>.c</code> /
+<code>.rs</code> file, prefixed with the import alias chosen at the
+<a href="#imports"><code>import</code> declaration</a>. The alias
+is <strong>required</strong> — there are no local callables in Fiducia, only
+externally-implemented functions reached through an alias.</p>
+<p>The first <code>ident</code> is the alias; the second is the function name. No
+whitespace is permitted around the <code>.</code> or before the <code>(</code>:</p>
+<pre><code class="language-text">eth.send_frame()                  // OK
+drv.start()                       // OK
+drv .start()                      // rejected — whitespace before '.'
+drv. start()                      // rejected — whitespace after '.'
+drv.start ()                      // rejected — whitespace before '('
+</code></pre>
+<h3 id="argument-lists"><a class="header" href="#argument-lists">Argument lists</a></h3>
+<p>Argument parsing is currently a stub: the parser accepts an empty <code>(...)</code>
+argument list and stores <code>Vec::new()</code> for the args. Once the rest of the
+expression grammar lands, arguments will be <code>Vec&lt;Expr&gt;</code> and the call site
+shape (<code>eth.send_frame(pkt)</code>) will parse as expected.</p>
+<blockquote>
+<p>🚧 <em>Argument parsing for call expressions is gated on the broader
+expression grammar — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. Today, only <code>()</code> is accepted; calls
+with arguments parse only inside places that do their own
+identifier-list handling (sub-process calls, computation-event
+carriers).</em></p>
+</blockquote>
+<h2 id="arithmetic-expressions-aexpr"><a class="header" href="#arithmetic-expressions-aexpr">Arithmetic expressions (<a href="https://github.com/fiducia-lang/fic/blob/main/src/parser/expr.rs"><code>AExpr</code></a>)</a></h2>
+<blockquote>
+<p>🚧 <em>Not yet implemented — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</em></p>
+<p>The designed grammar covers integer literals, variables, unary negation,
+and the standard binary arithmetic operators (<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code>).
+Until the grammar lands, integer values appear in source only as
+literals at fixed positions (IRQ numbers, page sizes, sizes / phys-addrs
+in <a href="#memory-region-declarations"><code>MemoryRegion</code></a>).</p>
+</blockquote>
+<h2 id="logical-expressions-lexpr"><a class="header" href="#logical-expressions-lexpr">Logical expressions (<a href="https://github.com/fiducia-lang/fic/blob/main/src/parser/expr.rs"><code>LExpr</code></a>)</a></h2>
+<blockquote>
+<p>🚧 <em>Not yet implemented — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</em></p>
+<p>The designed grammar covers comparison (<code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>,
+<code>&gt;=</code>) and boolean composition (<code>&amp;&amp;</code>, <code>||</code>, <code>!</code>). Until the grammar
+lands, <a href="#guards">guards</a> accept only <code>[var]</code> and
+<code>[!var]</code>.</p>
+</blockquote>
+<h2 id="boolean-expressions-bexpr"><a class="header" href="#boolean-expressions-bexpr">Boolean expressions (<a href="https://github.com/fiducia-lang/fic/blob/main/src/parser/expr.rs"><code>BExpr</code></a>)</a></h2>
+<blockquote>
+<p>🚧 <em>Not yet implemented — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</em></p>
+<p>A lifted boolean form for use as a payload type, distinct from
+<code>LExpr</code> which composes other relations. Likely to merge into <code>LExpr</code>
+in the final grammar — tracked under <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</p>
+</blockquote>
+<h2 id="stand-ins-for-unimplemented-forms"><a class="header" href="#stand-ins-for-unimplemented-forms">Stand-ins for unimplemented forms</a></h2>
+<p>Where the grammar currently lacks a construct, the surrounding parser
+accepts a narrow stand-in so existing fixtures continue to parse:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Position</th><th>Stand-in accepted</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MemoryRegion</code> size / page / phys</td><td>hex literal only</td></tr>
+<tr><td>Mapping <code>vaddr</code></td><td>hex literal only</td></tr>
+<tr><td><code>c!e</code> send payload</td><td>identifier</td></tr>
+<tr><td><code>irq?N</code> / <code>irq!N</code> IRQ number</td><td>integer literal</td></tr>
+<tr><td>Computation-event carrier args</td><td>identifier</td></tr>
+<tr><td>Sub-process call args</td><td>identifier</td></tr>
+<tr><td>Constructor RHS</td><td><code>mapping.field</code> or opaque text to <code>;</code></td></tr>
+<tr><td>Guard expression</td><td><code>var</code> or <code>!var</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>These accept-narrow / reject-everything-else windows keep the parser
+honest: every position where an expression <em>should</em> go either has a
+fully-typed <code>Expr</code> (via <code>CExpr</code>) today, or accepts a clearly-restricted
+shape that surfaces an error if you reach for an un-implemented form.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
