@@ -274,6 +274,78 @@
       sel4test and seL4_libs run unmodified from upstream.
     </p>
 
+    <h3>Based on TX2 (closest existing seL4 platform)</h3>
+    <p>
+      The seL4 manual's
+      <a href="https://docs.sel4.systems/projects/sel4/porting.html" target="_blank" rel="noopener">porting guide</a>
+      recommends starting from the closest existing platform and customising only what
+      actually differs. For T234 (the SoC under both the Orin Nano and AGX Orin), the closest
+      existing seL4 platform is <code>tx2</code> &mdash; Tegra186, same Tegra family, same
+      TKE timer block, same NV UART register layout, same SMMUv2/GICv3 conventions.
+      Following the porting guide:
+    </p>
+    <ul>
+      <li><strong>util_libs platform headers</strong> &mdash; <code>clock.h</code>,
+        <code>i2c.h</code>, <code>reset.h</code> are <strong>verbatim TX2 copies</strong>.
+        sel4test never exercises clocks / I2C / resets through libplatsupport, so the contents are
+        irrelevant for our build &mdash; the files just need to <em>exist</em> at the per-plat path
+        because the libplatsupport sources do unconditional <code>#include</code>s. Bringing them
+        across literally is the seL4 manual's recommended pattern.</li>
+      <li><strong>Two files customised</strong> &mdash; <code>serial.h</code> (3-line
+        change: default UART becomes UART-C, not UART-A; AGX/Nano expose TCU debug on UART-C)
+        and <code>timer.h</code> (1-line change: <code>NV_TMR_PATH</code> points at the TKE
+        block at <code>0x2080000</code>, the T234 address, not <code>0x3020000</code> which is
+        TX2's). Every other constant is exactly TX2's.</li>
+      <li><strong>nvidia/timer.c</strong> &mdash; we extend the existing
+        <code>#ifdef CONFIG_PLAT_TX2</code> branch to also cover the orin platforms (one line).
+        The upstream source already has a comment saying "If the platform specific code becomes
+        any larger, then it should be considered moving into a per platform <code>nv_timer_plat_init</code>
+        function" &mdash; until that refactor happens, extending the conditional is the
+        Tegra-family-hygiene fix.</li>
+    </ul>
+    <p>
+      The kernel-platform tree (<code>kernel/src/plat/orin-nano/</code>) is similarly modelled
+      on <code>src/plat/tx2/</code>: same <code>declare_platform</code> pattern, GICv3, A72-class
+      CPU constants, <code>l2c_nop.c</code> shim. The DTS overlay and the chosen device-tree
+      paths are AGX/Nano-specific because the board layout differs, but the cmake structure is
+      Tegra-family-standard.
+    </p>
+
+    <h3>Two categories of changes &mdash; and why the distinction matters</h3>
+    <p>
+      Every change in this port lives in one of two buckets, with very different blast radius:
+    </p>
+    <ol>
+      <li><strong>Platform-specific files</strong> &mdash; under
+        <code>kernel/src/plat/orin-nano/</code>,
+        <code>libplatsupport/plat_include/orin-nano/</code>,
+        <code>libsel4/sel4_plat_include/orin-nano/</code>,
+        <code>kernel/tools/dts/orin-nano.dts</code>, and
+        <code>tools/seL4/elfloader-tool/src/plat/orin-nano/</code>.
+        These compile only when <code>KernelPlatform=orin-nano</code> &mdash; other platforms
+        never see them. Safe to be as platform-specific as we like.</li>
+      <li><strong>Shared-infrastructure changes</strong> &mdash; modifications under
+        <code>kernel/src/arch/arm/</code>,
+        <code>kernel/include/arch/arm/</code>,
+        <code>kernel/src/drivers/serial/</code>,
+        <code>elfloader-tool/src/arch-arm/</code>,
+        <code>libplatsupport/src/mach/nvidia/</code>, etc.
+        Every other ARMv8 / Tegra-family platform compiles these. We work to keep this
+        column as small as possible.</li>
+    </ol>
+    <p>
+      The two repository-structure tables below are split on this line. The category-1
+      tables list files that live under per-plat directories &mdash; "safe" changes. The
+      category-2 table lists modifications to shared code &mdash; the ones to scrutinise.
+      Where possible we move things from category 2 to category 1; the most recent example
+      is the <code>plat_console_putchar</code> override, which used to be in shared elfloader
+      code (<code>efi_init.c</code>) and now lives entirely in
+      <code>src/plat/orin-nano/console.c</code> as a strong override of an upstream
+      <code>WEAK</code> symbol. Several more candidates exist (init_downpages, the elfloader
+      cache discipline, the 2 MiB low-address reservation), each gated on a single-line
+      <code>__attribute__((weak))</code> upstream marker.
+    </p>
+
     <!-- 1. Hardware -->
     <h2 id="hardware">1. Hardware</h2>
 
@@ -619,15 +691,20 @@ All is well in the universe</code></pre>
       </tbody>
     </table>
 
-    <h3><a href="https://github.com/potanin/util_libs/tree/orin-nano" target="_blank" rel="noopener">projects/util_libs/ &mdash; potanin/util_libs</a> (<a href="https://github.com/potanin/util_libs/compare/master...orin-nano" target="_blank" rel="noopener">5 files</a>)</h3>
+    <h3><a href="https://github.com/potanin/util_libs/tree/orin-nano" target="_blank" rel="noopener">projects/util_libs/ &mdash; potanin/util_libs</a> (<a href="https://github.com/potanin/util_libs/compare/master...orin-nano" target="_blank" rel="noopener">6 files</a>)</h3>
+    <p style="font-size:0.85rem; color: var(--text-dim); margin: 0 0 8px;">
+      Five files live under <code>libplatsupport/plat_include/orin-nano/</code> &mdash; per-plat, safe.
+      One file (<code>nvidia/timer.c</code>) is shared across all Tegra platforms.
+    </p>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-fcdfdeeaaac0c9e1d50205740abd75e172164c821f5a70efd7794c8bd1e14824" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></a></td><td>Platform stub header (required by build system)</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-83828dfc9248be296122aa52efc1501f1cd7df39fec3e3dd4497656e1fb9992f" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></a></td><td>Platform stub header (required by build system)</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-145ecd10d70107da6ba32ad3b2942b04a9efc1e3a42b6539833a3753c5fbb877" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></a></td><td>Platform serial configuration: UARTC address and parameters</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-ba8e6c4e1f45b6ecd3b313d28f8e39c5608ad83b467f3a7434be213ff437a0e5" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></a></td><td>Platform timer configuration: NV timer addresses and interrupt routing</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td>Enable timer interrupt routing for orin-nano (same as TX2)</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-fcdfdeeaaac0c9e1d50205740abd75e172164c821f5a70efd7794c8bd1e14824" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></a></td><td><strong>[plat-specific]</strong> verbatim from tx2 — no changes</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-83828dfc9248be296122aa52efc1501f1cd7df39fec3e3dd4497656e1fb9992f" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></a></td><td><strong>[plat-specific]</strong> verbatim from tx2 — no changes</td></tr>
+        <tr><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/reset.h</code></td><td><strong>[plat-specific]</strong> verbatim from tx2 — no changes</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-145ecd10d70107da6ba32ad3b2942b04a9efc1e3a42b6539833a3753c5fbb877" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></a></td><td><strong>[plat-specific]</strong> copy of tx2's, 3-line change: <code>PS_SERIAL_DEFAULT</code> / <code>DEFAULT_SERIAL_PADDR</code> / <code>DEFAULT_SERIAL_INTERRUPT</code> &rarr; UART-C (AGX/Nano debug TCU), where TX2 uses UART-A</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-ba8e6c4e1f45b6ecd3b313d28f8e39c5608ad83b467f3a7434be213ff437a0e5" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></a></td><td><strong>[plat-specific]</strong> copy of tx2's, 1-line change: <code>NV_TMR_PATH</code> = <code>/bus@0/timer@2080000</code> (T234 TKE) vs <code>/timer@3020000</code> (TX2)</td></tr>
+        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td><strong>[shared, hygiene]</strong> extend the existing <code>#ifdef CONFIG_PLAT_TX2</code> branch to also cover the orin platforms (one line). Upstream source already flags this as a planned refactor.</td></tr>
       </tbody>
     </table>
 
