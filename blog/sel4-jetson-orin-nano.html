@@ -154,6 +154,34 @@
       border-bottom: 1px solid var(--border);
     }
     .article-container tr:hover td { background: rgba(96, 165, 250, 0.03); }
+    /* Per-row category markers used in repository-structure tables.
+       Green = platform-specific files (compile only when KernelPlatform matches; safe).
+       Reddish = shared-infrastructure changes (every ARMv8/Tegra platform compiles them). */
+    .article-container tr.plat-specific td {
+      background: rgba(52, 211, 153, 0.07);
+      border-left: 3px solid rgba(52, 211, 153, 0.55);
+    }
+    .article-container tr.plat-specific:hover td {
+      background: rgba(52, 211, 153, 0.12);
+    }
+    .article-container tr.shared td {
+      background: rgba(251, 113, 133, 0.07);
+      border-left: 3px solid rgba(251, 113, 133, 0.55);
+    }
+    .article-container tr.shared:hover td {
+      background: rgba(251, 113, 133, 0.12);
+    }
+    .legend-row {
+      display: flex;
+      gap: 18px;
+      font-size: 0.82rem;
+      margin: 8px 0 4px;
+      color: var(--text-dim);
+    }
+    .legend-row span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; }
+    .legend-swatch.plat { background: rgba(52, 211, 153, 0.55); }
+    .legend-swatch.shared { background: rgba(251, 113, 133, 0.55); }
     .callout {
       background: rgba(96, 165, 250, 0.06);
       border: 1px solid rgba(96, 165, 250, 0.2);
@@ -661,50 +689,58 @@ All is well in the universe</code></pre>
     <h2 id="repos">7. Repository Structure</h2>
 
     <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (<a href="https://github.com/potanin/seL4/compare/master...orin-nano" target="_blank" rel="noopener">11 files</a>)</h3>
+    <div class="legend-row">
+      <span><span class="legend-swatch plat"></span> plat-specific (under <code>src/plat/orin-nano/</code> or per-plat path; safe)</span>
+      <span><span class="legend-swatch shared"></span> shared kernel infrastructure (compiles on every ARMv8 platform)</span>
+    </div>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b4a29b517b1670263643a013d34039e95ecacd4437bae368d9230c4d6b836c22" target="_blank" rel="noopener"><code>src/plat/orin-nano/config.cmake</code></a></td><td>New platform declaration: Cortex-A78AE (A72 proxy), GICv3, 40-bit PA override</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ac97ddcbfd707445653d8d5cb3730507c81b494e0ea54722b4a1fa84f9779c3e" target="_blank" rel="noopener"><code>src/plat/orin-nano/overlay-orin-nano.dts</code></a></td><td>Device tree overlay: UARTC, dual memory regions with 64 MB carve-out gap</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-6ce482a5ac7d31120478f153a40ee9cb3ea17480148fdda509bcba85256bfe2a" target="_blank" rel="noopener"><code>tools/dts/orin-nano.dts</code></a></td><td>Full device tree extracted from running Linux on the hardware</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-03f50b80301f03cbe74afa0f123800a1edf7b9a5c0f79b15d3bb8f23d532cd95" target="_blank" rel="noopener"><code>tools/hardware.yml</code></a></td><td>Register orin-nano platform in seL4 hardware database</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-fe00529041e0026a118d08103fdcc7cd67d70e99255ed582d4823f20c09e55fd" target="_blank" rel="noopener"><code>libsel4/sel4_plat_include/orin-nano/sel4/plat/api/constants.h</code></a></td><td>Platform constants header (required by build system)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-1ab5c91d34315907d48dee2e3e86f576da4417a6f77e52d0dc3b6e1953e98ab3" target="_blank" rel="noopener"><code>src/drivers/serial/tegra_omap3_dwapb.c</code></a></td><td>8250-style UART driver shared with other Tegra/OMAP/DW-APB platforms</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b57ee5c830ef97989e73af94224df0c55e50759d5bf5b3aa6d6cbd21865f94a3" target="_blank" rel="noopener"><code>src/drivers/serial/config.cmake</code></a></td><td>Wire orin-nano to the tegra_omap3_dwapb serial driver</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>src/arch/arm/64/kernel/vspace.c</code></a></td><td>Map only SDRAM regions in kernel window instead of full PA range; prevents speculative RAS errors</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-951758e038c3377f24f8ec4bec73efe93d468b9cbda3f952ae6a1bd49e2962de" target="_blank" rel="noopener"><code>src/arch/arm/kernel/boot.c</code></a></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b4a29b517b1670263643a013d34039e95ecacd4437bae368d9230c4d6b836c22" target="_blank" rel="noopener"><code>src/plat/orin-nano/config.cmake</code></a></td><td>New platform declaration: Cortex-A78AE (A72 proxy), GICv3</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ac97ddcbfd707445653d8d5cb3730507c81b494e0ea54722b4a1fa84f9779c3e" target="_blank" rel="noopener"><code>src/plat/orin-nano/overlay-orin-nano.dts</code></a></td><td>Device tree overlay: UARTC, dual memory regions with 64 MB carve-out gap</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-6ce482a5ac7d31120478f153a40ee9cb3ea17480148fdda509bcba85256bfe2a" target="_blank" rel="noopener"><code>tools/dts/orin-nano.dts</code></a></td><td>Full device tree extracted from running Linux on the hardware</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-fe00529041e0026a118d08103fdcc7cd67d70e99255ed582d4823f20c09e55fd" target="_blank" rel="noopener"><code>libsel4/sel4_plat_include/orin-nano/sel4/plat/api/constants.h</code></a></td><td>Platform constants header (required by build system)</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-03f50b80301f03cbe74afa0f123800a1edf7b9a5c0f79b15d3bb8f23d532cd95" target="_blank" rel="noopener"><code>tools/hardware.yml</code></a></td><td>Add <code>nvidia,tegra194-hsuart</code> to the seL4 hardware database (shared across all platforms)</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-1ab5c91d34315907d48dee2e3e86f576da4417a6f77e52d0dc3b6e1953e98ab3" target="_blank" rel="noopener"><code>src/drivers/serial/tegra_omap3_dwapb.c</code></a></td><td>Add UART init (FIFO, DLAB, divisor) + TX timeout to the shared 8250-style driver used by Tegra/OMAP/DW-APB platforms</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b57ee5c830ef97989e73af94224df0c55e50759d5bf5b3aa6d6cbd21865f94a3" target="_blank" rel="noopener"><code>src/drivers/serial/config.cmake</code></a></td><td>Wire <code>tegra194-hsuart</code> compatible into the shared serial driver registration</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>src/arch/arm/64/kernel/vspace.c</code></a></td><td>Map only SDRAM regions in kernel window instead of full PA range; prevents speculative RAS errors. <em>Arguably an upstream-correct fix for any platform with firmware-protected pages.</em></td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-951758e038c3377f24f8ec4bec73efe93d468b9cbda3f952ae6a1bd49e2962de" target="_blank" rel="noopener"><code>src/arch/arm/kernel/boot.c</code></a></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory. Guarded by <code>#ifdef CONFIG_PLAT_ORIN_NANO</code>; candidate for plat-isolation via a <code>plat_pre_create_untypeds()</code> hook.</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td><code>cleanCacheRange_RAM</code> (<code>dc cvac</code> to PoC) for page table cleaning. PoU does not reach the T234 SLC; <em>any platform with a system-level cache beyond PoU benefits</em>.</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for user page table object creation</td></tr>
       </tbody>
     </table>
 
     <h3><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">tools/seL4/ &mdash; potanin/seL4_tools</a> (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano" target="_blank" rel="noopener">6 files</a>)</h3>
+    <div class="legend-row">
+      <span><span class="legend-swatch plat"></span> plat-specific (under <code>src/plat/orin-nano/</code>; safe)</span>
+      <span><span class="legend-swatch shared"></span> shared elfloader / cmake infrastructure</span>
+    </div>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0fec65efa0edbc5f4b074086d5093e7d9b2ae4ab21d0a5dbb469a34108e362c2" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/sys_boot.c</code></a></td><td>Flush page tables to DRAM with dc cvac (bypasses SLC); reordered boot flow for T234 cache maintenance</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></a></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-8517cc6176675305d1d0ba8922b2e153c808880bf96c0d0d43d7ff12306857a7" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>Identity-map full 4 GiB as MT_NORMAL 1 GiB PUD blocks (prevents speculative translation faults on T234)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-935fb166d4b06802afd2581e149c3d7288ea27b3cdb885124c0f7ce5cc2849fd" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/efi_init.c</code></a></td><td>No-op plat_console_putchar override (UEFI doesn't map UART MMIO at 0x0c280000)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-82c867884706d12711ae80d6ed2302cac6c7ef56c62f855ef4e48a99515799e0" target="_blank" rel="noopener"><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></a></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-d704aa0b7efcfa3ad27ee4b44f400ae9c0522b46d1fd0f5d8371162f5d39eb94" target="_blank" rel="noopener"><code>cmake-tool/helpers/application_settings.cmake</code></a></td><td>Add orin-nano to EFI boot platform list</td></tr>
+        <tr class="plat-specific"><td><code>elfloader-tool/src/plat/orin-nano/console.c</code></td><td>No-op <code>plat_console_putchar</code> override; strong override of upstream <code>WEAK</code> default. UEFI doesn't map UART MMIO at <code>0x0c280000</code> &mdash; the override silences the elfloader's pre-MMU banner. <em>Tier A: previously lived in <code>efi_init.c</code> as shared code; migrated to plat dir.</em></td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0fec65efa0edbc5f4b074086d5093e7d9b2ae4ab21d0a5dbb469a34108e362c2" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/sys_boot.c</code></a></td><td>Flush page tables to DRAM with <code>dc cvac</code> (bypasses SLC); reordered boot flow for T234 cache maintenance. Candidate for plat-isolation via a <code>plat_pre_disable_caches()</code> hook.</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></a></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition. Candidate for plat-isolation via <code>.weak</code> markers on <code>disable_caches_hyp</code> + <code>arm_enable_hyp_mmu</code>.</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-8517cc6176675305d1d0ba8922b2e153c808880bf96c0d0d43d7ff12306857a7" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>Identity-map the full 512 GiB PA range as 1 GiB PUD blocks (prevents speculative translation faults on T234). The silent-boot fix. Candidate for plat-isolation via <code>__attribute__((weak))</code> on <code>init_downpages</code>.</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-82c867884706d12711ae80d6ed2302cac6c7ef56c62f855ef4e48a99515799e0" target="_blank" rel="noopener"><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></a></td><td>Add <code>nvidia,tegra194-hsuart</code> compatible string to the shared 8250 driver's match table</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-d704aa0b7efcfa3ad27ee4b44f400ae9c0522b46d1fd0f5d8371162f5d39eb94" target="_blank" rel="noopener"><code>cmake-tool/helpers/application_settings.cmake</code></a></td><td>Add orin-nano to the EFI boot platform list</td></tr>
       </tbody>
     </table>
 
     <h3><a href="https://github.com/potanin/util_libs/tree/orin-nano" target="_blank" rel="noopener">projects/util_libs/ &mdash; potanin/util_libs</a> (<a href="https://github.com/potanin/util_libs/compare/master...orin-nano" target="_blank" rel="noopener">6 files</a>)</h3>
-    <p style="font-size:0.85rem; color: var(--text-dim); margin: 0 0 8px;">
-      Five files live under <code>libplatsupport/plat_include/orin-nano/</code> &mdash; per-plat, safe.
-      One file (<code>nvidia/timer.c</code>) is shared across all Tegra platforms.
-    </p>
+    <div class="legend-row">
+      <span><span class="legend-swatch plat"></span> plat-specific (under <code>libplatsupport/plat_include/orin-nano/</code>; safe)</span>
+      <span><span class="legend-swatch shared"></span> shared mach-nvidia code (compiles on every Tegra platform)</span>
+    </div>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-fcdfdeeaaac0c9e1d50205740abd75e172164c821f5a70efd7794c8bd1e14824" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></a></td><td><strong>[plat-specific]</strong> verbatim from tx2 — no changes</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-83828dfc9248be296122aa52efc1501f1cd7df39fec3e3dd4497656e1fb9992f" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></a></td><td><strong>[plat-specific]</strong> verbatim from tx2 — no changes</td></tr>
-        <tr><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/reset.h</code></td><td><strong>[plat-specific]</strong> verbatim from tx2 — no changes</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-145ecd10d70107da6ba32ad3b2942b04a9efc1e3a42b6539833a3753c5fbb877" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></a></td><td><strong>[plat-specific]</strong> copy of tx2's, 3-line change: <code>PS_SERIAL_DEFAULT</code> / <code>DEFAULT_SERIAL_PADDR</code> / <code>DEFAULT_SERIAL_INTERRUPT</code> &rarr; UART-C (AGX/Nano debug TCU), where TX2 uses UART-A</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-ba8e6c4e1f45b6ecd3b313d28f8e39c5608ad83b467f3a7434be213ff437a0e5" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></a></td><td><strong>[plat-specific]</strong> copy of tx2's, 1-line change: <code>NV_TMR_PATH</code> = <code>/bus@0/timer@2080000</code> (T234 TKE) vs <code>/timer@3020000</code> (TX2)</td></tr>
-        <tr><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td><strong>[shared, hygiene]</strong> extend the existing <code>#ifdef CONFIG_PLAT_TX2</code> branch to also cover the orin platforms (one line). Upstream source already flags this as a planned refactor.</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-fcdfdeeaaac0c9e1d50205740abd75e172164c821f5a70efd7794c8bd1e14824" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/clock.h</code></a></td><td>verbatim from tx2 — no changes</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-83828dfc9248be296122aa52efc1501f1cd7df39fec3e3dd4497656e1fb9992f" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/i2c.h</code></a></td><td>verbatim from tx2 — no changes</td></tr>
+        <tr class="plat-specific"><td><code>libplatsupport/plat_include/orin-nano/platsupport/plat/reset.h</code></td><td>verbatim from tx2 — no changes</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-145ecd10d70107da6ba32ad3b2942b04a9efc1e3a42b6539833a3753c5fbb877" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/serial.h</code></a></td><td>copy of tx2's, 3-line change: <code>PS_SERIAL_DEFAULT</code> / <code>DEFAULT_SERIAL_PADDR</code> / <code>DEFAULT_SERIAL_INTERRUPT</code> &rarr; UART-C (AGX/Nano debug TCU); TX2 uses UART-A</td></tr>
+        <tr class="plat-specific"><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-ba8e6c4e1f45b6ecd3b313d28f8e39c5608ad83b467f3a7434be213ff437a0e5" target="_blank" rel="noopener"><code>libplatsupport/plat_include/orin-nano/platsupport/plat/timer.h</code></a></td><td>copy of tx2's, 1-line change: <code>NV_TMR_PATH</code> = <code>/bus@0/timer@2080000</code> (T234 TKE) vs <code>/timer@3020000</code> (TX2)</td></tr>
+        <tr class="shared"><td><a href="https://github.com/potanin/util_libs/compare/master...orin-nano#diff-f4d26768a38528846f2177df7c05e8261d7b387ddf8e1bb32014f1ffc063723d" target="_blank" rel="noopener"><code>libplatsupport/src/mach/nvidia/timer.c</code></a></td><td>extend the existing <code>#ifdef CONFIG_PLAT_TX2</code> branch to also cover the orin platforms (one line). Upstream source already flags this as a planned refactor.</td></tr>
       </tbody>
     </table>
 
