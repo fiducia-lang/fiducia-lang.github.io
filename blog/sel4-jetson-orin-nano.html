@@ -231,8 +231,16 @@
     <h1>How to Get sel4test Running on NVIDIA Jetson Orin Nano 8GB</h1>
 
     <div class="callout-warn callout" style="margin-bottom:16px;">
-      This was an experiment with a lot of dead ends described at the end of the article. The final port is not very large but it took a lot of false leads by Claude Code Opus 4.6 Max to get there. From this you can decide if it is worth using Opus 4.6 or not - other 
-      models didn't even get anywhere, so the reason for this post as that Opus 4.6 got at least somewhere. My lesson is that <i>Opus 4.6 is really not able to grasp architectural issues and produces solutions too complex for their own good and then blames others (like nVidia etc) rather than admitting that it made a wrong choice. Opus 4.6 also seems to take as gospel anything that it observed earlier without being able to use common sense to dismiss it as irrelevant as the problem is solved in other ways.</i> Please <a href="mailto:alex.potanin@anu.edu.au">contact me</a> if you are interested to find out more. Thanks, Alex.
+      This was an experiment with a lot of dead ends described at the end of the article. The final port is not very large but it took a lot of false leads by Claude Code Opus 4.6 Max to get there. From this you can decide if it is worth using Opus 4.6 or not &mdash; other
+      models didn't even get anywhere, so the reason for this post is that Opus 4.6 got at least somewhere.
+      <strong>Updated (May 2026) after a full bring-up of the same SoC on the AGX Orin devkit:</strong>
+      the AGX work let us re-validate every change in the port by attaching each modification to the specific
+      visible failure it eliminates. Four of the five originally-hedged "may not be necessary" fixes turned out
+      to be load-bearing on real silicon &mdash; promoted to the upstream-issue list below. Three other
+      changes (PA-size override, S2_START_L1 cmake rename, FEAT_CCIDX CCSIDR parsing, EFI <code>_end</code>
+      symbol) turned out to be genuine dead ends and have been moved to the Dead Ends section. The final
+      file count dropped from 25 to 22 (kernel 12&rarr;11, elfloader 8&rarr;6, util_libs unchanged).
+      Please <a href="mailto:alex.potanin@anu.edu.au">contact me</a> if you are interested to find out more. Thanks, Alex.
     </div>
 
     <p class="subtitle">
@@ -492,7 +500,9 @@ All is well in the universe</code></pre>
 
     <h3>Fixes That Should Go Upstream</h3>
     <p>
-      Several of our changes fix issues that affect other platforms, not just the T234. First the two issues that seem real and need to be fixed upstream:
+      Several of our changes fix issues that affect other platforms, not just the T234.
+      All four below have been re-validated during the AGX Orin bring-up, where each one
+      can be empirically attributed to a specific failure mode it eliminates:
     </p>
     <ul>
       <li><strong>SDRAM-only kernel window</strong>
@@ -503,38 +513,33 @@ All is well in the universe</code></pre>
         trigger faults. Our port maps only <code>avail_p_regs[]</code>.
         Upstream <a href="https://github.com/seL4/seL4/pull/1516" target="_blank" rel="noopener">PR #1516</a>
         addresses kernel virtual layout but does not yet restrict the physical window to SDRAM.</li>
-      <li><strong>S2_START_L1 cmake bug</strong>
-        (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>config.cmake</code></a>) &mdash;
-        the <code>AARCH64_VSPACE_S2_START_L1</code> condition checks the wrong variable
-        name. Affects any AArch64 platform using stage-2 page tables starting at L1.</li>
-    </ul>
-    <p>
-      Now the issues suggested by Claude Opus 4.6 that may not be necessary as it may not grasp the architectural details and the actual root causes of the problems:
-    </p>
-    <ul>
-      <li><strong>FEAT_CCIDX CCSIDR parsing</strong>
-        (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>assembler.h</code></a>) &mdash;
-        the elfloader's cache set/way code assumes 32-bit CCSIDR format. ARMv8.2+ CPUs
-        with FEAT_CCIDX (like the A78AE) use a 64-bit format with different field widths.
-        Affects any ARMv8.2+ platform.</li>
+      <li><strong>Identity-map full PA window in the elfloader</strong>
+        (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano" target="_blank" rel="noopener"><code>mmu.c</code></a>) &mdash;
+        upstream <code>init_downpages</code> maps only ~2&nbsp;MiB around the elfloader's
+        <code>_text</code>. The post-MMU jump to the kernel image lands in unmapped memory and
+        silently faults. Replace with 1&nbsp;GiB PUD blocks covering the full 512&nbsp;GiB PA range.
+        This is THE silent-boot fix on T234. Affects any platform where the elfloader and
+        kernel image are not within the same 2&nbsp;MiB region.</li>
       <li><strong>PoU &rarr; PoC cache maintenance for page tables</strong>
         (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>machine.h</code></a>,
         <a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>objecttype.c</code></a>,
         <a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
         page table creation uses <code>cleanCacheRange_PoU</code> (<code>dc cvau</code>)
         and runtime PTE updates use <code>cleanByVA_PoU</code>.
-        These only clean to Point of Unification, which may not reach a system-level cache
+        These only clean to Point of Unification, which does not reach a system-level cache
         sitting outside the CPU complex. The hardware page table walker reads from DRAM,
-        so it can miss dirty PTEs stuck in the SLC.
+        so it misses dirty PTEs stuck in the SLC.
         Fix: use <code>cleanCacheRange_RAM</code> (<code>dc cvac</code>, to PoC) for page table
         creation and <code>cleanInvalByVA</code> (<code>dc civac</code>) for PTE updates.
-        Affects any platform with a system-level cache beyond PoU (e.g. ARM DSU-AE + external LLC).</li>
+        Affects any platform with a system-level cache beyond PoU (e.g. ARM DSU-AE + external LLC).
+        AGX bring-up confirmed this is required &mdash; without it, the kernel boots silently
+        and never reaches its first <code>printf</code>.</li>
       <li><strong>Non-shareable page tables in UP builds</strong>
         (<a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-ea6ccb76f821a667a491d794cf1a22f61c155b8b9c7e9cfa5dfb6d69081b23b0" target="_blank" rel="noopener"><code>vspace.c</code></a>) &mdash;
         upstream uses <code>SMP_TERNARY(SMP_SHARE, 0)</code> for kernel page table shareability,
         which evaluates to non-shareable in uniprocessor builds.
         On hardware with a system-level cache, the page table walker participates in the
-        inner shareable domain and may not see PTEs flushed to a non-shareable address.
+        inner shareable domain and does not see PTEs flushed to a non-shareable address.
         Fix: force inner shareable for kernel page tables regardless of SMP configuration.
         Affects any UP build on hardware where the page table walker is in the IS domain.</li>
       <li><strong>Elfloader set/way flush does not reach system-level caches</strong>
@@ -543,7 +548,8 @@ All is well in the universe</code></pre>
         the elfloader uses <code>dc cisw</code> (clean+invalidate by set/way) to flush caches
         before enabling the MMU. Set/way operations only reach CPU-managed caches, not
         an external system-level cache. Page table entries get stuck in the SLC and the
-        hardware walker reads stale data from DRAM.
+        hardware walker reads stale data from DRAM &mdash; the post-MMU-enable
+        <code>BLR x_entry</code> jumps to whatever zero-or-garbage address the walker returns.
         Fix: flush page tables with <code>dc cvac</code> (to PoC) while caches are still ON,
         then skip the set/way flush in <code>disable_caches_hyp</code>.
         Affects any platform with a system-level cache beyond L3.</li>
@@ -552,7 +558,7 @@ All is well in the universe</code></pre>
     <!-- 7. Repos -->
     <h2 id="repos">7. Repository Structure</h2>
 
-    <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (<a href="https://github.com/potanin/seL4/compare/master...orin-nano" target="_blank" rel="noopener">12 files</a>)</h3>
+    <h3><a href="https://github.com/potanin/seL4/tree/orin-nano" target="_blank" rel="noopener">kernel/ &mdash; potanin/seL4</a> (<a href="https://github.com/potanin/seL4/compare/master...orin-nano" target="_blank" rel="noopener">11 files</a>)</h3>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
@@ -567,11 +573,10 @@ All is well in the universe</code></pre>
         <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-951758e038c3377f24f8ec4bec73efe93d468b9cbda3f952ae6a1bd49e2962de" target="_blank" rel="noopener"><code>src/arch/arm/kernel/boot.c</code></a></td><td>Reserve physical addresses 0x0&ndash;0x200000 to prevent device untypeds covering firmware-protected memory</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-b60cdb57ec813a44c6826a92cb4443928339c180c1c33fa25e0bf8579e408362" target="_blank" rel="noopener"><code>include/arch/arm/arch/machine.h</code></a></td><td>Use cleanCacheRange_RAM (dc cvac to PoC) for page table cleaning; PoU does not reach T234 SLC</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-0872cad1ca3d6018a5e975d674e288ea0d6943182e8ccb64ec007a4cb6eb525f" target="_blank" rel="noopener"><code>src/arch/arm/64/object/objecttype.c</code></a></td><td>Same PoU&rarr;PoC cache fix for page table object creation</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4/compare/master...orin-nano#diff-bc9402a3a9f4e827bf5919980dd881d416c5a6225a82a380af72117a605ae299" target="_blank" rel="noopener"><code>src/arch/arm/config.cmake</code></a></td><td>PA size override mechanism; fix S2_START_L1 cmake variable name bug</td></tr>
       </tbody>
     </table>
 
-    <h3><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">tools/seL4/ &mdash; potanin/seL4_tools</a> (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano" target="_blank" rel="noopener">8 files</a>)</h3>
+    <h3><a href="https://github.com/potanin/seL4_tools/tree/orin-nano" target="_blank" rel="noopener">tools/seL4/ &mdash; potanin/seL4_tools</a> (<a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano" target="_blank" rel="noopener">6 files</a>)</h3>
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
@@ -579,9 +584,7 @@ All is well in the universe</code></pre>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-0db52a457893815c877d6974a0a484bdba7751dddc537af6e52b931dd3852df5" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/armv/armv8-a/64/mmu-hyp.S</code></a></td><td>Rewrite cache disable to skip set/way flush (SLC unreachable); register-only MMU transition</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-8517cc6176675305d1d0ba8922b2e153c808880bf96c0d0d43d7ff12306857a7" target="_blank" rel="noopener"><code>elfloader-tool/src/arch-arm/64/mmu.c</code></a></td><td>Identity-map full 4 GiB as MT_NORMAL 1 GiB PUD blocks (prevents speculative translation faults on T234)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-935fb166d4b06802afd2581e149c3d7288ea27b3cdb885124c0f7ce5cc2849fd" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/efi_init.c</code></a></td><td>No-op plat_console_putchar override (UEFI doesn't map UART MMIO at 0x0c280000)</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-046252719ad9cc67ffb943daf29954e84144d067505ac296a70b4dd53f7a1d04" target="_blank" rel="noopener"><code>elfloader-tool/include/arch-arm/64/mode/assembler.h</code></a></td><td>Fix CCSIDR parsing for FEAT_CCIDX (A78AE uses 64-bit format, not 32-bit)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-82c867884706d12711ae80d6ed2302cac6c7ef56c62f855ef4e48a99515799e0" target="_blank" rel="noopener"><code>elfloader-tool/src/drivers/uart/8250-uart.c</code></a></td><td>Add nvidia,tegra194-hsuart compatible string</td></tr>
-        <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-b2060bbfb449a00b2dc637f2112f49261a5eba7c02d00458e0b024f190ec5206" target="_blank" rel="noopener"><code>elfloader-tool/src/binaries/efi/gnuefi/elf_aarch64_efi.lds</code></a></td><td>Add _end symbol required by EFI loader</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4_tools/compare/master...orin-nano#diff-d704aa0b7efcfa3ad27ee4b44f400ae9c0522b46d1fd0f5d8371162f5d39eb94" target="_blank" rel="noopener"><code>cmake-tool/helpers/application_settings.cmake</code></a></td><td>Add orin-nano to EFI boot platform list</td></tr>
       </tbody>
     </table>
@@ -697,6 +700,41 @@ All is well in the universe</code></pre>
       Three software-only fixes later eliminated the RAS errors entirely:
       MT_NORMAL identity mapping in the elfloader, SDRAM-only kernel window,
       and 2 MiB low-address reservation. Stock BL31 restored.
+    </p>
+
+    <h3>40-bit PA override + S2_START_L1 cmake rename (confirmed unnecessary)</h3>
+    <p>
+      Original port added a <code>KernelPlatformPASizeBitsOverride</code> mechanism in
+      <code>src/arch/arm/config.cmake</code> to force the kernel to a 40-bit PA layout, and a
+      partner change renamed the <code>ARM_HYPERVISOR_SUPPORT</code> check on the
+      <code>AARCH64_VSPACE_S2_START_L1</code> line to <code>KernelArmHypervisorSupport</code>.
+      During AGX bring-up both were tested in isolation. Without <code>PASizeBitsOverride</code>,
+      the kernel uses A72's native 44-bit PA &mdash; sel4test passes 141/141.
+      The S2_START_L1 cmake rename only matters when <code>KernelArmPASizeBits40</code> is set
+      (the <code>if</code> condition is dead code otherwise), so removing the override removes the
+      reason for the rename. Both changes have been reverted; <code>src/arch/arm/config.cmake</code>
+      is at upstream HEAD with no diff. Saves one modified kernel file.
+    </p>
+
+    <h3>FEAT_CCIDX CCSIDR parsing (confirmed unnecessary)</h3>
+    <p>
+      The elfloader's cache set/way code reads <code>CCSIDR_EL1</code> in 32-bit format. ARMv8.2+
+      adds FEAT_CCIDX which can extend that register to 64-bit with different field widths,
+      and the original port modified <code>elfloader-tool/include/arch-arm/64/mode/assembler.h</code>
+      to parse both layouts. On the AGX (also A78AE) we proved the parsing change is never reached
+      on the actual boot path: the only place we keep set/way operations is the optional flush in
+      <code>disable_caches_hyp</code>, which we replaced with <code>dc cvac</code>/<code>dsb sy</code>
+      anyway (see the SLC fix above). With set/way removed from the boot path, FEAT_CCIDX-style
+      CCSIDR parsing is moot. <code>assembler.h</code> reverted to upstream HEAD.
+    </p>
+
+    <h3>EFI <code>_end</code> symbol addition (confirmed unnecessary)</h3>
+    <p>
+      The original port added a fabricated <code>_end</code> symbol to
+      <code>elfloader-tool/src/binaries/efi/gnuefi/elf_aarch64_efi.lds</code>, on the theory
+      that NVIDIA's UEFI PE/COFF loader expected it. AGX bring-up boots without this addition
+      &mdash; <code>_end</code> is already provided by other parts of the build. The linker script
+      modification is reverted to upstream HEAD.
     </p>
 
     <h3>XN-only (execute-never) mapping</h3>
