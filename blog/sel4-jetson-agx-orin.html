@@ -250,7 +250,20 @@ $ # or ./dhcp-libvmm-alpine.sh &amp; # serves agx/libvmm-alpine.efi</code></pre>
         12 cores vs the Nano's 6) doesn't have to be guarded with conditionals.</li>
     </ul>
 
-    <p>The kernel and elfloader changes from <code>orin-nano</code> apply unchanged.</p>
+    <p>
+      The kernel and elfloader fixes (T234 SLC cache discipline,
+      <code>init_downpages</code> full-PA identity map, SDRAM-only kernel
+      window, 2&nbsp;MiB low-address reservation, UART driver init,
+      <code>plat_console_putchar</code> override) carry over from the
+      <a href="sel4-jetson-orin-nano.html">orin-nano post</a> unchanged
+      &mdash; that post documents them with rationale and per-file diffs.
+      The AGX-only delta on top is the new <code>src/plat/orin-agx/</code>
+      directory + DTS, the <code>libsel4</code> and util_libs platform
+      headers, and (for libvmm guests later in this post) the HCR_TID3
+      trap in <code>vcpu.h</code>. Build flags are identical:
+      <code>-DARM_HYP=ON -DDEBUG=ON</code> (the latter unlocks 9 BREAKPOINT
+      / SINGLESTEP tests &mdash; 132/141 without it, 141/141 with).
+    </p>
 
     <h3>Build</h3>
     <pre><code>cd ~/jetson-agx-orin/sel4test-src
@@ -260,8 +273,7 @@ mkdir build-orin-agx &amp;&amp; cd build-orin-agx
     -DPLATFORM=orin-agx \
     -DAARCH64=TRUE \
     -DARM_HYP=ON \
-    -DSIMULATION=FALSE \
-    -DRELEASE=FALSE
+    -DDEBUG=ON
 
 ninja
 cp images/sel4test-driver-image-arm-orin-agx /srv/tftp/agx/sel4test.efi</code></pre>
@@ -632,7 +644,7 @@ Alpine Linux 3.19.1
     <table>
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-5d084c6b5b2de54173748f94912629101aa0e7ce8110e983797897de9dd440d5" target="_blank" rel="noopener"><code>src/plat/orin-agx/config.cmake</code></a></td><td>New platform declaration: A78AE (A72 proxy), GICv3, 40-bit PA override.</td></tr>
+        <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-5d084c6b5b2de54173748f94912629101aa0e7ce8110e983797897de9dd440d5" target="_blank" rel="noopener"><code>src/plat/orin-agx/config.cmake</code></a></td><td>New platform declaration: A78AE (A72 proxy), GICv3. (40-bit PA override turned out to be unnecessary &mdash; see Nano post's Dead Ends.)</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-3bb37007957be3d893fa1190e8e9e0efca69b50116ecee18adee0cd17c78c703" target="_blank" rel="noopener"><code>src/plat/orin-agx/overlay-orin-agx.dts</code></a></td><td>Device tree overlay: UARTC, dual memory bank with 64 MiB carve-out gap at 0xbe000000.</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-cbcaddc0f4bcebb2bbdfd7f66d5e7ae1701695cd79d1d4d4281ea685ac573910" target="_blank" rel="noopener"><code>tools/dts/orin-agx.dts</code></a></td><td>Full device tree dumped from running L4T on the AGX hardware.</td></tr>
         <tr><td><a href="https://github.com/potanin/seL4/pull/1/files#diff-03f50b80301f03cbe74afa0f123800a1edf7b9a5c0f79b15d3bb8f23d532cd95" target="_blank" rel="noopener"><code>tools/hardware.yml</code></a></td><td>Register orin-agx in the seL4 hardware database.</td></tr>
