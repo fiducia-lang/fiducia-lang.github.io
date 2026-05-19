@@ -498,9 +498,39 @@ All is well in the universe</code></pre>
       untypeds covering firmware-protected addresses.
     </p>
 
+    <h3>Two categories of changes &mdash; and why the distinction matters</h3>
+    <p>
+      The 22 file operations split cleanly into two groups, with very different blast radius:
+    </p>
+    <ol>
+      <li><strong>Platform-specific changes</strong> &mdash; anything that lives under
+      <code>src/plat/orin-nano/</code> (kernel) or <code>libplatsupport/plat_include/orin-nano/</code>
+      (util_libs) or <code>src/plat/orin-nano/</code> (elfloader). These touch only this platform's
+      tree; selecting a different <code>KernelPlatform</code> never sees them. We can be as
+      AGX/Nano-specific as we want without worrying about regressions elsewhere.</li>
+      <li><strong>Shared-infrastructure changes</strong> &mdash; modifications to files in
+      <code>src/arch/arm/</code>, <code>elfloader-tool/src/arch-arm/</code>,
+      <code>libplatsupport/src/mach/nvidia/</code>, etc. Every other ARMv8 platform compiles
+      these. Even guarded by <code>#ifdef CONFIG_PLAT_ORIN_*</code>, they enlarge the
+      surface area maintainers have to review and risk subtle regressions on platforms we don't
+      have hands on to test.</li>
+    </ol>
+    <p>
+      Where possible, we move things from group (2) into group (1). The
+      <code>plat_console_putchar</code> override is one example &mdash; it used to live in
+      <code>efi_init.c</code> (shared elfloader code, modified). It now lives in
+      <code>tools/seL4/elfloader-tool/src/plat/orin-nano/console.c</code> as a strong override
+      of the upstream <code>WEAK</code> default. Zero changes to shared elfloader files for
+      that fix. Several more candidates exist (<code>init_downpages</code>, the elfloader cache
+      discipline, the 2 MiB low-address reservation, the TX2 timer-init extension) and each
+      could be moved with a one-line <code>__attribute__((weak))</code> upstream marker. That
+      reduces the shared-code modifications from 14 to ~6 at the cost of trivial upstream PRs.
+    </p>
+
     <h3>Fixes That Should Go Upstream</h3>
     <p>
-      Several of our changes fix issues that affect other platforms, not just the T234.
+      These are the genuine shared-infrastructure changes &mdash; group (2) above.
+      Several affect other platforms beyond the T234.
       All four below have been re-validated during the AGX Orin bring-up, where each one
       can be empirically attributed to a specific failure mode it eliminates:
     </p>
