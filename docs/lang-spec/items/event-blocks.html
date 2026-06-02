@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Event Blocks - The Fiducia Language Reference</title>
+        <title>Event Declarations - The Fiducia Language Reference</title>
 
 
         <!-- Custom HTML head -->
@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-ae190c7a.js";
+            window.path_to_searchindex_js = "../searchindex-27a2f6de.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-24a59eb4.js"></script>
+        <script src="../toc-1afb22d7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -180,23 +180,22 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="event-blocks"><a class="header" href="#event-blocks">Event Blocks</a></h1>
-<pre><code class="language-text">EventsSection   ::= 'Events' ':' EventDecl*
-
-EventDecl       ::= 'Event' ident Carriers? ':' Statement* 'end'
-Carriers        ::= ('.' '|' Param (',' Param)* '|')+
-Param           ::= ident ':' Type
+                        <h1 id="event-declarations"><a class="header" href="#event-declarations">Event Declarations</a></h1>
+<pre><code class="language-text">EventDecl   ::= 'evt' ident Carriers? ':' Statement*
+Carriers    ::= ('.' '|' Param (',' Param)* '|')+
+Param       ::= ident ':' Type
 </code></pre>
-<p>An <em>event block</em> is the block of computation events declared at the top
-level of a <code>.fi</code> file under an <code>Events:</code> section header. Each declaration
-binds one named atom of computation that processes can reference by name.
-A <code>.fi</code> file may have zero or more <code>Events:</code> sections; multiple sections
-merge into a single event list at parse time.</p>
+<p>An <em>event declaration</em> introduces one named atom of computation at the
+top level of a <code>.fi</code> file using the <code>evt</code> keyword. Processes reference
+it by name on the left of a prefix (<code>my_event -&gt; ...</code>).</p>
+<p><code>evt</code> declarations must appear <strong>before</strong> any <code>proc</code> definition in the
+same file; the compiler rejects an <code>evt</code> that follows a <code>proc</code> with a
+diagnostic. (Single-pass files are scannable top-to-bottom: all events
+visible before the processes that use them.)</p>
 <p>Computation events are one of three event kinds in CoreFi (paper §4.2);
 the other two — <em>channel events</em> (<code>c?x</code> / <code>c!e</code>) and <em>hardware-interrupt
 events</em> (<code>irq?N</code> / <code>irq!N</code>) — are inline atoms that appear in process
-bodies and have no top-level declaration. They are documented at the end
-of this chapter.</p>
+bodies and have no top-level declaration.</p>
 <h2 id="computation-events"><a class="header" href="#computation-events">Computation events</a></h2>
 <p>A computation event is a named, atomic block of <a href="variable-declarations.html">statements</a>:
 assignments and external calls, plus optional carrier parameters. The
@@ -205,21 +204,39 @@ processes can prefix on it (<code>my_event -&gt; ...</code>) but cannot observe 
 mid-flight.</p>
 <p>Names follow <code>snake_case</code> and start with a lowercase letter. This both
 signals intent and lets the parser disambiguate between a computation
-event reference and a sub-process reference (which uses
-<code>UpperCamelCase</code>).</p>
-<h3 id="carriers"><a class="header" href="#carriers">Carriers</a></h3>
-<pre><code class="language-text">Event handle_packet.|size: int|:                  // single carrier
-Event ack.|chan: int, slot: int|:                 // grouped carriers
-Event ack.|chan: int|.|slot: int|:                // chained carriers (equivalent)
+event reference and a sub-process reference (which uses <code>UpperCamelCase</code>).</p>
+<h3 id="body-and-termination"><a class="header" href="#body-and-termination">Body and termination</a></h3>
+<p>After the <code>:</code>, the body is a sequence of <a href="variable-declarations.html">statements</a>:
+local variable declarations, assignments, and external function calls.
+There is no explicit terminator — the body ends implicitly when the next
+top-level keyword (<code>evt</code>, <code>proc</code>, <code>import</code>, <code>Mapping</code>, etc.) is reached
+or when the file ends. Single-statement bodies terminate at <code>;</code>.</p>
+<pre><code class="language-text">// Single-statement body — ends at ;
+evt setup_eth: eth.eth_setup();
+
+// Multi-statement body — ends at the next top-level item; size carrier used in alloc.
+evt handle_packet.|size: int|:
+    local_buf: int;
+    local_buf = eth.alloc(size);
+    counter = counter + 1;
+
+evt next_event: ...   // body above ends here
 </code></pre>
-<p><em>Carriers</em> are read-only inputs supplied by the invoking process. The
+<h3 id="carriers"><a class="header" href="#carriers">Carriers</a></h3>
+<pre><code class="language-text">evt handle_packet.|size: int|:                  // single carrier
+evt ack.|chan: int, slot: int|:                 // grouped carriers
+evt ack.|chan: int|.|slot: int|:                // chained carriers (equivalent)
+</code></pre>
+<p><em>Carriers</em> are parameters supplied by the invoking process. The
 syntax uses pipes (<code>.|...|</code>) — chosen over parentheses so the visual
 boundary is distinct from sub-process parameter lists. Multiple carriers
 may be <strong>grouped</strong> in a single <code>.|x: int, y: int|</code> clause or <strong>chained</strong>
 across multiple <code>.|x: int|.|y: int|</code> clauses; both forms parse to the
 same <code>Vec&lt;(Type, String)&gt;</code> and behave identically.</p>
-<p>Carriers are <em>read-only</em> inside the body. Three kinds of variable names
-can appear in an event body:</p>
+<p>Inside the body, carriers are used like any other variable — passed to
+external calls (<code>eth.handle_rx(idx)</code>), read in expressions
+(<code>local_buf = eth.alloc(size)</code>), or updated by assignment. Three kinds of
+variable names can appear in an event body:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -234,54 +251,30 @@ can appear in an event body:</p>
 </div>
 <p>Name resolution searches in order: local → carrier → global. To carry
 mutable state across event invocations, use a <a href="variable-declarations.html">global</a>;
-to carry mutable scratch within one invocation, declare a local and
-initialise it from the carrier (<code>int x = carrier;</code> once initialisers
-land).</p>
-<h3 id="body-and-termination"><a class="header" href="#body-and-termination">Body and termination</a></h3>
-<p>Between <code>:</code> and <code>end</code>, the body is a sequence of <a href="variable-declarations.html">statements</a>:
-local variable declarations, assignments, and external function calls.
-There is no return value — events emit side effects (memory writes,
-external calls, channel sends are implicit when the event participates
-in a process’s <code>-&gt;</code>).</p>
-<p>The <code>end</code> keyword is the explicit terminator. Implicit termination on the
-next top-level keyword would give weak error messages on a missing <code>;</code>
-inside the body; the explicit <code>end</code> keeps diagnostics local. The same
-keyword terminates <a href="process-blocks.html">process</a> sub-bodies for symmetry.</p>
+to carry mutable scratch within one invocation, declare a local variable.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
-<pre><code class="language-text">Events:
-    // No carriers — the event is a fixed call.
-    Event setup_eth: eth.eth_setup(); end
+<pre><code class="language-text">// No carriers — the event is a fixed call.
+evt setup_eth: eth.eth_setup();
 
-    // Single carrier, single-statement body.
-    Event read_frame.|idx: int|: eth.handle_rx(); end
+// Single carrier, single-statement body — idx is the carrier.
+evt read_frame.|idx: int|: eth.handle_rx(idx);
 
-    // Multi-statement body with a local.
-    Event handle_packet.|size: int|:
-        int local_buf;
-        local_buf = eth.alloc();
-        counter = counter + 1;
-    end
+// Multi-statement body — size carrier passed to alloc.
+evt handle_packet.|size: int|:
+    local_buf: int;
+    local_buf = eth.alloc(size);
+    counter = counter + 1;
 
-    // Multiple carriers, grouped form.
-    Event ack.|chan: int, slot: int|: eth.ack_slot(); end
+// Multiple carriers, grouped form.
+evt ack.|chan: int, slot: int|: eth.ack_slot(chan, slot);
 
-    // Same event, chained carrier form.
-    Event ack.|chan: int|.|slot: int|: eth.ack_slot(); end
+// Same event, chained carrier form (equivalent).
+evt ack.|chan: int|.|slot: int|: eth.ack_slot(chan, slot);
 </code></pre>
-<p>A <code>.fi</code> file may carry multiple <code>Events:</code> sections (for grouping by
-concern); they merge into a single event list:</p>
-<pre><code class="language-text">Events:
-    Event setup_eth: eth.eth_setup(); end
-
-import "more.c" as more;
-
-Events:
-    Event handle_irq: more.handle(); end
-</code></pre>
-<p>Both events become part of <code>Program.events</code>.</p>
 <h3 id="empty-body-events"><a class="header" href="#empty-body-events">Empty-body events</a></h3>
-<p><code>Event noop: end</code> is accepted; the body is just zero statements. This is
-useful as a placeholder while a process expression is being prototyped.</p>
+<p><code>evt noop: </code> (no statements before the next item) is accepted; the body
+is zero statements. Useful as a placeholder while a process expression is
+being prototyped.</p>
 <h2 id="channel-events"><a class="header" href="#channel-events">Channel events</a></h2>
 <pre><code class="language-text">ChannelEvent ::= ident '?' ident             // c?x — receive
               |  ident '!' ident             // c!e — send
@@ -314,9 +307,9 @@ result of a call, bind it in a computation event first:</p>
 <pre><code class="language-text">// Rejected
 // c!eth.get_packet()
 
-// Accepted: bind, then send.
-Event get_pkt: pkt = eth.get_packet(); end
-Process p:    get_pkt -&gt; c!pkt -&gt; ...
+// Accepted: bind, then send (pkt is a global variable).
+evt get_pkt: pkt = eth.get_packet();
+proc P() { get_pkt -&gt; c!pkt -&gt; ... }
 </code></pre>
 <h2 id="hardware-interrupt-events"><a class="header" href="#hardware-interrupt-events">Hardware-interrupt events</a></h2>
 <pre><code class="language-text">IRQEvent ::= 'irq' '?' integer_literal       // irq?N — await
@@ -328,13 +321,12 @@ the <a href="../system/protection-domains.html">protection domain</a>. <code>irq
 until the IRQ fires; <code>irq!N</code> acknowledges the IRQ back to the kernel.</p>
 <p>Like channel events, IRQ events appear only inside process expressions
 and have no top-level declaration:</p>
-<pre><code class="language-text">Notified() = irq?159 -&gt; Handle_eth() ; irq!159 -&gt; Notified();
+<pre><code class="language-text">proc Notified() { irq?159 -&gt; Handle_eth(); irq!159 -&gt; Notified(); }
 </code></pre>
-<p>The IRQ number here parses as an integer literal — channel events do
-not yet accept integer payloads on either side. This asymmetry exists
-because IRQ numbers are constants from the system topology, while
-general channel payloads will become full <a href="../expressions.html">expressions</a>
-once the expression grammar lands.</p>
+<blockquote>
+<p>🚧 <em><code>self.IRQ</code> syntax is planned (<a href="https://github.com/fiducia-lang/fic/issues/164">#164</a>) — <code>irq?self.IRQ</code> / <code>irq!self.IRQ</code>
+will resolve the protection domain’s IRQ number without a magic literal.</em></p>
+</blockquote>
 
                     </main>
 

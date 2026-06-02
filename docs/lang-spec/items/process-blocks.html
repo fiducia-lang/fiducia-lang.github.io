@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Process Blocks - The Fiducia Language Reference</title>
+        <title>Process Definitions - The Fiducia Language Reference</title>
 
 
         <!-- Custom HTML head -->
@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-ae190c7a.js";
+            window.path_to_searchindex_js = "../searchindex-27a2f6de.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-24a59eb4.js"></script>
+        <script src="../toc-1afb22d7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -180,28 +180,31 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="process-blocks"><a class="header" href="#process-blocks">Process Blocks</a></h1>
-<pre><code class="language-text">ProcessSection ::= 'Process' ':' ProcessDecl+
+                        <h1 id="process-definitions"><a class="header" href="#process-definitions">Process Definitions</a></h1>
+<pre><code class="language-text">ProcessDecl ::= 'proc' UIdent '(' (Param (',' Param)*)? ')' '{' ProcessBody '}'
+Param       ::= ident ':' Type
 
-ProcessDecl    ::= ident '(' (Param (',' Param)*)? ')' '=' ProcessBody ';'
-Param          ::= ident ':' Type
-
-ProcessBody    ::= ProcessExpr (';' ProcessExpr)*
-ProcessExpr    ::= 'Skip'
-                |  'Div'
-                |  Event '-&gt;' ProcessExpr
-                |  '[' Guard ']' ProcessExpr
-                |  ProcessExpr ('[]' ProcessExpr)+ ('default' ProcessExpr)?
-                |  ProcessRef
-                |  '(' ProcessBody ')'
-ProcessRef     ::= ident ('(' (ident (',' ident)*)? ')')?
-Guard          ::= ident | '!' ident
+ProcessBody ::= BodyItem (';' BodyItem)* ';'?
+BodyItem    ::= VarDecl | ProcessExpr
+VarDecl     ::= ident ':' Type ';'
+ProcessExpr ::= 'Skip'
+             |  'Div'
+             |  Event '-&gt;' ProcessExpr
+             |  '[' Guard ']' ProcessExpr
+             |  ProcessExpr ('[]' ProcessExpr)+ ('default' ProcessExpr)?
+             |  ProcessRef
+             |  '(' ProcessExpr (';' ProcessExpr)* ';'? ')'
+ProcessRef  ::= UIdent '(' (ident (',' ident)*)? ')'
+Guard       ::= ident | '!' ident
 </code></pre>
-<p>A <em>process block</em> is the orchestration layer of a Fiducia protection
+<p>A <em>process definition</em> is the orchestration layer of a Fiducia protection
 domain — a CSP-style algebraic expression composed from
 <a href="event-blocks.html">events</a>, guards, choices, and sequential composition.
-Each <code>Process:</code> section declares one or more named processes; multiple
-sections in the same <code>.fi</code> merge into a single process list.</p>
+Each <code>proc</code> declaration introduces one named process; all <code>proc</code>
+declarations in the same <code>.fi</code> file are mutually visible and may reference
+each other by name.</p>
+<p><code>proc</code> definitions must appear <strong>after</strong> all <code>evt</code> declarations in the
+same file; the compiler rejects a <code>proc</code> that is followed by an <code>evt</code>.</p>
 <p>Following CoreFi paper §4.2, a process expression is one of:</p>
 <div class="table-wrapper">
 <table>
@@ -210,7 +213,7 @@ sections in the same <code>.fi</code> merge into a single process list.</p>
 </thead>
 <tbody>
 <tr><td>Successful exit</td><td><code>Skip</code></td><td>Terminates normally.</td></tr>
-<tr><td>Divergence</td><td><code>Div</code></td><td>Infinite-loop terminal (Ω).</td></tr>
+<tr><td>Divergence</td><td><code>Div</code></td><td>Divergence (a self-loop, Ω).</td></tr>
 <tr><td>Event prefix</td><td><code>e -&gt; P</code></td><td>Performs event <code>e</code>, then <code>P</code>.</td></tr>
 <tr><td>Guard</td><td><code>[b] P</code></td><td>Performs <code>P</code> only if <code>b</code> holds.</td></tr>
 <tr><td>External choice</td><td><code>P [] Q</code></td><td>Either branch — environment chooses.</td></tr>
@@ -221,15 +224,14 @@ sections in the same <code>.fi</code> merge into a single process list.</p>
 </table>
 </div>
 <h2 id="naming-convention"><a class="header" href="#naming-convention">Naming convention</a></h2>
-<p>Process names start with an <code>UpperCamelCase</code> first letter — this both
-signals intent and lets the parser detect the start of a new declaration
-while consuming a body. The convention also disambiguates:</p>
+<p>Process names use <code>UpperCamelCase</code>. This both signals intent and
+disambiguates process references from computation event references at
+parse time:</p>
 <ul>
-<li><code>Reply(pkt)</code> — sub-process call (<code>UpperCamelCase</code>, parses as a process expression).</li>
-<li><code>send_frame(pkt)</code> — computation-event reference (<code>snake_case</code>, parses as an event).</li>
+<li><code>Reply(pkt)</code> — sub-process call (<code>UpperCamelCase</code>, parentheses required).</li>
+<li><code>send_frame.pkt</code> — computation-event reference (<code>snake_case</code>, dot carrier syntax).</li>
 </ul>
-<p>The disambiguation happens at parse time on the leading character of the
-identifier; do not lowercase a process name or capitalise an event name.</p>
+<p>The disambiguation happens on the leading character of the identifier.</p>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From loosest to tightest:</p>
 <div class="table-wrapper">
@@ -247,11 +249,11 @@ identifier; do not lowercase a process name or capitalise an event name.</p>
 </table>
 </div>
 <p>Concrete consequences:</p>
-<pre><code class="language-text">e -&gt; P [] e2 -&gt; Q                ≡ Choice([Prefix(e, P), Prefix(e2, Q)])
-e -&gt; P ; Q                       ≡ (e -&gt; P) ; Q
-[b] e -&gt; P [] e2 -&gt; Q            ≡ Choice([Guard(b, Prefix(e, P)), Prefix(e2, Q)])
-p1 ; p2 [] p3                    ≡ p1 ; (p2 [] p3)
-[b] (e -&gt; P [] e2 -&gt; Q)          ≡ Guard(b, Choice(...))   // outer-guard the choice
+<pre><code class="language-text">e -&gt; P() [] e2 -&gt; Q()            ≡ Choice([Prefix(e, P()), Prefix(e2, Q())])
+e -&gt; P() ; Q()                   ≡ (e -&gt; P()) ; Q()
+[b] e -&gt; P() [] e2 -&gt; Q()        ≡ Choice([Guard(b, Prefix(e, P())), Prefix(e2, Q())])
+p1() ; p2() [] p3()              ≡ p1() ; (p2() [] p3())
+[b] (e -&gt; P() [] e2 -&gt; Q())      ≡ Guard(b, Choice(...))   // outer-guard the choice
 </code></pre>
 <p>Parenthesisation cuts through: <code>(...)</code> re-enters at the top of the
 precedence chain.</p>
@@ -262,22 +264,23 @@ on. The parser checks structurally and recurses into a branch’s first
 sequential item and into nested choices; deferred resolution is required
 only for <code>ProcessRef</code> (the validator follows the name).</p>
 <p>Common discriminator shapes:</p>
-<pre><code class="language-text">e -&gt; P                  // event prefix
-[b] P                   // guard
+<pre><code class="language-text">e -&gt; P()                // event prefix
+[b] P()                 // guard
 c?x -&gt; ...              // channel-event prefix
 </code></pre>
-<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds.
-<code>default</code> and <code>otherwise</code> are both currently accepted as the keyword for
-the default branch; <code>default</code> is the canonical form (paper choice).</p>
+<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-text">// Two branches, no default.
-Dispatch() = [rx] receive -&gt; Skip [] [!rx] cleanup -&gt; Skip;
+proc Dispatch() {
+    [rx] receive -&gt; Skip [] [!rx] cleanup -&gt; Skip;
+}
 
 // Two branches with a fallback.
-Reply(pkt: int) =
-    [pass] o2d!pkt -&gt; Skip
+proc Reply(pkt: int) {
+    [pass]  o2d!pkt -&gt; Skip
  [] [!pass] handle_ping -&gt; Skip
-    default Skip ;
+    default Skip;
+}
 </code></pre>
 <h2 id="guards"><a class="header" href="#guards">Guards</a></h2>
 <pre><code class="language-text">Guard ::= ident | '!' ident
@@ -285,9 +288,10 @@ Reply(pkt: int) =
 <p>A <em>guard</em> gates the next process expression on a boolean variable. Today
 the parser accepts only <code>[var]</code> (variable read) and <code>[!var]</code> (negation);
 the variable must be a <a href="variable-declarations.html">global</a> declared in the
-same <code>.fi</code> file (process bodies cannot declare their own state). The
-guard binds tighter than <code>[]</code> — <code>[b] e -&gt; P [] e2 -&gt; Q</code> guards the first
-branch only.</p>
+same <code>.fi</code> file. The guard binds tighter than <code>[]</code>:</p>
+<pre><code class="language-text">[b] e -&gt; P [] e2 -&gt; Q   ≡   ([b] (e -&gt; P)) [] (e2 -&gt; Q)
+</code></pre>
+<p>The guard applies only to the first branch.</p>
 <blockquote>
 <p>🚧 <em>Full boolean / relational guard expressions (<code>[x == 3]</code>, <code>[x &amp;&amp; y]</code>,
 etc.) land with the <a href="../expressions.html">expression grammar</a> — see
@@ -295,34 +299,32 @@ etc.) land with the <a href="../expressions.html">expression grammar</a> — see
 needs richer logic.</em></p>
 </blockquote>
 <h2 id="sequential-composition"><a class="header" href="#sequential-composition">Sequential composition</a></h2>
-<p>Inside a body, <code>;</code> separates items. The body is <strong>not</strong> a list of
-declarations — it is a single process expression with <code>;</code>-composed
-sub-expressions:</p>
-<pre><code class="language-text">Notified() = irq?159 -&gt; Handle_eth() ; irq!159 -&gt; Notified();
+<p>Inside a <code>{}</code> body, <code>;</code> separates items. The last item may carry a
+trailing <code>;</code> before <code>}</code>:</p>
+<pre><code class="language-text">proc Notified() {
+    irq?159 -&gt; Handle_eth();
+    irq!159 -&gt; Notified();
+}
 </code></pre>
-<p>The trailing <code>;</code> after <code>Notified()</code> is the <strong>declaration terminator</strong>, not
-the sequential operator. Inside the body, <code>;</code> separates expressions.</p>
 <h2 id="sub-process-calls"><a class="header" href="#sub-process-calls">Sub-process calls</a></h2>
-<pre><code class="language-text">ProcessRef ::= ident ('(' (ident (',' ident)*)? ')')?
+<pre><code class="language-text">ProcessRef ::= UIdent '(' (ident (',' ident)*)? ')'
 </code></pre>
 <p>A <em>sub-process call</em> references another process declared in the same
-section. The argument list is currently restricted to identifiers (the
-expression grammar will widen this). Argument-less calls may also drop
-the parentheses entirely:</p>
-<pre><code class="language-text">Process:
-    Notified() = irq?159 -&gt; Handle_eth() ; irq!159 -&gt; Notified();
-    Handle_eth() = handle_irq -&gt; Dispatch ;        // empty arg list, no parens
-    Dispatch() = [rx] receive -&gt; Skip [] [!rx] cleanup -&gt; Skip ;
-    Reply(pkt: int) = o2d!pkt -&gt; Skip ;
+file. The argument list is currently restricted to identifiers.
+Parentheses are always required — even for empty argument lists (<code>Skip</code>
+and <code>Div</code> are the only bare uppercase atoms):</p>
+<pre><code class="language-text">proc Notified()   { irq?159 -&gt; Handle_eth(); irq!159 -&gt; Notified(); }
+proc Handle_eth() { handle_irq -&gt; Dispatch(); }
+proc Dispatch()   { [rx] receive -&gt; Skip [] [!rx] cleanup -&gt; Skip; }
+proc Reply(pkt: int) { o2d!pkt -&gt; Skip; }
 </code></pre>
 <p>The validator confirms each <code>ProcessRef</code> resolves to a declared process
-and that the argument count matches the declaration.</p>
+and that the argument count matches.</p>
 <h2 id="empty-processes"><a class="header" href="#empty-processes">Empty processes</a></h2>
 <p><code>Skip</code> and <code>Div</code> are atomic and self-contained: <code>Skip</code> is successful
-termination, <code>Div</code> is non-termination (Ω). Both stand alone as a body:</p>
-<pre><code class="language-text">Process:
-    NoOp() = Skip;
-    Stuck() = Div;
+termination, <code>Div</code> is divergence (a self-loop):</p>
+<pre><code class="language-text">proc NoOp()  { Skip; }
+proc Stuck() { Div; }
 </code></pre>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
@@ -330,9 +332,12 @@ termination, <code>Div</code> is non-termination (Ω). Both stand alone as a bod
 restricted to identifiers. Channel-receive RHS accepts identifiers <em>or</em>
 integer literals (so <code>irq?159</code> parses).</li>
 <li>Guards accept <code>[var]</code> / <code>[!var]</code> only.</li>
-<li>No variable declarations inside a process body — promote to a global.</li>
-<li>Recursion is modeled as a sub-process call by name, e.g. the trailing
-<code>Notified()</code> in <code>Notified() = ... -&gt; Notified();</code>.</li>
+<li>Currently only variable declarations (<code>x: int;</code>) are permitted as inline
+body items alongside process expressions. Assignment statements and external
+calls must live in <code>evt</code> declarations. This restriction is planned to be
+lifted: future versions will allow statements directly in <code>proc</code> bodies,
+with flexible interleaving of statements and process expressions.</li>
+<li>Recursion is modeled as a sub-process call by name.</li>
 </ul>
 
                     </main>

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-ae190c7a.js";
+            window.path_to_searchindex_js = "searchindex-27a2f6de.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-24a59eb4.js"></script>
+        <script src="toc-1afb22d7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -199,24 +199,24 @@ the parser actually accepts today.</p>
 protection domains, channels, the system composition. One per project.</li>
 <li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
 C / Rust files, memory mappings, the constructor block, global variable
-declarations, and the <code>Events:</code> and <code>Process:</code> sections covered by this
-reference. One per protection domain.</li>
+declarations, flat <code>evt</code> declarations, and flat <code>proc</code> definitions
+covered by this reference. One per protection domain.</li>
 </ul>
 <p>The two are linked by name: a <code>Mapping</code> in a <code>.fi</code> file refers to a
 <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a process
 expression resolves against the <code>.fis</code> channel declarations; a computation
-event referenced by name from a process is declared in the same <code>.fi</code>’s
-<code>Events:</code> section.</p>
+event referenced by name from a process is declared in the same <code>.fi</code> with
+<code>evt</code>.</p>
 <h2 id="scope-of-this-revision"><a class="header" href="#scope-of-this-revision">Scope of this revision</a></h2>
 <p>This revision covers the three constructs that participate in the Fiducia
 process algebra:</p>
 <ul>
-<li><a href="items/event-blocks.html"><strong>Event Blocks</strong></a> — the <code>Events:</code> section that
-declares computation events, plus the inline channel and IRQ events used
+<li><a href="items/event-blocks.html"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
+for computation events, plus the inline channel and IRQ events used
 on the left of a process prefix.</li>
-<li><a href="items/process-blocks.html"><strong>Process Blocks</strong></a> — the <code>Process:</code> section
-that declares CSP-style processes composed from events, guards, choices,
-and sequential composition.</li>
+<li><a href="items/process-blocks.html"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
+for CSP-style processes composed from events, guards, choices, and
+sequential composition.</li>
 <li><a href="expressions.html"><strong>Expressions</strong></a> — the expression language available to
 carriers, guards, send payloads, and (eventually) constructor RHS.</li>
 </ul>
@@ -236,7 +236,7 @@ mdBook’s syntax-highlight neutral.</li>
 module-doc style.</li>
 <li>Cross-references to the parser source use repository-relative paths
 (<code>src/parser/event.rs</code>); cross-references to other chapters use plain
-Markdown links (e.g. <a href="items/event-blocks.html">Event Blocks</a>).</li>
+Markdown links (e.g. <a href="items/event-blocks.html">Event Declarations</a>).</li>
 </ul>
 
                     </main>

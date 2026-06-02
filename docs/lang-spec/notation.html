@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-ae190c7a.js";
+            window.path_to_searchindex_js = "searchindex-27a2f6de.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-24a59eb4.js"></script>
+        <script src="toc-1afb22d7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,7 +188,7 @@ familiar with Rust documentation can read it without a separate primer.</p>
 <p>A production has the form <code>LHS ::= RHS</code>, where the right-hand side is a
 sequence of terminals, non-terminals, and meta-operators. Productions are
 written in <code>text</code>-tagged code blocks:</p>
-<pre><code class="language-text">EventDecl ::= 'Event' ident carriers? ':' stmt* 'end'
+<pre><code class="language-text">EventDecl ::= 'evt' ident carriers? ':' stmt*
 carriers  ::= carrier_group+
 carrier_group ::= '.' '|' param (',' param)* '|'
 param     ::= ident ':' type
@@ -225,9 +225,8 @@ fragment when it disambiguates (<code>Event::CPEvent</code>,
 <p>Examples render in <code>text</code>-tagged code blocks, not <code>rust</code>-tagged: the Fiducia
 source language is not Rust, and <code>text</code> keeps mdBook’s syntax-highlighter
 neutral. Example:</p>
-<pre><code class="language-text">Event handle_irq:
+<pre><code class="language-text">evt handle_irq:
     eth.handle_irq();
-end
 </code></pre>
 <p>Where an example references symbols declared elsewhere (a channel from the
 <code>.fis</code> file, a function from an imported <code>.c</code> file, a process declared in

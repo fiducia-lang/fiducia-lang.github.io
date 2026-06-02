@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-ae190c7a.js";
+            window.path_to_searchindex_js = "../searchindex-27a2f6de.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-24a59eb4.js"></script>
+        <script src="../toc-1afb22d7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -210,7 +210,7 @@ process expressions must be promoted to a global.</p>
 <pre><code class="language-text">local → carrier → global
 </code></pre>
 <p>Carriers are the read-only inputs declared in the event header — see
-<a href="event-blocks.html#carriers">Event Blocks</a>.</p>
+<a href="event-blocks.html#carriers">Event Declarations</a>.</p>
 <h2 id="primitive-types"><a class="header" href="#primitive-types">Primitive types</a></h2>
 <p>The primitive types accepted in declarations are:</p>
 <div class="table-wrapper">
@@ -244,11 +244,10 @@ bool ready;
 uint64 last_irq_ts;
 
 // Local declarations inside an event body.
-Event handle_packet.|size: int|:
+evt handle_packet.|size: int|:
     int local_buf;            // local
     bool ok;                  // local
     local_buf = eth.alloc();  // assignment uses globals/locals/carriers
-end
 </code></pre>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
