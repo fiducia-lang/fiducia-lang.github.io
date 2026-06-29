@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27a2f6de.js";
+            window.path_to_searchindex_js = "searchindex-3b8a25e7.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1afb22d7.js"></script>
+        <script src="toc-ebb36012.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,8 +184,7 @@
 <p>This chapter describes the expression grammar designed for Fiducia and
 the subset that today’s parser actually accepts. Expressions appear as:</p>
 <ul>
-<li>the right-hand side of assignments inside event bodies and the
-constructor block;</li>
+<li>the right-hand side of assignments inside event bodies;</li>
 <li>the payload of a <a href="items/event-blocks.html#channel-events">channel send</a> (<code>c!e</code>);</li>
 <li>the body of a <a href="items/process-blocks.html#guards">guard</a> (<code>[b]</code>);</li>
 <li>arguments to sub-process calls and computation-event references.</li>
@@ -263,7 +262,6 @@ accepts a narrow stand-in so existing fixtures continue to parse:</p>
 <tr><td><code>irq?N</code> / <code>irq!N</code> IRQ number</td><td>integer literal</td></tr>
 <tr><td>Computation-event carrier args</td><td>identifier</td></tr>
 <tr><td>Sub-process call args</td><td>identifier</td></tr>
-<tr><td>Constructor RHS</td><td><code>mapping.field</code> or opaque text to <code>;</code></td></tr>
 <tr><td>Guard expression</td><td><code>var</code> or <code>!var</code></td></tr>
 </tbody>
 </table>

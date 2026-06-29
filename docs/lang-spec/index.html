@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27a2f6de.js";
+            window.path_to_searchindex_js = "searchindex-3b8a25e7.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1afb22d7.js"></script>
+        <script src="toc-ebb36012.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -198,7 +198,7 @@ the parser actually accepts today.</p>
 <li><strong>System description (<code>.fis</code>)</strong> — the static topology: memory regions,
 protection domains, channels, the system composition. One per project.</li>
 <li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
-C / Rust files, memory mappings, the constructor block, global variable
+C / Rust files, memory mappings, global variable
 declarations, flat <code>evt</code> declarations, and flat <code>proc</code> definitions
 covered by this reference. One per protection domain.</li>
 </ul>
@@ -218,7 +218,7 @@ on the left of a process prefix.</li>
 for CSP-style processes composed from events, guards, choices, and
 sequential composition.</li>
 <li><a href="expressions.html"><strong>Expressions</strong></a> — the expression language available to
-carriers, guards, send payloads, and (eventually) constructor RHS.</li>
+carriers, guards, and send payloads.</li>
 </ul>
 <p>Other surfaces (lexical structure, system items, types, validation, the
 type system) belong in chapters that have not yet been ported into this

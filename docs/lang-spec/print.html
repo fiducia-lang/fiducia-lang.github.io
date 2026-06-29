@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27a2f6de.js";
+            window.path_to_searchindex_js = "searchindex-3b8a25e7.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1afb22d7.js"></script>
+        <script src="toc-ebb36012.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -196,7 +196,7 @@ the parser actually accepts today.</p>
 <li><strong>System description (<code>.fis</code>)</strong> — the static topology: memory regions,
 protection domains, channels, the system composition. One per project.</li>
 <li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
-C / Rust files, memory mappings, the constructor block, global variable
+C / Rust files, memory mappings, global variable
 declarations, flat <code>evt</code> declarations, and flat <code>proc</code> definitions
 covered by this reference. One per protection domain.</li>
 </ul>
@@ -216,7 +216,7 @@ on the left of a process prefix.</li>
 for CSP-style processes composed from events, guards, choices, and
 sequential composition.</li>
 <li><a href="#expressions"><strong>Expressions</strong></a> — the expression language available to
-carriers, guards, send payloads, and (eventually) constructor RHS.</li>
+carriers, guards, and send payloads.</li>
 </ul>
 <p>Other surfaces (lexical structure, system items, types, validation, the
 type system) belong in chapters that have not yet been ported into this
@@ -375,7 +375,7 @@ Each <code>ProtectionDomain</code> listed in a <code>.fis</code> system file pai
 <h2 id="fields-1"><a class="header" href="#fields-1">Fields</a></h2>
 <ul>
 <li><strong>Name</strong> — <code>snake_case</code> identifier. The matching <code>&lt;name&gt;.fi</code> file holds
-the PD’s mappings, constructor block, events, and processes.</li>
+the PD’s mappings, events, and processes.</li>
 <li><strong>Priority</strong> — required, range <code>0..=254</code>. Out-of-range values are
 rejected with a parse-time error. Higher numbers run first under the
 Microkit fixed-priority scheduler.</li>
@@ -524,9 +524,9 @@ perms       ::= string_literal             // 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
 cached      ::= bool_literal               // default: false
 </code></pre>
 <p>A <em>mapping declaration</em> installs a <code>MemoryRegion</code> into the PD’s address
-space. The mapping’s name becomes a globally-visible symbol inside the PD;
-the <a href="#constructor-block">Constructor block</a> can then reference its
-<code>.vaddr</code>, <code>.paddr</code>, or <code>.size</code>.</p>
+space. The mapping’s name derives the auto-emitted setvar symbols
+(<code>&lt;mapping&gt;_vaddr</code>, <code>_paddr</code>, <code>_size</code>) patched into the PD’s ELF — see
+<a href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation</a>.</p>
 <h3 id="fields-3"><a class="header" href="#fields-3">Fields</a></h3>
 <ul>
 <li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. The mapping
@@ -586,95 +586,81 @@ is rejected.</li>
 <li>Mapping names are unique within the same <code>.fi</code> file.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="constructor-block"><a class="header" href="#constructor-block">Constructor Block</a></h1>
-<pre><code class="language-text">ConstructorBlock ::= '(' ')' ':' '{' Assign* '}'
-Assign           ::= ident '=' RHS ';'
-RHS              ::= ident '.' MappingField
-                   | &lt;anything up to the terminating ';'&gt;
-MappingField     ::= 'vaddr' | 'paddr' | 'size'
+<h1 id="boot-initialisation-init-process-and-auto-setvars"><a class="header" href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation: <code>Init</code> Process and Auto-Setvars</a></h1>
+<p>Boot-time behaviour of a protection domain is expressed in two ways:</p>
+<ol>
+<li><strong>Address binding</strong> is automatic: every <a href="#imports-and-mappings"><code>Mapping</code></a>
+exports its addresses to the imported C / Rust implementation through
+a <em>naming convention</em> (the <code>setvar</code> mechanism below). No syntax is
+required.</li>
+<li><strong>Boot-time logic</strong> is modelled by an ordinary
+<a href="#process-definitions">process</a> conventionally named <code>Init</code> — the
+model-level counterpart of Microkit’s <code>void init(void)</code> entrypoint,
+which the imported source file implements.</li>
+</ol>
+<blockquote>
+<p>ℹ️ Earlier versions of Fiducia used a special <code>(): { ... }</code>
+<em>constructor block</em> for both purposes. It was removed in <a href="https://github.com/fiducia-lang/fic/issues/168">#168</a>;
+<code>(): {</code> is now a parse error.</p>
+</blockquote>
+<h2 id="the-init-process"><a class="header" href="#the-init-process">The <code>Init</code> process</a></h2>
+<p>The boot process is conventionally named <code>Init</code>. It is an ordinary
+process — <code>UpperCamelCase</code> like every other, with no special casing:</p>
+<pre><code class="language-text">proc Init() {
+    setup_eth -&gt; Skip;
+}
 </code></pre>
-<p>The <em>constructor block</em> is the per-PD initialiser that runs before the
-PD’s first event. It binds globals declared in the imported <code>.c</code> /
-<code>.rs</code> file to either:</p>
-<ul>
-<li>a <em>mapping field</em> — <code>mapping.vaddr</code>, <code>mapping.paddr</code>, or <code>.size</code> —
-in which case the value is patched into the binary by the seL4 Microkit
-loader before the PD starts (via the <code>setvar</code> mechanism); or</li>
-<li>an <em>opaque expression</em> — anything up to the terminating <code>;</code> — in which
-case the assignment runs at PD-init time inside the imported source’s
-<code>init()</code> function.</li>
-</ul>
-<p>There is at most one constructor block per <code>.fi</code> file. Its leading <code>():</code>
-borrows the empty-parameter-list shape; the parens are required even
-though there are no parameters yet.</p>
-<h2 id="mapping-field-rhs"><a class="header" href="#mapping-field-rhs">Mapping-field RHS</a></h2>
-<p>The compiler classifies the RHS as a <em>mapping field</em> only when it is
-exactly <code>mapping.field</code>, with nothing between the field name and the
-terminating <code>;</code> (whitespace excepted). The matched fields are:</p>
+<p>Microkit calls the PD’s entrypoint exactly once, before any event is
+delivered. Declaring <code>proc Init</code> documents and models that boot
+behaviour in the same CSP language used for event handlers; the
+imported <code>.c</code> / <code>.rs</code> file provides the matching <code>void init(void)</code>
+implementation.</p>
+<h2 id="auto-emitted-setvars"><a class="header" href="#auto-emitted-setvars">Auto-emitted setvars</a></h2>
+<p>For every mapping named <code>m</code>, the compiler emits <code>setvar</code> candidates for
+three ELF symbols:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Field</th><th>Meaning</th></tr>
+<tr><th>Symbol</th><th>Patched with</th></tr>
 </thead>
 <tbody>
-<tr><td><code>.vaddr</code></td><td>Virtual address where the mapping was installed.</td></tr>
-<tr><td><code>.paddr</code></td><td>Physical address backing the mapping (only valid for regions with explicit <code>phys_addr</code>).</td></tr>
-<tr><td><code>.size</code></td><td>Mapping size in bytes.</td></tr>
+<tr><td><code>m_vaddr</code></td><td>Virtual address where the mapping was installed.</td></tr>
+<tr><td><code>m_paddr</code></td><td>Physical address of the backing region. Always linked: if the region was declared without an explicit <code>phys_addr</code>, the kernel fills it at boot.</td></tr>
+<tr><td><code>m_size</code></td><td>Region size in bytes.</td></tr>
 </tbody>
 </table>
 </div>
-<p>Each matched assignment becomes one SDF <code>setvar</code> entry in the lowered
-output. The Microkit loader patches the named symbol in the PD’s ELF
-before launch.</p>
-<pre><code class="language-text">(): {
-    rbd = ring_buffer.vaddr;            // setvar "rbd" → vaddr
-    tbd = ring_buffer.size;             // setvar "tbd" → size in bytes
-    pa  = packet_buffer.paddr;          // setvar "pa"  → physical address
-}
-</code></pre>
-<h2 id="opaque-rhs"><a class="header" href="#opaque-rhs">Opaque RHS</a></h2>
-<p>Any RHS that is not exactly <code>mapping.field</code> is recorded as an opaque blob
-and emitted into the PD’s runtime init code rather than as <code>setvar</code>. The
-parser consumes verbatim up to the next <code>;</code>.</p>
-<pre><code class="language-text">(): {
-    tbd = ring_buffer.vaddr + (sizeof(struct rbd) * RBD_COUNT);  // opaque
-    irq_ack_index = 0;                                            // opaque
-}
-</code></pre>
-<p>This split exists because <code>setvar</code> only supports literal-substitution
-patching: it cannot evaluate arithmetic. Anything more elaborate than a
-direct field read is deferred to runtime initialisation in the imported
-source file.</p>
-<blockquote>
-<p>🚧 <em>Constructor block is being unified with the broader <a href="#variable-declarations">statement
-grammar</a> and the <a href="#expressions">expression
-grammar</a> — see <a href="https://github.com/fiducia-lang/fic/issues/128">#128</a>. Once that lands, the
-mapping-field / opaque distinction moves out of the AST and the
-constructor body becomes a plain sequence of statements.</em></p>
-</blockquote>
-<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>Before image generation (<code>--emit=img</code>), candidates whose symbol is not
+declared in the PD’s compiled ELF are dropped — the implementation only
+receives the symbols it declares. The Microkit loader patches the
+surviving symbols before the PD starts.</p>
 <pre><code class="language-text">import "eth.c" as eth;
 
 Low Mapping ring_buffer(ring_buffer_outer, "rw");
 Low Mapping packet_buffer(packet_buffer_outer, "rw");
-
-(): {
-    ring_buffer_vaddr  = ring_buffer.vaddr;       // setvar
-    packet_buffer_vaddr = packet_buffer.vaddr;    // setvar
-    ring_buffer_paddr  = ring_buffer.paddr;       // setvar
-    packet_buffer_paddr = packet_buffer.paddr;    // setvar
-
-    rbd_count = RBD_COUNT;                         // opaque (runtime init)
-}
 </code></pre>
+<pre><code class="language-c">/* eth.c — declared symbols are patched by the loader */
+uintptr_t ring_buffer_vaddr;    /* ← ring_buffer.vaddr  */
+uintptr_t ring_buffer_paddr;    /* ← ring_buffer.paddr  */
+uintptr_t packet_buffer_vaddr;  /* ← packet_buffer.vaddr */
+/* packet_buffer_size not declared → no setvar emitted   */
+</code></pre>
+<p>Pick mapping names so that <code>&lt;mapping&gt;_vaddr</code> matches the symbol your
+implementation uses.</p>
+<h3 id="derived-values"><a class="header" href="#derived-values">Derived values</a></h3>
+<p><code>setvar</code> only supports literal-substitution patching: it cannot
+evaluate arithmetic. Values derived from a mapping address (for
+example, an offset into a ring buffer) are computed at runtime inside
+the implementation’s <code>init</code> function — or, in future, in <code>proc Init</code>
+once compile-time expression evaluation (<a href="https://github.com/fiducia-lang/fic/issues/111">#111</a>) lands.</p>
 <h2 id="validation-3"><a class="header" href="#validation-3">Validation</a></h2>
 <ul>
-<li>The mapping referenced on the left of <code>.vaddr</code> / <code>.paddr</code> / <code>.size</code> must
-exist in the same <code>.fi</code> file.</li>
-<li><code>.paddr</code> is rejected if the underlying <code>MemoryRegion</code> was declared
-without an explicit physical address.</li>
-<li>Only one constructor block per <code>.fi</code>; a second <code>():</code> block is a parse
-error.</li>
+<li>Mapping names must be unique within a PD (checked by name
+resolution); this also guarantees the derived setvar symbols are
+unique.</li>
+<li><code>m_paddr</code> is always linked: when the underlying <code>MemoryRegion</code> has an
+explicit physical address that value is patched in, otherwise the
+kernel assigns one at boot.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="variable-declarations"><a class="header" href="#variable-declarations">Variable Declarations</a></h1>
@@ -688,15 +674,15 @@ reserved but not yet parsed.</p>
 <blockquote>
 <p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed — see
 <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. For now, initialise locals from inside the body, and globals
-from the <a href="#constructor-block">Constructor block</a> or the imported
-source’s <code>init()</code> function.</em></p>
+from the imported source’s <code>init()</code> function (see
+<a href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation</a>).</em></p>
 </blockquote>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
 <p>Variables can appear in two positions inside a <code>.fi</code> file:</p>
 <ul>
 <li><strong>Global</strong> — at the top level of the file, alongside <code>Mapping</code> and
 <code>import</code> declarations. Globals are visible everywhere in the PD,
-read/write inside event bodies and the constructor.</li>
+read/write inside event bodies.</li>
 <li><strong>Local</strong> — inside a computation <a href="#event-declarations">event body</a>, between
 the <code>:</code> and <code>end</code>. Locals shadow globals of the same name. Their scope
 ends with the <code>end</code> of the enclosing event.</li>
@@ -1066,8 +1052,7 @@ with flexible interleaving of statements and process expressions.</li>
 <p>This chapter describes the expression grammar designed for Fiducia and
 the subset that today’s parser actually accepts. Expressions appear as:</p>
 <ul>
-<li>the right-hand side of assignments inside event bodies and the
-constructor block;</li>
+<li>the right-hand side of assignments inside event bodies;</li>
 <li>the payload of a <a href="#channel-events">channel send</a> (<code>c!e</code>);</li>
 <li>the body of a <a href="#guards">guard</a> (<code>[b]</code>);</li>
 <li>arguments to sub-process calls and computation-event references.</li>
@@ -1145,7 +1130,6 @@ accepts a narrow stand-in so existing fixtures continue to parse:</p>
 <tr><td><code>irq?N</code> / <code>irq!N</code> IRQ number</td><td>integer literal</td></tr>
 <tr><td>Computation-event carrier args</td><td>identifier</td></tr>
 <tr><td>Sub-process call args</td><td>identifier</td></tr>
-<tr><td>Constructor RHS</td><td><code>mapping.field</code> or opaque text to <code>;</code></td></tr>
 <tr><td>Guard expression</td><td><code>var</code> or <code>!var</code></td></tr>
 </tbody>
 </table>
