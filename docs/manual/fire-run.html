@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c70e74a2.js";
+            window.path_to_searchindex_js = "searchindex-9408a0b5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-71c87d02.js"></script>
+        <script src="toc-47800150.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,7 @@
                         <h1 id="building-and-running-fire-build--fire-run"><a class="header" href="#building-and-running-fire-build--fire-run">Building and Running: <code>fire build</code> / <code>fire run</code></a></h1>
 <p><code>fire build</code> compiles a project to a bootable Microkit image;
 <code>fire run</code> builds and then launches it as configured in
-<a href="project-toml.html"><code>project.toml</code></a> — mimicking the <code>cargo</code> tools.</p>
+<a href="fire-toml.html"><code>fire.toml</code></a> — mimicking the <code>cargo</code> tools.</p>
 <blockquote>
 <p>🚧 The <code>build</code> / <code>run</code> subcommands land with
 <a href="https://github.com/fiducia-lang/fic/pull/174">PR #174</a>. On earlier
@@ -200,18 +200,18 @@ fire run   [PROJECT_DIR] [-o &lt;IMG&gt;]   # build, then launch
 <tr><th>Argument / flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>project.toml</code>. Defaults to the current directory.</td></tr>
+<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
 <tr><td><code>-o, --output &lt;IMG&gt;</code></td><td>Override the output <code>.img</code> path (default: <code>&lt;src&gt;/build/&lt;name&gt;.img</code>).</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
 <ol>
-<li>Reads <code>project.toml</code> from <code>PROJECT_DIR</code> and resolves the source
+<li>Reads <code>fire.toml</code> from <code>PROJECT_DIR</code> and resolves the source
 directory (<code>project.src</code>).</li>
 <li>Builds the image — incrementally, like <code>cargo</code>: when
 <code>build/&lt;name&gt;.img</code> is already newer than every source file and
-<code>project.toml</code>, the rebuild is skipped (<code>✓ image up to date</code>).
+<code>fire.toml</code>, the rebuild is skipped (<code>✓ image up to date</code>).
 Otherwise it invokes <code>fic &lt;src&gt; --board &lt;board&gt; --build-profile &lt;profile&gt;</code> (image generation is fic’s default
 mode), with the toolchain from <code>[run.target]</code>
 (or the <code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment). This compiles
@@ -253,7 +253,7 @@ setvar patches applied to each PD.</p>
 <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
 </thead>
 <tbody>
-<tr><td><code>could not read .../project.toml</code></td><td><code>PROJECT_DIR</code> doesn’t contain a manifest; pass the project directory, not the repo root.</td></tr>
+<tr><td><code>could not read .../fire.toml</code></td><td><code>PROJECT_DIR</code> doesn’t contain a manifest; pass the project directory, not the repo root.</td></tr>
 <tr><td><code>Could not read MICROKIT_SDK environment variable</code></td><td>Set <code>$MICROKIT_SDK</code> or <code>[run.target] sdk</code>. Same pattern for <code>GCC</code> / <code>LD</code>.</td></tr>
 <tr><td><code>board path '...' does not exist</code></td><td><code>[run.target] board</code>/<code>profile</code> doesn’t match a directory under <code>&lt;sdk&gt;/board/</code>.</td></tr>
 <tr><td><code>fic: command not found</code></td><td>Install <code>fic</code> on <code>PATH</code> or set <code>$FIRE_FIC</code> to the binary.</td></tr>
@@ -269,7 +269,7 @@ setvar patches applied to each PD.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="project-toml.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="fire-toml.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -283,7 +283,7 @@ setvar patches applied to each PD.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="project-toml.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="fire-toml.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

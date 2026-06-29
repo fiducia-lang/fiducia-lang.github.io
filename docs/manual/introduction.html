@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c70e74a2.js";
+            window.path_to_searchindex_js = "searchindex-9408a0b5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-71c87d02.js"></script>
+        <script src="toc-47800150.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -206,7 +206,7 @@ releases.</p>
 </thead>
 <tbody>
 <tr><td><code>fic</code></td><td>The compiler: parses, validates, and type-checks a project; emits ASTs, SDF XML, topology graphs, UPPAAL models, or a bootable Microkit image.</td></tr>
-<tr><td><code>fire</code></td><td>The project runner: reads <code>project.toml</code> and drives <code>fic</code> — <code>fire build</code> produces the image, <code>fire run</code> builds and launches it on QEMU or hardware, <code>fire verify</code> model-checks the UPPAAL model with <code>verifyta</code>.</td></tr>
+<tr><td><code>fire</code></td><td>The project runner: reads <code>fire.toml</code> and drives <code>fic</code> — <code>fire build</code> produces the image, <code>fire run</code> builds and launches it on QEMU or hardware, <code>fire verify</code> model-checks the UPPAAL model with <code>verifyta</code>.</td></tr>
 </tbody>
 </table>
 </div>
@@ -220,8 +220,8 @@ imports of C / Rust sources, memory mappings, event declarations, and
 process definitions (the file <code>eth_outer.fi</code> implements the PD named
 <code>eth_outer</code>);</li>
 <li>the imported <strong><code>.c</code> / <code>.rs</code></strong> implementation files;</li>
-<li>a <strong><code>project.toml</code></strong> manifest telling <code>fire</code> how to build and run it
-(see <a href="project-toml.html">The Project Manifest</a>).</li>
+<li>a <strong><code>fire.toml</code></strong> manifest telling <code>fire</code> how to build and run it
+(see <a href="fire-toml.html">The Project Manifest</a>).</li>
 </ul>
 <p>The compiler pipeline is:</p>
 <pre><code class="language-text">discover → parse → resolve → validate → typecheck → WF2 → emit
@@ -232,7 +232,7 @@ cycles (a structural deadlock-freedom condition).</p>
 <h2 id="where-to-go-next"><a class="header" href="#where-to-go-next">Where to go next</a></h2>
 <ol>
 <li><a href="installation.html">Install the tools</a>.</li>
-<li><a href="project-toml.html">Write or copy a <code>project.toml</code></a>.</li>
+<li><a href="fire-toml.html">Write or copy a <code>fire.toml</code></a>.</li>
 <li><a href="fire-run.html">Build and run on QEMU</a> — the
 <code>demo/datadiode/</code> project in the repository is a complete worked
 example.</li>

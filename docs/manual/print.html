@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c70e74a2.js";
+            window.path_to_searchindex_js = "searchindex-9408a0b5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-71c87d02.js"></script>
+        <script src="toc-47800150.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -204,7 +204,7 @@ releases.</p>
 </thead>
 <tbody>
 <tr><td><code>fic</code></td><td>The compiler: parses, validates, and type-checks a project; emits ASTs, SDF XML, topology graphs, UPPAAL models, or a bootable Microkit image.</td></tr>
-<tr><td><code>fire</code></td><td>The project runner: reads <code>project.toml</code> and drives <code>fic</code> — <code>fire build</code> produces the image, <code>fire run</code> builds and launches it on QEMU or hardware, <code>fire verify</code> model-checks the UPPAAL model with <code>verifyta</code>.</td></tr>
+<tr><td><code>fire</code></td><td>The project runner: reads <code>fire.toml</code> and drives <code>fic</code> — <code>fire build</code> produces the image, <code>fire run</code> builds and launches it on QEMU or hardware, <code>fire verify</code> model-checks the UPPAAL model with <code>verifyta</code>.</td></tr>
 </tbody>
 </table>
 </div>
@@ -218,8 +218,8 @@ imports of C / Rust sources, memory mappings, event declarations, and
 process definitions (the file <code>eth_outer.fi</code> implements the PD named
 <code>eth_outer</code>);</li>
 <li>the imported <strong><code>.c</code> / <code>.rs</code></strong> implementation files;</li>
-<li>a <strong><code>project.toml</code></strong> manifest telling <code>fire</code> how to build and run it
-(see <a href="#the-project-manifest-projecttoml">The Project Manifest</a>).</li>
+<li>a <strong><code>fire.toml</code></strong> manifest telling <code>fire</code> how to build and run it
+(see <a href="#the-project-manifest-firetoml">The Project Manifest</a>).</li>
 </ul>
 <p>The compiler pipeline is:</p>
 <pre><code class="language-text">discover → parse → resolve → validate → typecheck → WF2 → emit
@@ -230,7 +230,7 @@ cycles (a structural deadlock-freedom condition).</p>
 <h2 id="where-to-go-next"><a class="header" href="#where-to-go-next">Where to go next</a></h2>
 <ol>
 <li><a href="#installation">Install the tools</a>.</li>
-<li><a href="#the-project-manifest-projecttoml">Write or copy a <code>project.toml</code></a>.</li>
+<li><a href="#the-project-manifest-firetoml">Write or copy a <code>fire.toml</code></a>.</li>
 <li><a href="#building-and-running-fire-build--fire-run">Build and run on QEMU</a> — the
 <code>demo/datadiode/</code> project in the repository is a complete worked
 example.</li>
@@ -314,7 +314,7 @@ tar -xJf arm-gnu-toolchain.tar.xz
 <p><code>fire verify</code> runs the <a href="https://uppaal.org/">UPPAAL</a> command-line
 model checker <code>verifyta</code>. Download UPPAAL and either put <code>verifyta</code>
 on your <code>PATH</code>, set <code>$VERIFYTA</code>, or point to it from
-<a href="#verify--formal-verification"><code>project.toml</code></a>.
+<a href="#verify--formal-verification"><code>fire.toml</code></a>.
 UPPAAL requires a (free academic) licence.</p>
 <h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
 <div class="table-wrapper">
@@ -337,10 +337,10 @@ export GCC=&lt;path-to-arm-gnu-toolchain&gt;/bin/aarch64-none-elf-gcc
 export LD=&lt;path-to-arm-gnu-toolchain&gt;/bin/aarch64-none-elf-ld
 </code></pre>
 <p>Projects can instead pin these per-project in
-<a href="#runtarget--board-and-toolchain"><code>project.toml</code>’s <code>[run.target]</code> section</a>.</p>
+<a href="#runtarget--board-and-toolchain"><code>fire.toml</code>’s <code>[run.target]</code> section</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="the-project-manifest-projecttoml"><a class="header" href="#the-project-manifest-projecttoml">The Project Manifest (<code>project.toml</code>)</a></h1>
-<p><code>fire</code> reads a <code>project.toml</code> manifest from the project directory.
+<h1 id="the-project-manifest-firetoml"><a class="header" href="#the-project-manifest-firetoml">The Project Manifest (<code>fire.toml</code>)</a></h1>
+<p><code>fire</code> reads a <code>fire.toml</code> manifest from the project directory.
 It names the project, locates the sources, and configures how
 <code>fire build</code> / <code>fire run</code> build and execute the image and how <code>fire verify</code> invokes
 the model checker.</p>
@@ -387,7 +387,7 @@ mode = "verifyta"               # verification engine
 </thead>
 <tbody>
 <tr><td><code>name</code></td><td>yes</td><td>Short name used as the output filename stem: <code>fire build</code> / <code>fire run</code> write <code>build/&lt;name&gt;.img</code>, <code>fire verify</code> writes <code>build/&lt;name&gt;.xml</code> and reads the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code>.</td></tr>
-<tr><td><code>src</code></td><td>yes</td><td>Directory containing the <code>.fis</code> / <code>.fi</code> files, relative to <code>project.toml</code>. Build artifacts go to <code>&lt;src&gt;/build/</code>.</td></tr>
+<tr><td><code>src</code></td><td>yes</td><td>Directory containing the <code>.fis</code> / <code>.fi</code> files, relative to <code>fire.toml</code>. Build artifacts go to <code>&lt;src&gt;/build/</code>.</td></tr>
 </tbody>
 </table>
 </div>
@@ -437,7 +437,7 @@ your environment — useful for pinning a toolchain per project.</p>
 </table>
 </div>
 <h2 id="worked-example"><a class="header" href="#worked-example">Worked example</a></h2>
-<p>The repository’s <code>demo/datadiode/project.toml</code> is a complete,
+<p>The repository’s <code>demo/datadiode/fire.toml</code> is a complete,
 runnable manifest for the data-diode demo — four protection domains
 (<code>eth_outer</code>, <code>dd</code>, <code>eth_inner</code>, <code>simulate</code>) built into one image and
 launched on <code>qemu_virt_aarch64</code> with a user-mode network device.</p>
@@ -445,7 +445,7 @@ launched on <code>qemu_virt_aarch64</code> with a user-mode network device.</p>
 <h1 id="building-and-running-fire-build--fire-run"><a class="header" href="#building-and-running-fire-build--fire-run">Building and Running: <code>fire build</code> / <code>fire run</code></a></h1>
 <p><code>fire build</code> compiles a project to a bootable Microkit image;
 <code>fire run</code> builds and then launches it as configured in
-<a href="#the-project-manifest-projecttoml"><code>project.toml</code></a> — mimicking the <code>cargo</code> tools.</p>
+<a href="#the-project-manifest-firetoml"><code>fire.toml</code></a> — mimicking the <code>cargo</code> tools.</p>
 <blockquote>
 <p>🚧 The <code>build</code> / <code>run</code> subcommands land with
 <a href="https://github.com/fiducia-lang/fic/pull/174">PR #174</a>. On earlier
@@ -462,18 +462,18 @@ fire run   [PROJECT_DIR] [-o &lt;IMG&gt;]   # build, then launch
 <tr><th>Argument / flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>project.toml</code>. Defaults to the current directory.</td></tr>
+<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
 <tr><td><code>-o, --output &lt;IMG&gt;</code></td><td>Override the output <code>.img</code> path (default: <code>&lt;src&gt;/build/&lt;name&gt;.img</code>).</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
 <ol>
-<li>Reads <code>project.toml</code> from <code>PROJECT_DIR</code> and resolves the source
+<li>Reads <code>fire.toml</code> from <code>PROJECT_DIR</code> and resolves the source
 directory (<code>project.src</code>).</li>
 <li>Builds the image — incrementally, like <code>cargo</code>: when
 <code>build/&lt;name&gt;.img</code> is already newer than every source file and
-<code>project.toml</code>, the rebuild is skipped (<code>✓ image up to date</code>).
+<code>fire.toml</code>, the rebuild is skipped (<code>✓ image up to date</code>).
 Otherwise it invokes <code>fic &lt;src&gt; --board &lt;board&gt; --build-profile &lt;profile&gt;</code> (image generation is fic’s default
 mode), with the toolchain from <code>[run.target]</code>
 (or the <code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment). This compiles
@@ -515,7 +515,7 @@ setvar patches applied to each PD.</p>
 <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
 </thead>
 <tbody>
-<tr><td><code>could not read .../project.toml</code></td><td><code>PROJECT_DIR</code> doesn’t contain a manifest; pass the project directory, not the repo root.</td></tr>
+<tr><td><code>could not read .../fire.toml</code></td><td><code>PROJECT_DIR</code> doesn’t contain a manifest; pass the project directory, not the repo root.</td></tr>
 <tr><td><code>Could not read MICROKIT_SDK environment variable</code></td><td>Set <code>$MICROKIT_SDK</code> or <code>[run.target] sdk</code>. Same pattern for <code>GCC</code> / <code>LD</code>.</td></tr>
 <tr><td><code>board path '...' does not exist</code></td><td><code>[run.target] board</code>/<code>profile</code> doesn’t match a directory under <code>&lt;sdk&gt;/board/</code>.</td></tr>
 <tr><td><code>fic: command not found</code></td><td>Install <code>fic</code> on <code>PATH</code> or set <code>$FIRE_FIC</code> to the binary.</td></tr>
@@ -547,7 +547,7 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 <tr><th>Argument / flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>project.toml</code>. Defaults to the current directory.</td></tr>
+<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
 <tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code> next to the sources).</td></tr>
 </tbody>
 </table>
@@ -569,7 +569,7 @@ E&lt;&gt; dd.L1
 <code>build/&lt;name&gt;.xml</code> (or open it in the UPPAAL GUI) to find them.</p>
 <h2 id="what-it-does-1"><a class="header" href="#what-it-does-1">What it does</a></h2>
 <ol>
-<li>Reads <code>project.toml</code> and resolves the source directory.</li>
+<li>Reads <code>fire.toml</code> and resolves the source directory.</li>
 <li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the
 UPPAAL model).</li>
 <li>Locates the query file: the <code>-q</code> flag, or <code>&lt;src&gt;/&lt;name&gt;.q</code>. Errors

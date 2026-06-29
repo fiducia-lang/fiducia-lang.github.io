@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c70e74a2.js";
+            window.path_to_searchindex_js = "searchindex-9408a0b5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-71c87d02.js"></script>
+        <script src="toc-47800150.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -200,7 +200,7 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 <tr><th>Argument / flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>project.toml</code>. Defaults to the current directory.</td></tr>
+<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
 <tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code> next to the sources).</td></tr>
 </tbody>
 </table>
@@ -222,7 +222,7 @@ E&lt;&gt; dd.L1
 <code>build/&lt;name&gt;.xml</code> (or open it in the UPPAAL GUI) to find them.</p>
 <h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
 <ol>
-<li>Reads <code>project.toml</code> and resolves the source directory.</li>
+<li>Reads <code>fire.toml</code> and resolves the source directory.</li>
 <li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the
 UPPAAL model).</li>
 <li>Locates the query file: the <code>-q</code> flag, or <code>&lt;src&gt;/&lt;name&gt;.q</code>. Errors
