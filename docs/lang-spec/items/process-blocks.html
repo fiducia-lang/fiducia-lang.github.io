@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3b8a25e7.js";
+            window.path_to_searchindex_js = "../searchindex-e343443b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ebb36012.js"></script>
@@ -181,7 +181,8 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="process-definitions"><a class="header" href="#process-definitions">Process Definitions</a></h1>
-<pre><code class="language-text">ProcessDecl ::= 'proc' UIdent '(' (Param (',' Param)*)? ')' '{' ProcessBody '}'
+<pre><code class="language-text">ProcessDecl ::= Bind? 'proc' UIdent '(' (Param (',' Param)*)? ')' '{' ProcessBody '}'
+Bind        ::= '@bind' '(' ident '.' ident (',' ident '.' ident)* ')'
 Param       ::= ident ':' Type
 
 ProcessBody ::= BodyItem (';' BodyItem)* ';'?
@@ -231,7 +232,25 @@ parse time:</p>
 <li><code>Reply(pkt)</code> — sub-process call (<code>UpperCamelCase</code>, parentheses required).</li>
 <li><code>send_frame.pkt</code> — computation-event reference (<code>snake_case</code>, dot carrier syntax).</li>
 </ul>
-<p>The disambiguation happens on the leading character of the identifier.</p>
+<p>The disambiguation happens on the leading character of the identifier.
+The boot process is named <code>Init</code> and follows the same convention (see
+<a href="init-process.html">Boot Initialisation</a>).</p>
+<h2 id="annotations-bind"><a class="header" href="#annotations-bind">Annotations (<code>@bind</code>)</a></h2>
+<p>A process may carry a single <code>@bind(...)</code> annotation mapping it to one or
+more platform entry points, without hardcoding kernel terminology into
+process names. Group the targets — one <code>platform.entry</code> pair per platform —
+on one line:</p>
+<pre><code class="language-text">@bind(microkit.notified, cheri.interrupt_handler)
+proc Notified() { o2d?pkt -&gt; d2i!pkt -&gt; Notified(); }
+</code></pre>
+<ul>
+<li>A process with no <code>@bind</code> is <em>internal</em> — not directly callable by the
+kernel.</li>
+<li><code>fic</code> only <em>records</em> <code>@bind</code> pairs in the model. Resolving them to a
+platform’s kernel entry points — and rejecting unknown, duplicate, or
+conflicting targets — is the project layer’s job (<code>fire</code>, configured in
+<code>fire.toml</code>) and lands with the binding work (<a href="https://github.com/fiducia-lang/fic/issues/190">#190</a>).</li>
+</ul>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From loosest to tightest:</p>
 <div class="table-wrapper">
