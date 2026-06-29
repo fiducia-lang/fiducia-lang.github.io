@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-e343443b.js";
+            window.path_to_searchindex_js = "searchindex-a0f48966.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ebb36012.js"></script>
+        <script src="toc-cd6ef858.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -296,6 +296,69 @@ the tracking issue:</p>
 <blockquote>
 <p>🚧 <em>Not yet implemented</em> — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</p>
 </blockquote>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="data-layer-structs-and-constants"><a class="header" href="#data-layer-structs-and-constants">Data Layer: Structs and Constants</a></h1>
+<pre><code class="language-text">StructDecl ::= 'struct' UIdent '{' Field* '}'
+Field      ::= ident ':' Type ';'
+Type       ::= ScalarType | Type '[' ArrayLen ']'
+ArrayLen   ::= integer-literal | CONST_NAME
+ConstDecl  ::= 'const' UPPER_IDENT ':' Type '=' Expr ';'
+</code></pre>
+<p>The <em>data layer</em> is the system-wide vocabulary of payload struct types
+and layout constants. It is shared by every protection domain — and,
+through generated type headers, by the external low-level
+implementations (C, Rust, Pancake) too, so the model and the code agree
+on one definition. It lives as flat, top-level items in the <code>.fis</code> file:
+like the rest of the system description, declarations are visible to
+every <code>.fi</code> program with no import ceremony.</p>
+<pre><code class="language-text">const PACKET_BUFFER_SIZE: int = 2 * 1024;
+
+struct Packet {
+    length:  uint16;                    // valid bytes in payload (≤ capacity)
+    payload: byte[PACKET_BUFFER_SIZE];  // fixed-capacity buffer
+}
+
+const RING_BYTES: int = 64 * sizeof(Packet);
+</code></pre>
+<h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
+<ul>
+<li>Names use <code>UpperCamelCase</code> by convention.</li>
+<li>Fields are flat — primitives, other declared structs, or <strong>fixed-size
+arrays</strong> of those; no pointers.</li>
+<li><strong>Fixed-size arrays</strong> <code>T[N]</code>: the length <code>N</code> is an integer literal or a
+declared integer <code>const</code> (e.g. <code>byte[PACKET_BUFFER_SIZE]</code>), so the size
+stays statically known: <code>sizeof(T[N]) = N * sizeof(T)</code>.</li>
+<li><strong>No recursion</strong>: a struct may not contain itself, directly or
+indirectly. This guarantees <code>sizeof</code> is computable at compile time by
+recursive field traversal.</li>
+<li>Fields must have <strong>fixed-width</strong> types (<code>uint32</code>, not <code>int</code>; arrays of
+fixed-width elements) so the layout is well-defined.</li>
+<li>Struct names are usable wherever a type is expected — variable
+declarations, <a href="#channel-declarations">typed channel buffers</a> (<code>via buf&lt;Packet&gt;</code>),
+and <code>sizeof</code>.</li>
+</ul>
+<h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
+<ul>
+<li>Names use <code>SCREAMING_SNAKE_CASE</code> by convention; a declared type is
+required.</li>
+<li>The right-hand side is a full <a href="#expressions">expression</a>, folded
+at <strong>compile time</strong> (rustc-style, before any lowering). The const
+subset covers: literals, references to <em>previously declared</em>
+constants, <code>sizeof(T)</code>, and unary/binary arithmetic, bitwise, shift,
+comparison, and logical operators.</li>
+<li>Function calls, runtime variables, and field access are rejected in
+const position. Forward references between constants are errors —
+declare in dependency order.</li>
+<li>The folded value must match the declared type (<code>bool</code> constants take
+boolean values; integer-family types take integers).</li>
+</ul>
+<h2 id="global-state"><a class="header" href="#global-state">Global state</a></h2>
+<p>The data layer declares <em>types and constants</em>, not mutable state. In
+CoreFi, shared global state is exactly the channel-buffer view: mutable
+data lives in declared <a href="#memory-region-declarations">memory regions</a>, mapped
+explicitly into the PDs that may touch it and labelled for information
+flow. A shared scalar is a typed slot of a declared region — never an
+ambient global.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="memory-region-declarations"><a class="header" href="#memory-region-declarations">Memory Region Declarations</a></h1>
 <pre><code class="language-text">MemoryRegionDecl ::= SecurityLabel? 'MemoryRegion' ident '(' size (',' page_size)? (',' phys_addr)? ')' ';'
