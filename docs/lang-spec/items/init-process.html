@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-48658d24.js";
+            window.path_to_searchindex_js = "../searchindex-9c98cda2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -213,8 +213,10 @@ IRQ awaits. When it terminates (<code>Skip</code>), control falls through to the
 the generated C <code>init()</code> runs the boot body and then arms <code>notified()</code>.</p>
 <p>A <code>@bind(microkit.init)</code> process is <strong>mandatory</strong> for every PD that has a
 <code>.fi</code> program when targeting Microkit (<code>--emit=c</code> or image generation):
-the kernel calls <code>init()</code> on every PD at startup. A PD with no boot work
-still declares a no-op:</p>
+the kernel calls <code>init()</code> on every PD at startup. It is mandatory in tandem
+with <a href="process-blocks.html"><code>@bind(microkit.notified)</code></a> — Microkit invokes
+both, so a conforming PD binds both (any other platform entry points are
+optional). A PD with no boot work still declares a no-op:</p>
 <pre><code class="language-text">@bind(microkit.init)
 proc Init() { Skip; }
 </code></pre>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-48658d24.js";
+            window.path_to_searchindex_js = "../searchindex-9c98cda2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -252,11 +252,19 @@ and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
 boot body) and the <code>microkit.notified</code>-bound process becomes the
 <code>notified()</code> event loop.</li>
-<li>A <code>@bind(microkit.init)</code> process is <strong>mandatory</strong> for every PD with a
-program when targeting Microkit (<code>--emit=c</code> or image generation) — see
-<a href="init-process.html">Boot Initialisation</a>. <code>--emit=xta</code> (verification only)
-does not require it.</li>
+<li>Both a <code>@bind(microkit.init)</code> <strong>and</strong> a <code>@bind(microkit.notified)</code>
+process are <strong>mandatory</strong> for every PD with a program when targeting
+Microkit (<code>--emit=c</code> or image generation) — Microkit invokes both on
+every PD. See <a href="init-process.html">Boot Initialisation</a>. <code>--emit=xta</code>
+(verification only) does not require them. Other platform entry points
+are optional.</li>
+<li><strong>Each entry point binds at most one process.</strong> Two processes both
+<code>@bind(microkit.notified)</code> is an error — resolution rejects the second
+rather than silently keeping the first.</li>
 </ul>
+<p>The target platform is chosen with <code>--platform</code> (e.g. <code>--platform=microkit</code>);
+omit it to compile whatever the annotations bind. A platform <code>fic</code> does not
+support is rejected.</p>
 <blockquote>
 <p>Resolving bindings to a platform’s concrete kernel symbols — and
 rejecting unknown or conflicting targets across platforms — remains the
