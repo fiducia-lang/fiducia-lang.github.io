@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-a0f48966.js";
+            window.path_to_searchindex_js = "../searchindex-48658d24.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -233,7 +233,8 @@ parse time:</p>
 <li><code>send_frame.pkt</code> — computation-event reference (<code>snake_case</code>, dot carrier syntax).</li>
 </ul>
 <p>The disambiguation happens on the leading character of the identifier.
-The boot process is named <code>Init</code> and follows the same convention (see
+The boot process is the one bound with <code>@bind(microkit.init)</code>; <code>Init</code> is a
+conventional name but carries no special meaning (see
 <a href="init-process.html">Boot Initialisation</a>).</p>
 <h2 id="annotations-bind"><a class="header" href="#annotations-bind">Annotations (<code>@bind</code>)</a></h2>
 <p>A process may carry a single <code>@bind(...)</code> annotation mapping it to one or
@@ -246,11 +247,21 @@ proc Notified() { o2d?pkt -&gt; d2i!pkt -&gt; Notified(); }
 <ul>
 <li>A process with no <code>@bind</code> is <em>internal</em> — not directly callable by the
 kernel.</li>
-<li><code>fic</code> only <em>records</em> <code>@bind</code> pairs in the model. Resolving them to a
-platform’s kernel entry points — and rejecting unknown, duplicate, or
-conflicting targets — is the project layer’s job (<code>fire</code>, configured in
-<code>fire.toml</code>) and lands with the binding work (<a href="https://github.com/fiducia-lang/fic/issues/190">#190</a>).</li>
+<li><strong><code>@bind</code> is authoritative for entry-point selection.</strong> The C backend
+and the UPPAAL lowering pick kernel entry points by binding, not by
+process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
+boot body) and the <code>microkit.notified</code>-bound process becomes the
+<code>notified()</code> event loop.</li>
+<li>A <code>@bind(microkit.init)</code> process is <strong>mandatory</strong> for every PD with a
+program when targeting Microkit (<code>--emit=c</code> or image generation) — see
+<a href="init-process.html">Boot Initialisation</a>. <code>--emit=xta</code> (verification only)
+does not require it.</li>
 </ul>
+<blockquote>
+<p>Resolving bindings to a platform’s concrete kernel symbols — and
+rejecting unknown or conflicting targets across platforms — remains the
+project layer’s job (<code>fire</code>, configured in <code>fire.toml</code>); see <a href="https://github.com/fiducia-lang/fic/issues/190">#190</a>.</p>
+</blockquote>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From loosest to tightest:</p>
 <div class="table-wrapper">

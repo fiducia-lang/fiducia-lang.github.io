@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-a0f48966.js";
+            window.path_to_searchindex_js = "../searchindex-48658d24.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -180,7 +180,7 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="boot-initialisation-init-process-and-auto-setvars"><a class="header" href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation: <code>Init</code> Process and Auto-Setvars</a></h1>
+                        <h1 id="boot-initialisation-the-microkitinit-process-and-auto-setvars"><a class="header" href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation: the <code>microkit.init</code> Process and Auto-Setvars</a></h1>
 <p>Boot-time behaviour of a protection domain is expressed in two ways:</p>
 <ol>
 <li><strong>Address binding</strong> is automatic: every <a href="imports-and-mappings.html"><code>Mapping</code></a>
@@ -188,27 +188,40 @@ exports its addresses to the imported C / Rust implementation through
 a <em>naming convention</em> (the <code>setvar</code> mechanism below). No syntax is
 required.</li>
 <li><strong>Boot-time logic</strong> is modelled by an ordinary
-<a href="process-blocks.html">process</a> conventionally named <code>Init</code> — the
-model-level counterpart of Microkit’s <code>void init(void)</code> entrypoint,
-which the imported source file implements.</li>
+<a href="process-blocks.html">process</a> bound to the platform’s boot entry point
+with <code>@bind(microkit.init)</code> — the model-level counterpart of Microkit’s
+<code>void init(void)</code> entrypoint, which the imported source file implements.</li>
 </ol>
 <blockquote>
 <p>ℹ️ Earlier versions of Fiducia used a special <code>(): { ... }</code>
 <em>constructor block</em> for both purposes. It was removed in <a href="https://github.com/fiducia-lang/fic/issues/168">#168</a>;
 <code>(): {</code> is now a parse error.</p>
 </blockquote>
-<h2 id="the-init-process"><a class="header" href="#the-init-process">The <code>Init</code> process</a></h2>
-<p>The boot process is conventionally named <code>Init</code>. It is an ordinary
-process — <code>UpperCamelCase</code> like every other, with no special casing:</p>
-<pre><code class="language-text">proc Init() {
+<h2 id="the-boot-process"><a class="header" href="#the-boot-process">The boot process</a></h2>
+<p>The boot process is the one annotated <code>@bind(microkit.init)</code>. Its <em>name</em>
+carries no meaning — <code>Init</code> is a common choice, but the binding, not the
+name, is what makes it the boot entry point:</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() {
     setup_eth -&gt; Skip;
 }
 </code></pre>
 <p>Microkit calls the PD’s entrypoint exactly once, before any event is
-delivered. Declaring <code>proc Init</code> documents and models that boot
-behaviour in the same CSP language used for event handlers; the
-imported <code>.c</code> / <code>.rs</code> file provides the matching <code>void init(void)</code>
-implementation.</p>
+delivered, so the bound process <strong>must not</strong> contain channel receives or
+IRQ awaits. When it terminates (<code>Skip</code>), control falls through to the
+<a href="process-blocks.html"><code>@bind(microkit.notified)</code></a> event loop — exactly as
+the generated C <code>init()</code> runs the boot body and then arms <code>notified()</code>.</p>
+<p>A <code>@bind(microkit.init)</code> process is <strong>mandatory</strong> for every PD that has a
+<code>.fi</code> program when targeting Microkit (<code>--emit=c</code> or image generation):
+the kernel calls <code>init()</code> on every PD at startup. A PD with no boot work
+still declares a no-op:</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() { Skip; }
+</code></pre>
+<blockquote>
+<p>The requirement is enforced on the C / image path only. Pure
+verification models (<code>--emit=xta</code>) do not require kernel entry points.</p>
+</blockquote>
 <h2 id="auto-emitted-setvars"><a class="header" href="#auto-emitted-setvars">Auto-emitted setvars</a></h2>
 <p>For every mapping named <code>m</code>, the compiler emits <code>setvar</code> candidates for
 three ELF symbols:</p>

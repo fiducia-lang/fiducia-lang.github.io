@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-a0f48966.js";
+            window.path_to_searchindex_js = "searchindex-48658d24.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cd6ef858.js"></script>
@@ -589,7 +589,7 @@ cached      ::= bool_literal               // default: false
 <p>A <em>mapping declaration</em> installs a <code>MemoryRegion</code> into the PD’s address
 space. The mapping’s name derives the auto-emitted setvar symbols
 (<code>&lt;mapping&gt;_vaddr</code>, <code>_paddr</code>, <code>_size</code>) patched into the PD’s ELF — see
-<a href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation</a>.</p>
+<a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>.</p>
 <h3 id="fields-3"><a class="header" href="#fields-3">Fields</a></h3>
 <ul>
 <li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. The mapping
@@ -649,7 +649,7 @@ is rejected.</li>
 <li>Mapping names are unique within the same <code>.fi</code> file.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="boot-initialisation-init-process-and-auto-setvars"><a class="header" href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation: <code>Init</code> Process and Auto-Setvars</a></h1>
+<h1 id="boot-initialisation-the-microkitinit-process-and-auto-setvars"><a class="header" href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation: the <code>microkit.init</code> Process and Auto-Setvars</a></h1>
 <p>Boot-time behaviour of a protection domain is expressed in two ways:</p>
 <ol>
 <li><strong>Address binding</strong> is automatic: every <a href="#imports-and-mappings"><code>Mapping</code></a>
@@ -657,27 +657,40 @@ exports its addresses to the imported C / Rust implementation through
 a <em>naming convention</em> (the <code>setvar</code> mechanism below). No syntax is
 required.</li>
 <li><strong>Boot-time logic</strong> is modelled by an ordinary
-<a href="#process-definitions">process</a> conventionally named <code>Init</code> — the
-model-level counterpart of Microkit’s <code>void init(void)</code> entrypoint,
-which the imported source file implements.</li>
+<a href="#process-definitions">process</a> bound to the platform’s boot entry point
+with <code>@bind(microkit.init)</code> — the model-level counterpart of Microkit’s
+<code>void init(void)</code> entrypoint, which the imported source file implements.</li>
 </ol>
 <blockquote>
 <p>ℹ️ Earlier versions of Fiducia used a special <code>(): { ... }</code>
 <em>constructor block</em> for both purposes. It was removed in <a href="https://github.com/fiducia-lang/fic/issues/168">#168</a>;
 <code>(): {</code> is now a parse error.</p>
 </blockquote>
-<h2 id="the-init-process"><a class="header" href="#the-init-process">The <code>Init</code> process</a></h2>
-<p>The boot process is conventionally named <code>Init</code>. It is an ordinary
-process — <code>UpperCamelCase</code> like every other, with no special casing:</p>
-<pre><code class="language-text">proc Init() {
+<h2 id="the-boot-process"><a class="header" href="#the-boot-process">The boot process</a></h2>
+<p>The boot process is the one annotated <code>@bind(microkit.init)</code>. Its <em>name</em>
+carries no meaning — <code>Init</code> is a common choice, but the binding, not the
+name, is what makes it the boot entry point:</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() {
     setup_eth -&gt; Skip;
 }
 </code></pre>
 <p>Microkit calls the PD’s entrypoint exactly once, before any event is
-delivered. Declaring <code>proc Init</code> documents and models that boot
-behaviour in the same CSP language used for event handlers; the
-imported <code>.c</code> / <code>.rs</code> file provides the matching <code>void init(void)</code>
-implementation.</p>
+delivered, so the bound process <strong>must not</strong> contain channel receives or
+IRQ awaits. When it terminates (<code>Skip</code>), control falls through to the
+<a href="#process-definitions"><code>@bind(microkit.notified)</code></a> event loop — exactly as
+the generated C <code>init()</code> runs the boot body and then arms <code>notified()</code>.</p>
+<p>A <code>@bind(microkit.init)</code> process is <strong>mandatory</strong> for every PD that has a
+<code>.fi</code> program when targeting Microkit (<code>--emit=c</code> or image generation):
+the kernel calls <code>init()</code> on every PD at startup. A PD with no boot work
+still declares a no-op:</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() { Skip; }
+</code></pre>
+<blockquote>
+<p>The requirement is enforced on the C / image path only. Pure
+verification models (<code>--emit=xta</code>) do not require kernel entry points.</p>
+</blockquote>
 <h2 id="auto-emitted-setvars"><a class="header" href="#auto-emitted-setvars">Auto-emitted setvars</a></h2>
 <p>For every mapping named <code>m</code>, the compiler emits <code>setvar</code> candidates for
 three ELF symbols:</p>
@@ -738,7 +751,7 @@ reserved but not yet parsed.</p>
 <p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed — see
 <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. For now, initialise locals from inside the body, and globals
 from the imported source’s <code>init()</code> function (see
-<a href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation</a>).</em></p>
+<a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>).</em></p>
 </blockquote>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
 <p>Variables can appear in two positions inside a <code>.fi</code> file:</p>
@@ -1004,8 +1017,9 @@ parse time:</p>
 <li><code>send_frame.pkt</code> — computation-event reference (<code>snake_case</code>, dot carrier syntax).</li>
 </ul>
 <p>The disambiguation happens on the leading character of the identifier.
-The boot process is named <code>Init</code> and follows the same convention (see
-<a href="#boot-initialisation-init-process-and-auto-setvars">Boot Initialisation</a>).</p>
+The boot process is the one bound with <code>@bind(microkit.init)</code>; <code>Init</code> is a
+conventional name but carries no special meaning (see
+<a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>).</p>
 <h2 id="annotations-bind"><a class="header" href="#annotations-bind">Annotations (<code>@bind</code>)</a></h2>
 <p>A process may carry a single <code>@bind(...)</code> annotation mapping it to one or
 more platform entry points, without hardcoding kernel terminology into
@@ -1017,11 +1031,21 @@ proc Notified() { o2d?pkt -&gt; d2i!pkt -&gt; Notified(); }
 <ul>
 <li>A process with no <code>@bind</code> is <em>internal</em> — not directly callable by the
 kernel.</li>
-<li><code>fic</code> only <em>records</em> <code>@bind</code> pairs in the model. Resolving them to a
-platform’s kernel entry points — and rejecting unknown, duplicate, or
-conflicting targets — is the project layer’s job (<code>fire</code>, configured in
-<code>fire.toml</code>) and lands with the binding work (<a href="https://github.com/fiducia-lang/fic/issues/190">#190</a>).</li>
+<li><strong><code>@bind</code> is authoritative for entry-point selection.</strong> The C backend
+and the UPPAAL lowering pick kernel entry points by binding, not by
+process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
+boot body) and the <code>microkit.notified</code>-bound process becomes the
+<code>notified()</code> event loop.</li>
+<li>A <code>@bind(microkit.init)</code> process is <strong>mandatory</strong> for every PD with a
+program when targeting Microkit (<code>--emit=c</code> or image generation) — see
+<a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>. <code>--emit=xta</code> (verification only)
+does not require it.</li>
 </ul>
+<blockquote>
+<p>Resolving bindings to a platform’s concrete kernel symbols — and
+rejecting unknown or conflicting targets across platforms — remains the
+project layer’s job (<code>fire</code>, configured in <code>fire.toml</code>); see <a href="https://github.com/fiducia-lang/fic/issues/190">#190</a>.</p>
+</blockquote>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From loosest to tightest:</p>
 <div class="table-wrapper">
