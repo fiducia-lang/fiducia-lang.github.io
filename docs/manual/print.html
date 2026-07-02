@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-9408a0b5.js";
+            window.path_to_searchindex_js = "searchindex-a36b6801.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -693,10 +693,11 @@ fair scheduler (e.g. the asymmetric dining philosophers, Hoare CSP
 §2.5.4). Use this flag when deadlock-freedom is established by an
 external authority — typically <a href="#verifying-fire-verify"><code>fire verify</code></a> on the
 emitted UPPAAL model.</p>
-<h3 id="--lsp"><a class="header" href="#--lsp"><code>--lsp</code></a></h3>
-<p>Start the Language Server Protocol server over stdio. Only available
-in builds compiled with <code>--features lsp</code>; used by the editor
-integrations under <code>editors/</code>.</p>
+<h2 id="language-server"><a class="header" href="#language-server">Language server</a></h2>
+<p>The Language Server Protocol server is a separate binary, <code>fic-lsp</code>
+(analogous to <code>rust-analyzer</code> vs <code>rustc</code>), built from the <code>fic-lsp</code>
+workspace crate and used by the editor integrations under <code>editors/</code>.
+Install it with <code>cargo install --path fic-lsp</code>; it speaks LSP on stdio.</p>
 <h2 id="environment-variables-1"><a class="header" href="#environment-variables-1">Environment variables</a></h2>
 <div class="table-wrapper">
 <table>
