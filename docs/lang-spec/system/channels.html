@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-491c5de0.js";
+            window.path_to_searchindex_js = "../searchindex-fc04c72c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -217,8 +217,14 @@ expressions on the LHS of <code>?</code> / <code>!</code>.</li>
 the same <code>.fis</code> file.</li>
 <li><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
 channel’s payload buffer, optionally annotated with a typed slot:
-<code>via packet_buffer_outer&lt;int&gt;</code>. Without <code>via</code>, the channel is treated
-as a pure synchronisation point with no shared payload buffer.</li>
+<code>via packet_buffer_outer&lt;int&gt;</code> or a declared
+<a href="data-layer.html">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>).
+Without <code>via</code>, the channel is treated as a pure synchronisation point
+with no shared payload buffer. A struct payload is the channel’s
+<strong>communication type</strong>: it must be a system (<code>.fis</code>) struct — never a
+<a href="data-layer.html#program-local-structs">program-local struct</a> — and the C
+backend types receive binders from it (<code>o2d?pkt</code> declares
+<code>static struct Slot pkt;</code>).</li>
 </ul>
 <p>The optional trailing semicolon is accepted but not required.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
@@ -245,9 +251,12 @@ for the inline event grammar and <a href="../items/process-blocks.html">Process 
 for how channel events sit in a process expression.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
-<li>Slot types in the <code>via</code> clause currently accept only <a href="../types/primitive-types.html">primitive types</a>;
-struct slot types parse but are gated by the type-system work tracked
-separately. The corresponding test is marked <code>#[ignore]</code>.</li>
+<li>A struct payload types the receive binder in the generated C, but the
+payload <strong>transport</strong> (the ring copy through the backing region) is not
+generated yet — it is an explicit follow-up under the data-diode case
+study (#201). The generated code marks the pending copy with a comment.</li>
+<li>Send-site type checking (<code>c!e</code> against the declared payload) needs
+expression typing and is tracked under the type-system work (#117).</li>
 <li>The <code>Sync</code> modifier rejects bidirectional <code>&lt;-&gt;</code> syntactically; sync
 bidirectional channels would require a richer call/reply protocol than
 the current implementation supports.</li>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-491c5de0.js";
+            window.path_to_searchindex_js = "../searchindex-fc04c72c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -252,7 +252,9 @@ ring: Rbd;
 <ul>
 <li>A local struct is visible <strong>only within its own program</strong> — other PDs
 and the <code>.fis</code> cannot reference it. Channel buffer payload types must
-be system structs.</li>
+be system structs: system structs are the project’s <em>communication
+types</em> (what may cross a <a href="channels.html">channel</a>), local structs are
+<em>program types</em> (PD-internal state) — the two tiers of the data model.</li>
 <li>A local struct may contain system structs in its fields; the reverse
 is impossible.</li>
 <li>A local struct may <strong>not</strong> reuse the name of a system struct
