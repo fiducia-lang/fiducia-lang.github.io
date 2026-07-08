@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-fc04c72c.js";
+            window.path_to_searchindex_js = "searchindex-6d786394.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cd6ef858.js"></script>
@@ -545,11 +545,16 @@ asynchronous by default. The default arrow is <code>&lt;-&gt;</code>. Only <code
 require the unidirectional <code>--&gt;</code> form.</p>
 <h2 id="fields-2"><a class="header" href="#fields-2">Fields</a></h2>
 <ul>
-<li><strong>Name</strong> — <code>snake_case</code> identifier. The same name appears in process
-expressions on the LHS of <code>?</code> / <code>!</code>.</li>
-<li><strong>Endpoints</strong> — two protection-domain names. Both must be declared in
-the same <code>.fis</code> file.</li>
-<li><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
+<li>
+<p><strong>Name</strong> — <code>snake_case</code> identifier. The same name appears in process
+expressions on the LHS of <code>?</code> / <code>!</code>.</p>
+</li>
+<li>
+<p><strong>Endpoints</strong> — two protection-domain names. Both must be declared in
+the same <code>.fis</code> file.</p>
+</li>
+<li>
+<p><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
 channel’s payload buffer, optionally annotated with a typed slot:
 <code>via packet_buffer_outer&lt;int&gt;</code> or a declared
 <a href="#data-layer-structs-and-constants">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>).
@@ -558,7 +563,14 @@ with no shared payload buffer. A struct payload is the channel’s
 <strong>communication type</strong>: it must be a system (<code>.fis</code>) struct — never a
 <a href="#program-local-structs">program-local struct</a> — and the C
 backend types receive binders from it (<code>o2d?pkt</code> declares
-<code>static struct Slot pkt;</code>).</li>
+<code>static struct Slot pkt;</code>).</p>
+<p>A buffer region is <strong>implicitly mapped into both endpoint PDs</strong> (<code>rw</code>,
+cached) at compiler-allocated vaddrs — it must not also appear in an
+explicit <code>Mapping</code>, and it may back only one channel. Each endpoint’s
+generated unit declares the loader-patched symbols
+<code>&lt;region&gt;_vaddr</code> / <code>&lt;region&gt;_size</code> (and driver code may declare
+<code>&lt;region&gt;_paddr</code> on demand), named after the <em>region</em>, not a mapping.</p>
+</li>
 </ul>
 <p>The optional trailing semicolon is accepted but not required.</p>
 <h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
