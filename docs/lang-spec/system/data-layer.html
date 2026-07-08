@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-9c98cda2.js";
+            window.path_to_searchindex_js = "../searchindex-491c5de0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -235,6 +235,34 @@ declare in dependency order.</li>
 <li>The folded value must match the declared type (<code>bool</code> constants take
 boolean values; integer-family types take integers).</li>
 </ul>
+<h2 id="program-local-structs"><a class="header" href="#program-local-structs">Program-local structs</a></h2>
+<p>A <code>.fi</code> program may declare structs of its own, with the same grammar and
+rules as system structs. These are <strong>PD-internal types</strong> — device-ring
+descriptors, driver bookkeeping — that never cross a channel:</p>
+<pre><code class="language-text">// eth_outer.fi
+struct Rbd {
+    data_length: uint16;
+    flags:       uint16;
+    addr:        uint32;
+}
+
+ring: Rbd;
+</code></pre>
+<p>Scoping:</p>
+<ul>
+<li>A local struct is visible <strong>only within its own program</strong> — other PDs
+and the <code>.fis</code> cannot reference it. Channel buffer payload types must
+be system structs.</li>
+<li>A local struct may contain system structs in its fields; the reverse
+is impossible.</li>
+<li>A local struct may <strong>not</strong> reuse the name of a system struct
+(shadowing is an error), so every type name means one thing across
+the project.</li>
+<li>Array lengths in local fields may reference system constants.</li>
+</ul>
+<p>The C backend emits each PD’s local structs into a per-PD header,
+<code>&lt;pd&gt;_types.h</code> (e.g. <code>eth_outer_types.h</code>), included by the PD’s
+generated unit and importable by that PD’s hand-written driver code.</p>
 <h2 id="global-state"><a class="header" href="#global-state">Global state</a></h2>
 <p>The data layer declares <em>types and constants</em>, not mutable state. In
 CoreFi, shared global state is exactly the channel-buffer view: mutable
