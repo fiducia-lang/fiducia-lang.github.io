@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-6d786394.js";
+            window.path_to_searchindex_js = "searchindex-5a2ba36b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cd6ef858.js"></script>
@@ -379,9 +379,13 @@ is impossible.</li>
 the project.</li>
 <li>Array lengths in local fields may reference system constants.</li>
 </ul>
-<p>The C backend emits each PD’s local structs into a per-PD header,
+<p>The C backend emits system structs and constants into a shared header
+named after the <code>.fis</code> file — <code>&lt;project&gt;_types.h</code> (e.g.
+<code>datadiode_types.h</code>) — and each PD’s local structs into a per-PD header,
 <code>&lt;pd&gt;_types.h</code> (e.g. <code>eth_outer_types.h</code>), included by the PD’s
-generated unit and importable by that PD’s hand-written driver code.</p>
+generated unit and importable by that PD’s hand-written driver code.
+A PD may not share the project’s name if it declares local structs (the
+two headers would collide).</p>
 <h2 id="global-state"><a class="header" href="#global-state">Global state</a></h2>
 <p>The data layer declares <em>types and constants</em>, not mutable state. In
 CoreFi, shared global state is exactly the channel-buffer view: mutable
