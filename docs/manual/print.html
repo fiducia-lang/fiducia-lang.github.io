@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c01e0678.js";
+            window.path_to_searchindex_js = "searchindex-b12647a5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -214,10 +214,11 @@ releases.</p>
 <li>one <strong><code>.fis</code></strong> file — the <em>system description</em>: memory regions,
 protection domains, channels, and the system composition;</li>
 <li>one <strong><code>.fi</code></strong> file <em>per protection domain</em> — the PD implementation:
-imports of C / Rust sources, memory mappings, event declarations, and
+imports of C sources, memory mappings, event declarations, and
 process definitions (the file <code>eth_outer.fi</code> implements the PD named
 <code>eth_outer</code>);</li>
-<li>the imported <strong><code>.c</code> / <code>.rs</code></strong> implementation files;</li>
+<li>the imported <strong><code>.c</code></strong> implementation files (<code>.rs</code> imports parse but
+aren’t runnable yet — the C backend rejects them; see <code>--emit=c</code>);</li>
 <li>a <strong><code>fire.toml</code></strong> manifest telling <code>fire</code> how to build and run it
 (see <a href="#the-project-manifest-firetoml">The Project Manifest</a>).</li>
 </ul>
@@ -491,14 +492,15 @@ yet implemented.</li>
 <h2 id="walkthrough-the-data-diode-demo"><a class="header" href="#walkthrough-the-data-diode-demo">Walkthrough: the data-diode demo</a></h2>
 <pre><code class="language-console">$ fire run demo/datadiode/
 fire: building datadiode for qemu_virt_aarch64 (debug)
-  ✓ Parsed 1 system + 4 program files
+  ✓ Parsed 1 system + 3 program files
+  ✓ Resolved data layer (2 structs, 1 consts)
   ✓ Resolved names
-  ✓ Validated cross-references
+  ✓ Resolved mapping vaddrs
   ✓ Type-checked information flow
   ✓ Checked channel dependency acyclicity (WF2)
-MICROKIT|CAPDL SPEC: number of root objects = 141, spec footprint = 20.61 KiB
-MICROKIT|INITIAL TASK: memory size = 432 KiB
-MICROKIT|LOADER: image file size = 2.61 MiB
+MICROKIT|CAPDL SPEC: number of root objects = 84, spec footprint = 12.44 KiB
+MICROKIT|INITIAL TASK: memory size = 412 KiB
+MICROKIT|LOADER: image file size = 2.59 MiB
 fire: launching QEMU ...
 </code></pre>
 <p>QEMU then boots the image; with <code>-serial mon:stdio</code> the PDs’ serial
@@ -594,24 +596,33 @@ Exits non-zero if any query fails.</li>
 counterexample trace:</p>
 <pre><code class="language-console">  A[] not deadlock                          FAIL
     Trace (12 steps):
-      Phil0.Thinking → Phil0.HasLeft
+      pd0.State0 → pd0.State1
       ...
-      ↯ stuck at: Phil0.HasLeft, Phil1.HasLeft, ...
+      ↯ stuck at: pd0.State1, pd1.State2, ...
 </code></pre>
 <p>The <code>↯ stuck at</code> line lists each automaton’s location in the deadlocked
 state — usually enough to spot the circular wait. A <code>FAIL</code> on a
 reachability query with <em>(property unreachable — no counterexample
 trace)</em> means the named location can never be entered.</p>
-<h2 id="worked-example-dining-philosophers"><a class="header" href="#worked-example-dining-philosophers">Worked example: dining philosophers</a></h2>
-<p>The repository ships Hoare’s dining philosophers (CSP §2.5) as two
-demos — the canonical symmetric version, which deadlocks, and the
-asymmetric “right-handed philosopher” fix, which does not. Each ships
-a hand-written <code>&lt;variant&gt;.q</code>:</p>
-<pre><code class="language-bash">verifyta /tmp/phil.xml demo/philosophers/philosophers.q           # FAIL
-verifyta /tmp/asym.xml demo/philosophers-asymmetric/philosophers-asymmetric.q  # PASS
+<h2 id="worked-example-ping-pong"><a class="header" href="#worked-example-ping-pong">Worked example: ping-pong</a></h2>
+<p><code>demo/pingpong/</code> ships two PDs (<code>ping</code>/<code>pong</code>) that bounce a bounded
+notification <code>ROUNDS</code> times over a genuinely cyclic channel
+(<code>ping &lt;-&gt; pong</code>), then go quiescent — a real case where WF2’s
+over-approximation would reject a topology that’s actually
+deadlock-free. Its hand-written <code>pingpong.q</code> states that, verified
+against the real emitted model (see <code>tests/uppaal/pingpong/expected.xml</code>
+for a known-good snapshot):</p>
+<pre><code class="language-bash">fire verify demo/pingpong/
+#   A[] (deadlock imply ping.rounds == ROUNDS)   PASS
+#   E&lt;&gt; ping.rounds == ROUNDS                    PASS
+#   A[] ping.rounds &lt;= ROUNDS                    PASS
+#   E&lt;&gt; pong.L1                                  PASS
 </code></pre>
-<p>(Model snapshots live in <code>tests/uppaal/&lt;variant&gt;/expected.xml</code> so you
-can read a known-good UPPAAL model without running the tool.)</p>
+<p>The first query is deadlock-freedom <em>modulo intended termination</em>: the
+only reachable quiescent state is the completed rally, so a blanket
+<code>A[] not deadlock</code> would itself report a false “deadlock” at the
+correct terminal state — see the header comment in
+<code>demo/pingpong/pingpong.q</code> for the full reasoning.</p>
 <h2 id="ad-hoc-queries"><a class="header" href="#ad-hoc-queries">Ad-hoc queries</a></h2>
 <p>Pass a different query file for a one-off check — a per-invocation
 input, like a <code>cargo test</code> filter:</p>
@@ -621,8 +632,8 @@ input, like a <code>cargo test</code> filter:</p>
 <p><code>fic</code> always runs <strong>WF2</strong>, a structural acyclicity check on the
 channel dependency graph, before emitting a deployable image. WF2 is
 an over-approximation: it rejects every cyclic topology, including
-systems that are deadlock-free under a fair scheduler (the asymmetric
-philosophers, for instance). When <code>fire verify</code> establishes
+systems that are deadlock-free under a fair scheduler (<code>demo/pingpong</code>’s
+<code>ping &lt;-&gt; pong</code>, for instance). When <code>fire verify</code> establishes
 deadlock-freedom, you can build such systems anyway with
 <code>fic --allow-wf2-cycles</code> — see the
 <a href="#--allow-wf2-cycles"><code>fic</code> reference</a>.</p>
@@ -645,14 +656,15 @@ front-end, lowers to SDF, cross-compiles each PD’s C file, patches the
 setvars, and packs the loader, seL4 kernel, and PD ELFs into
 <code>&lt;project&gt;.img</code>. This requires <code>--board</code> / <code>--build-profile</code> and the
 <code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment.</p>
-<p>With <code>--check</code>, <code>fic</code> stops after the front-end — parse, name
-resolution, cross-reference validation, information-flow typecheck,
-WF2 acyclicity — and reports diagnostics without writing any output
-(the <code>cargo check</code> of Fiducia):</p>
+<p>With <code>--check</code>, <code>fic</code> stops after the front-end — parse, data-layer
+resolution, name resolution, vaddr materialization, information-flow
+typecheck, WF2 acyclicity — and reports diagnostics without writing
+any output (the <code>cargo check</code> of Fiducia):</p>
 <pre><code class="language-console">$ fic demo/datadiode/ --check
-  ✓ Parsed 1 system + 4 program files
+  ✓ Parsed 1 system + 3 program files
+  ✓ Resolved data layer (2 structs, 1 consts)
   ✓ Resolved names
-  ✓ Validated cross-references
+  ✓ Resolved mapping vaddrs
   ✓ Type-checked information flow
   ✓ Checked channel dependency acyclicity (WF2)
 </code></pre>
@@ -667,13 +679,14 @@ representation:</p>
 <tbody>
 <tr><td><code>rawast</code></td><td>stdout / <code>-o</code></td><td>Parsed AST as JSON, before validation.</td></tr>
 <tr><td><code>ast</code></td><td>stdout / <code>-o</code></td><td>Validated AST as JSON (vaddrs allocated, names resolved).</td></tr>
+<tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>Generated per-PD C state machines plus <code>&lt;project&gt;_types.h</code>/<code>&lt;pd&gt;_types.h</code>. No image is built.</td></tr>
 <tr><td><code>sdf</code></td><td><code>&lt;project&gt;.system</code></td><td>SDF IR as XML — debug bridge for Microkit developers.</td></tr>
 <tr><td><code>dot</code></td><td><code>&lt;project&gt;.dot</code></td><td>Graphviz topology graph. Render with <code>dot -Tpng &lt;project&gt;.dot -o topology.png</code>.</td></tr>
 <tr><td><code>xta</code></td><td><code>&lt;project&gt;.xml</code></td><td>UPPAAL XTA model. Queries are user-authored — see <a href="#writing-queries"><code>fire verify</code></a>.</td></tr>
 </tbody>
 </table>
 </div>
-<p>The inspection formats (<code>rawast</code>, <code>ast</code>, <code>dot</code>) skip the WF2 check —
+<p>The inspection formats (<code>rawast</code>, <code>ast</code>, <code>c</code>, <code>dot</code>) skip the WF2 check —
 they have no deployment target. <code>xta</code> exists precisely to analyse
 cyclic systems, so it also skips WF2; image generation (the default)
 and <code>sdf</code> enforce it.</p>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c01e0678.js";
+            window.path_to_searchindex_js = "searchindex-b12647a5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -227,14 +227,15 @@ yet implemented.</li>
 <h2 id="walkthrough-the-data-diode-demo"><a class="header" href="#walkthrough-the-data-diode-demo">Walkthrough: the data-diode demo</a></h2>
 <pre><code class="language-console">$ fire run demo/datadiode/
 fire: building datadiode for qemu_virt_aarch64 (debug)
-  ✓ Parsed 1 system + 4 program files
+  ✓ Parsed 1 system + 3 program files
+  ✓ Resolved data layer (2 structs, 1 consts)
   ✓ Resolved names
-  ✓ Validated cross-references
+  ✓ Resolved mapping vaddrs
   ✓ Type-checked information flow
   ✓ Checked channel dependency acyclicity (WF2)
-MICROKIT|CAPDL SPEC: number of root objects = 141, spec footprint = 20.61 KiB
-MICROKIT|INITIAL TASK: memory size = 432 KiB
-MICROKIT|LOADER: image file size = 2.61 MiB
+MICROKIT|CAPDL SPEC: number of root objects = 84, spec footprint = 12.44 KiB
+MICROKIT|INITIAL TASK: memory size = 412 KiB
+MICROKIT|LOADER: image file size = 2.59 MiB
 fire: launching QEMU ...
 </code></pre>
 <p>QEMU then boots the image; with <code>-serial mon:stdio</code> the PDs’ serial

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c01e0678.js";
+            window.path_to_searchindex_js = "searchindex-b12647a5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -198,14 +198,15 @@ front-end, lowers to SDF, cross-compiles each PD’s C file, patches the
 setvars, and packs the loader, seL4 kernel, and PD ELFs into
 <code>&lt;project&gt;.img</code>. This requires <code>--board</code> / <code>--build-profile</code> and the
 <code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment.</p>
-<p>With <code>--check</code>, <code>fic</code> stops after the front-end — parse, name
-resolution, cross-reference validation, information-flow typecheck,
-WF2 acyclicity — and reports diagnostics without writing any output
-(the <code>cargo check</code> of Fiducia):</p>
+<p>With <code>--check</code>, <code>fic</code> stops after the front-end — parse, data-layer
+resolution, name resolution, vaddr materialization, information-flow
+typecheck, WF2 acyclicity — and reports diagnostics without writing
+any output (the <code>cargo check</code> of Fiducia):</p>
 <pre><code class="language-console">$ fic demo/datadiode/ --check
-  ✓ Parsed 1 system + 4 program files
+  ✓ Parsed 1 system + 3 program files
+  ✓ Resolved data layer (2 structs, 1 consts)
   ✓ Resolved names
-  ✓ Validated cross-references
+  ✓ Resolved mapping vaddrs
   ✓ Type-checked information flow
   ✓ Checked channel dependency acyclicity (WF2)
 </code></pre>
@@ -220,13 +221,14 @@ representation:</p>
 <tbody>
 <tr><td><code>rawast</code></td><td>stdout / <code>-o</code></td><td>Parsed AST as JSON, before validation.</td></tr>
 <tr><td><code>ast</code></td><td>stdout / <code>-o</code></td><td>Validated AST as JSON (vaddrs allocated, names resolved).</td></tr>
+<tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>Generated per-PD C state machines plus <code>&lt;project&gt;_types.h</code>/<code>&lt;pd&gt;_types.h</code>. No image is built.</td></tr>
 <tr><td><code>sdf</code></td><td><code>&lt;project&gt;.system</code></td><td>SDF IR as XML — debug bridge for Microkit developers.</td></tr>
 <tr><td><code>dot</code></td><td><code>&lt;project&gt;.dot</code></td><td>Graphviz topology graph. Render with <code>dot -Tpng &lt;project&gt;.dot -o topology.png</code>.</td></tr>
 <tr><td><code>xta</code></td><td><code>&lt;project&gt;.xml</code></td><td>UPPAAL XTA model. Queries are user-authored — see <a href="fire-verify.html#writing-queries"><code>fire verify</code></a>.</td></tr>
 </tbody>
 </table>
 </div>
-<p>The inspection formats (<code>rawast</code>, <code>ast</code>, <code>dot</code>) skip the WF2 check —
+<p>The inspection formats (<code>rawast</code>, <code>ast</code>, <code>c</code>, <code>dot</code>) skip the WF2 check —
 they have no deployment target. <code>xta</code> exists precisely to analyse
 cyclic systems, so it also skips WF2; image generation (the default)
 and <code>sdf</code> enforce it.</p>

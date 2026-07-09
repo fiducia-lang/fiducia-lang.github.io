@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-c01e0678.js";
+            window.path_to_searchindex_js = "searchindex-b12647a5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -216,10 +216,11 @@ releases.</p>
 <li>one <strong><code>.fis</code></strong> file — the <em>system description</em>: memory regions,
 protection domains, channels, and the system composition;</li>
 <li>one <strong><code>.fi</code></strong> file <em>per protection domain</em> — the PD implementation:
-imports of C / Rust sources, memory mappings, event declarations, and
+imports of C sources, memory mappings, event declarations, and
 process definitions (the file <code>eth_outer.fi</code> implements the PD named
 <code>eth_outer</code>);</li>
-<li>the imported <strong><code>.c</code> / <code>.rs</code></strong> implementation files;</li>
+<li>the imported <strong><code>.c</code></strong> implementation files (<code>.rs</code> imports parse but
+aren’t runnable yet — the C backend rejects them; see <code>--emit=c</code>);</li>
 <li>a <strong><code>fire.toml</code></strong> manifest telling <code>fire</code> how to build and run it
 (see <a href="fire-toml.html">The Project Manifest</a>).</li>
 </ul>
