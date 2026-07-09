@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-5a2ba36b.js";
+            window.path_to_searchindex_js = "../searchindex-3e0183dd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -181,12 +181,13 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="variable-declarations"><a class="header" href="#variable-declarations">Variable Declarations</a></h1>
-<pre><code class="language-text">VarDecl ::= Type ident ';'
-Type    ::= PrimitiveType | 'ptr' '&lt;' Type '&gt;' | StructName
+<pre><code class="language-text">VarDecl ::= ident ':' Type ';'
+Type    ::= BaseType ('[' ArrayLen ']')?
+BaseType ::= PrimitiveType | StructName
 </code></pre>
 <p>A <em>variable declaration</em> introduces one named value at PD-global scope or
-inside an <a href="event-blocks.html">event body</a>. The bare <code>Type ident;</code> form is
-the only shape supported today; an initialiser (<code>Type ident = expr;</code>) is
+inside an <a href="event-blocks.html">event body</a>. The <code>ident: Type;</code> form is
+the only shape supported today; an initialiser (<code>ident: Type = expr;</code>) is
 reserved but not yet parsed.</p>
 <blockquote>
 <p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed — see
@@ -200,9 +201,11 @@ from the imported source’s <code>init()</code> function (see
 <li><strong>Global</strong> — at the top level of the file, alongside <code>Mapping</code> and
 <code>import</code> declarations. Globals are visible everywhere in the PD,
 read/write inside event bodies.</li>
-<li><strong>Local</strong> — inside a computation <a href="event-blocks.html">event body</a>, between
-the <code>:</code> and <code>end</code>. Locals shadow globals of the same name. Their scope
-ends with the <code>end</code> of the enclosing event.</li>
+<li><strong>Local</strong> — inside a computation <a href="event-blocks.html">event body</a>. Locals
+shadow globals of the same name. Their scope ends where the enclosing
+event’s body ends — implicitly, at the next top-level item (<code>evt</code>,
+<code>proc</code>, <code>import</code>, <code>Mapping</code>), since there is no explicit terminator
+keyword.</li>
 </ul>
 <p>Process bodies cannot declare variables; any state needed by guards or
 process expressions must be promoted to a global.</p>
@@ -223,38 +226,40 @@ process expressions must be promoted to a global.</p>
 <tr><td>Unsigned integers</td><td><code>uint</code>, <code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td></tr>
 <tr><td>Boolean</td><td><code>bool</code></td></tr>
 <tr><td>Byte alias</td><td><code>byte</code> (8-bit)</td></tr>
-<tr><td>Empty type</td><td><code>void</code></td></tr>
+<tr><td>Address</td><td><code>Address</code></td></tr>
 </tbody>
 </table>
 </div>
 <p><code>int</code> and <code>uint</code> without a width default to 32-bit. <code>byte</code> is an alias
-for <code>uint8</code>.</p>
-<h2 id="pointer-and-struct-types"><a class="header" href="#pointer-and-struct-types">Pointer and struct types</a></h2>
-<pre><code class="language-text">ptr&lt;int&gt;            // pointer to int
-ptr&lt;ptr&lt;int&gt;&gt;       // pointer to pointer
-struct rbd          // user-defined struct (parser support pending)
+for <code>uint8</code>. There is no <code>void</code> type — every declared variable has a
+concrete, storable type.</p>
+<h2 id="struct-types-and-arrays"><a class="header" href="#struct-types-and-arrays">Struct types and arrays</a></h2>
+<pre><code class="language-text">pkt: Slot           // user-defined struct — declared in the .fis data layer
+buf: uint8[16]       // fixed-size array — length is a literal or const name
 </code></pre>
-<p>Pointer parsing exists in the grammar as <code>'ptr' '&lt;' Type '&gt;'</code>; struct
-type parsing is reserved for a later revision and is gated on the
-struct-declaration grammar.</p>
+<p>Any identifier that isn’t a recognised primitive keyword is treated as a
+struct type name, resolved against the <code>.fis</code> struct declarations during
+name resolution (unknown names are rejected there, not at parse time).
+Fiducia has no pointer types — there is no <code>ptr&lt;T&gt;</code> syntax.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <pre><code class="language-text">// Global declarations, top of a .fi file.
-int counter;
-bool ready;
-uint64 last_irq_ts;
+counter: int;
+ready: bool;
+last_irq_ts: uint64;
 
 // Local declarations inside an event body.
 evt handle_packet.|size: int|:
-    int local_buf;            // local
-    bool ok;                  // local
+    local_buf: uint8[64];     // local
+    ok: bool;                 // local
     local_buf = eth.alloc();  // assignment uses globals/locals/carriers
 </code></pre>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
 <li>A variable name is unique within its enclosing scope (multiple globals
 with the same name are rejected; a local may legally shadow a global).</li>
-<li>The type must be a recognised primitive, a pointer to a recognised
-type, or a declared struct (struct support pending).</li>
+<li>The type must be a recognised primitive, <code>Address</code>, a fixed-size array
+of one, or a struct name that resolves to a real <code>.fis</code> struct
+declaration.</li>
 </ul>
 
                     </main>

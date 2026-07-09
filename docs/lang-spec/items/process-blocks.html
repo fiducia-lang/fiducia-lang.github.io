@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-5a2ba36b.js";
+            window.path_to_searchindex_js = "../searchindex-3e0183dd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -196,7 +196,8 @@ ProcessExpr ::= 'Skip'
              |  ProcessRef
              |  '(' ProcessExpr (';' ProcessExpr)* ';'? ')'
 ProcessRef  ::= UIdent '(' (ident (',' ident)*)? ')'
-Guard       ::= ident | '!' ident
+Guard       ::= Expr   -- boolean-shaped: comparison, &amp;&amp;/||/!, boolean
+                        -- variable/call/field access; not arithmetic
 </code></pre>
 <p>A <em>process definition</em> is the orchestration layer of a Fiducia protection
 domain — a CSP-style algebraic expression composed from

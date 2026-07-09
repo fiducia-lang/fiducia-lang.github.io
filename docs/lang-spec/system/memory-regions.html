@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-5a2ba36b.js";
+            window.path_to_searchindex_js = "../searchindex-3e0183dd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -196,13 +196,13 @@ they are pure topology and carry no per-PD program logic.</p>
 <li><strong>Security label</strong> (optional, defaults to <code>Low</code>). Tags information-flow
 level. <code>High</code> regions can be mapped only into PDs that themselves carry
 flow restrictions consistent with the <code>flows_to</code> lattice — see
-<a href="../types/information-flow-labels.html">Information-Flow Labels</a>.</li>
+<a href="../items/imports-and-mappings.html#information-flow-labels">Information-flow labels</a>.</li>
 <li><strong>Name</strong> — <code>snake_case</code> identifier; the same name is referenced from
 <code>Mapping</code> declarations in <code>.fi</code> files.</li>
 <li><strong>Size</strong> — required, hex literal, in bytes. Must be a multiple of the
 region’s page size (validation runs post-parse and reports a <code>size not aligned</code> error if not).</li>
 <li><strong>Page size</strong> — optional, defaults to <code>0x1000</code> (4 KiB). The other accepted
-value is <code>0x200000</code> (2 MiB / Large). See <a href="../types/primitive-types.html#page-sizes">Page sizes</a>.</li>
+value is <code>0x200000</code> (2 MiB / Large).</li>
 <li><strong>Physical address</strong> — optional. When present, must be aligned to the
 region’s page size. Used for device MMIO regions (clock controller,
 ethernet registers) where the seL4 loader maps a fixed physical frame

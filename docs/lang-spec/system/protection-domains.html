@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-5a2ba36b.js";
+            window.path_to_searchindex_js = "../searchindex-3e0183dd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -182,8 +182,8 @@
                     <main>
                         <h1 id="protection-domain-declarations"><a class="header" href="#protection-domain-declarations">Protection Domain Declarations</a></h1>
 <pre><code class="language-text">ProtectionDomainDecl ::= 'ProtectionDomain' ident '(' priority (',' irq)? (',' budget)? (',' period)? ')' ';'
-priority             ::= integer_literal       // 0 ≤ p ≤ 254
-irq                  ::= integer_literal       // 0 ≤ irq ≤ 159
+priority             ::= integer_literal       // 0 ≤ p ≤ 254, enforced
+irq                  ::= integer_literal       // fits u16; range not enforced
 budget               ::= integer_literal       // microseconds, default 1000
 period               ::= integer_literal       // microseconds, default = budget
 </code></pre>
@@ -199,7 +199,9 @@ the PD’s mappings, events, and processes.</li>
 <li><strong>Priority</strong> — required, range <code>0..=254</code>. Out-of-range values are
 rejected with a parse-time error. Higher numbers run first under the
 Microkit fixed-priority scheduler.</li>
-<li><strong>IRQ</strong> — optional, range <code>0..=159</code>. When present, the PD is wired to
+<li><strong>IRQ</strong> — optional; any value fitting a <code>u16</code> parses (no range check is
+enforced by the compiler — pick a number the target board’s IRQ
+controller actually has). When present, the PD is wired to
 receive that hardware interrupt on the reserved <code>irq</code> channel and can
 observe it via <a href="../items/event-blocks.html#hardware-interrupt-events"><code>irq?N</code> / <code>irq!N</code></a>
 events.</li>

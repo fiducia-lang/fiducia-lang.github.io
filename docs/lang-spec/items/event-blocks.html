@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-5a2ba36b.js";
+            window.path_to_searchindex_js = "../searchindex-3e0183dd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -296,18 +296,19 @@ binding then guarding:</p>
 <pre><code class="language-text">// Recommended.
 c?msg -&gt; [msg == ACK] handle_ack -&gt; Skip [] [msg == NACK] handle_nack -&gt; Skip
 </code></pre>
-<h3 id="send-payload-restriction"><a class="header" href="#send-payload-restriction">Send-payload restriction</a></h3>
-<p>The RHS of <code>!</code> is restricted to value-producing, side-effect-free
-expressions: literals, variable references, arithmetic, and logical
-expressions. <em>Call expressions</em> (<code>eth.get_pkt()</code>) are deliberately
-<strong>rejected</strong> as a send payload — external calls must happen inside a
-<a href="#computation-events">computation event</a>, which preserves the rule that
-channel events stay pure-communication atoms in the LTS. To send the
-result of a call, bind it in a computation event first:</p>
-<pre><code class="language-text">// Rejected
+<h3 id="send-payload-style"><a class="header" href="#send-payload-style">Send-payload style</a></h3>
+<p>The RHS of <code>!</code> accepts any <code>Expr</code> — the parser does not reject a call
+expression there today. The <strong>recommended</strong> style is still to keep
+channel events as pure-communication atoms: bind a call’s result in a
+<a href="#computation-events">computation event</a> first, then send the bound
+variable, rather than calling directly in send position. This keeps
+side-effecting work legible as its own step in the process algebra,
+even though the grammar itself doesn’t enforce it:</p>
+<pre><code class="language-text">// Discouraged (parses, but buries a side-effecting call in a
+// communication event):
 // c!eth.get_packet()
 
-// Accepted: bind, then send (pkt is a global variable).
+// Recommended: bind, then send (pkt is a global variable).
 evt get_pkt: pkt = eth.get_packet();
 proc P() { get_pkt -&gt; c!pkt -&gt; ... }
 </code></pre>

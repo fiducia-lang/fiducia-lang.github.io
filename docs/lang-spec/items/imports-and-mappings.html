@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-5a2ba36b.js";
+            window.path_to_searchindex_js = "../searchindex-3e0183dd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -207,7 +207,7 @@ file.</p>
 region      ::= ident                      // a MemoryRegion declared in .fis
 vaddr       ::= hex                        // explicit virtual address (optional)
 perms       ::= string_literal             // 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
-cached      ::= bool_literal               // default: false
+cached      ::= bool_literal               // default: true
 </code></pre>
 <p>A <em>mapping declaration</em> installs a <code>MemoryRegion</code> into the PD’s address
 space. The mapping’s name derives the auto-emitted setvar symbols
@@ -218,7 +218,7 @@ space. The mapping’s name derives the auto-emitted setvar symbols
 <li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. The mapping
 inherits the region’s confidentiality; the type-checker rejects a <code>Low</code>
 mapping over a <code>High</code> region. See
-<a href="information-flow-labels">Information-Flow Labels</a> below.</li>
+<a href="#information-flow-labels">Information-flow labels</a> below.</li>
 <li><strong>Name</strong> — the mapping’s own identifier. Distinct from the region’s name;
 one region can have multiple mappings under different names.</li>
 <li><strong>Region</strong> — the <code>MemoryRegion</code> declared in the <code>.fis</code> file.</li>
@@ -228,14 +228,14 @@ omitted, the loader allocates one. Hex literal.</li>
 case are insensitive: <code>"rw"</code> and <code>"WR"</code> are equivalent. Write-only is
 rejected; at least <code>r</code> or <code>x</code> must be present. The accepted set is
 <code>r</code>, <code>rw</code>, <code>rx</code>, <code>rwx</code>, <code>x</code>, <code>wx</code>.</li>
-<li><strong>Cached</strong> (optional, default <code>false</code>) — whether the mapping is cached
-in the CPU MMU. Device MMIO regions are typically <code>false</code>.</li>
+<li><strong>Cached</strong> (optional, default <code>true</code>) — whether the mapping is cached
+in the CPU MMU. Device MMIO regions should be set <code>false</code> explicitly.</li>
 </ul>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-text">// Anonymous shared buffer at allocator-chosen vaddr, read-write, uncached.
 Low Mapping ring_buffer(ring_buffer_outer, "rw", false);
 
-// Same region, default cached flag (false).
+// Same region, default cached flag (true).
 Mapping packet_buffer(packet_buffer_outer, "rw");
 
 // Pinned vaddr — useful for debugging or for binding two PDs to a
