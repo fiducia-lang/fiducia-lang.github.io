@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Making a Robot Arm Impossible to Misuse from Its Own Computer - Fiducia Blog</title>
+  <meta name="description" content="We booted seL4 on a Unitree D1 robot arm and ran its unmodified Ubuntu as a guest. A tiny filter outside Linux now owns the motors — root inside Linux cannot reach them.">
+  <meta property="og:title" content="Making a Robot Arm Impossible to Misuse - Fiducia Blog">
+  <meta property="og:description" content="seL4 between a robot's Linux and its motors: the vendor software runs unmodified, but every motor command passes through a geometry-aware gatekeeper Linux cannot see, touch, or switch off.">
+  <meta property="og:url" content="https://fiducia-lang.github.io/blog/sel4-robot-arm.html">
+  <meta property="og:image" content="https://fiducia-lang.github.io/videos/robot-arm-sel4-demo-poster.jpg">
+  <meta property="og:type" content="article">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-code: #0d1220;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .container {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    nav .logo {
+      font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text);
+    }
+    nav .logo span { color: var(--accent); }
+    nav ul { list-style: none; display: flex; gap: 28px; }
+    nav ul a { color: var(--text-dim); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    nav ul a:hover { color: var(--text); text-decoration: none; }
+
+    /* Article */
+    .article-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+    .article-meta {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .article-container h1 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .article-container .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      margin-bottom: 40px;
+      line-height: 1.7;
+    }
+    .article-container h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 48px 0 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      letter-spacing: -0.01em;
+    }
+    .article-container h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 32px 0 12px;
+      color: var(--accent);
+    }
+    .article-container p {
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    .article-container ul, .article-container ol {
+      margin: 0 0 16px 24px;
+      font-size: 0.95rem;
+    }
+    .article-container li { margin-bottom: 6px; }
+    .article-container strong { color: var(--text); }
+    .article-container code {
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.85em;
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+    .article-container pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      overflow-x: auto;
+      margin: 0 0 20px;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+    }
+    .article-container pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+    .article-container table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 20px;
+      font-size: 0.9rem;
+    }
+    .article-container th {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 700;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+    .article-container td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .article-container tr:hover td { background: rgba(96, 165, 250, 0.03); }
+    .callout {
+      background: rgba(96, 165, 250, 0.06);
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 0 0 20px;
+      font-size: 0.9rem;
+    }
+    .callout-warn {
+      background: rgba(251, 191, 36, 0.06);
+      border-color: rgba(251, 191, 36, 0.2);
+    }
+    .callout strong { color: var(--accent); }
+    .callout-warn strong { color: var(--amber); }
+    .video-wrap {
+      margin: 0 0 32px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .video-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .video-caption {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      padding: 10px 16px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+    }
+    .result-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 8px;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 16px 0;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 640px) {
+      nav ul { gap: 16px; }
+      .article-container { padding: 30px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="../index.html" class="logo" style="text-decoration:none;"><span>F</span>iducia</a>
+      <ul>
+        <li><a href="../index.html#features">Features</a></li>
+        <li><a href="../index.html#use-cases">Use Cases</a></li>
+        <li><a href="../index.html#blog">Blog</a></li>
+        <li><a href="mailto:alex.potanin@anu.edu.au">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <article class="article-container">
+    <p class="article-meta">September 2, 2026 &middot; Alex Potanin</p>
+    <h1>Making a Robot Arm Impossible to Misuse from Its Own Computer</h1>
+
+    <p class="subtitle">
+      Today we made a robot arm impossible to misuse from its own computer.
+      Not &ldquo;hard&rdquo;. Impossible, in the sense that the software driving the motors
+      can no longer reach them except through a gatekeeper it cannot see, cannot
+      touch, and cannot switch off.
+    </p>
+
+    <div class="video-wrap">
+      <video controls preload="metadata" poster="../videos/robot-arm-sel4-demo-poster.jpg">
+        <source src="../videos/robot-arm-sel4-demo.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+        <a href="../videos/robot-arm-sel4-demo.mp4">Download the video</a>.
+      </video>
+      <div class="video-caption">
+        The demo: a Unitree D1 arm told to touch the desk. Under plain Ubuntu it does.
+        Under seL4 it stops ten centimetres above &mdash; and a console Linux cannot write to
+        explains why. (Apologies for the ad hoc sound and single-take edit &mdash; no
+        professional videographers were on call.)
+      </div>
+    </div>
+
+    <div class="result-badge">Same vendor binaries &middot; same ssh &middot; root can't reach the motors</div>
+
+    <p>
+      This is joint work between Fiducia and the seL4 Foundation community, here at the
+      <a href="https://comp.anu.edu.au/">ANU School of Computing</a> and
+      <a href="https://www.unsw.edu.au/engineering/our-schools/computer-science-and-engineering">UNSW Computer Science and Engineering</a>
+      &mdash; securing Embodied AI on robots, cars, drones, and other embedded devices.
+    </p>
+
+    <h2>The setup</h2>
+    <p>
+      A <strong>Unitree D1</strong> arm runs Ubuntu on a small board. The manufacturer's
+      control software talks to seven servos over a serial cable. Anyone with root on
+      that Ubuntu &mdash; a bug, a bad motion plan, or an attacker &mdash; can command
+      any joint anywhere: into the table, into a person, into itself.
+    </p>
+
+    <h2>What we did</h2>
+    <p>
+      We booted <strong>seL4</strong> on that board instead, and ran the arm's own,
+      <strong>unmodified</strong> Ubuntu inside it as a guest. The serial cable to the
+      motors now belongs to a tiny separate program outside Linux. Every command Linux
+      sends passes through a filter that knows the arm's geometry: it computes where
+      the fingertips will end up and refuses anything that takes them below the table.
+    </p>
+    <p>
+      The demo is simple. Tell the arm to touch the desk. Under plain Ubuntu it does.
+      Under seL4 it stops ten centimetres above, and a line appears on a console Linux
+      cannot write to, explaining why.
+    </p>
+    <p>
+      The manufacturer's software runs exactly as before. Same binaries, same network
+      address, same ssh, same web GUI. It does not know anything changed. Root inside
+      it cannot change anything either, because the policy lives in a different address
+      space and Linux holds no capability for the hardware. That is not a configuration
+      setting. It is enforced by the memory management unit, under a kernel with a
+      <strong>machine-checked proof</strong> that it enforces its access control.
+    </p>
+
+    <h2>Why not Docker, or a normal hypervisor?</h2>
+    <ul>
+      <li><strong>Containers</strong> are features of the same kernel that owns the
+        hardware. Root or a kernel exploit steps around them. This arm ships a 2016-era
+        vendor kernel that will never be patched.</li>
+      <li><strong>A Linux hypervisor</strong> has the right shape but puts a whole Linux
+        host, millions of lines, in the path you are trying to protect.</li>
+      <li><strong>With seL4</strong> the trusted part is the kernel plus about a thousand
+        lines of filter and driver. It is the software equivalent of a separate safety
+        microcontroller in the motor cable, on the same chip, retrofitted without touching
+        the vendor's code or the robot's storage.</li>
+    </ul>
+
+    <h2>What it took</h2>
+    <p>
+      One engineer-day of hands-on bring-up on top of an offline-prepared system, seven
+      power cycles, and a series of board-specific facts no generic driver knew: pin
+      multiplexing, a bus-enable pin, an RS-485 direction line, parity and flow control
+      left on by the bootloader. None of that was seL4 being hard. All of it was the
+      reality of hardware, and all of it is now written down.
+    </p>
+
+    <h2>What it does not do</h2>
+    <p>So you can trust the rest:</p>
+    <ul>
+      <li>The filter and drivers are ours, <strong>not verified</strong>;</li>
+      <li>The geometry model is only as good as the URDF we fed it;</li>
+      <li>It protects the servos, not the whole robot.</li>
+    </ul>
+    <p>Those are exactly the things funding fixes.</p>
+
+    <h2>Why this matters</h2>
+    <p>
+      This is the argument for investing in seL4 for robotics, medical devices and
+      vehicles. The question is not whether your robot's Linux will be compromised.
+      It is whether anything stands between that Linux and the motors when it is
+      compromised. Today, for most robots, <strong>nothing does</strong>.
+    </p>
+    <p>
+      The work is open. If you build or buy robots or other devices and want this
+      property in yours, <a href="mailto:alex.potanin@anu.edu.au">talk to us</a>.
+    </p>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:40px;font-size:0.95rem;">
+      <strong style="color:var(--text);">Join the discussion</strong>
+      <p style="margin-top:6px;color:var(--text-dim);">
+        Have questions or feedback?
+        <a href="https://www.linkedin.com/feed/update/urn:li:activity:7500762106913243136/" target="_blank" rel="noopener">Comment on this post on LinkedIn</a>
+        or <a href="mailto:alex.potanin@anu.edu.au">email Alex Potanin</a>.
+      </p>
+    </div>
+
+  </article>
+
+  <footer>
+    <div style="max-width:800px;margin:0 auto;padding:0 24px;">
+      <p>
+        <a href="../index.html">Fiducia</a> &middot;
+        <a href="../index.html#blog">Blog</a> &middot;
+        <a href="mailto:alex.potanin@anu.edu.au">Contact</a>
+      </p>
+      <p style="margin-top:8px;">
+        Fiducia is developed at the <a href="https://comp.anu.edu.au/">School of Computing</a>,
+        <a href="https://anu.edu.au">The Australian National University</a>.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
