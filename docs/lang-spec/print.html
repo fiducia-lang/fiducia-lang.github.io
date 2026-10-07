@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-3e0183dd.js";
+            window.path_to_searchindex_js = "searchindex-1ef86c16.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cd6ef858.js"></script>
@@ -848,9 +848,9 @@ process expressions must be promoted to a global.</p>
 </tbody>
 </table>
 </div>
-<p><code>int</code> and <code>uint</code> without a width default to 32-bit. <code>byte</code> is an alias
-for <code>uint8</code>. There is no <code>void</code> type — every declared variable has a
-concrete, storable type.</p>
+<p><code>int</code> and <code>uint</code> are aliases of <code>int64</code> and <code>uint64</code> on every target.
+<code>byte</code> is an alias for <code>uint8</code>. There is no <code>void</code> type — every
+declared variable has a concrete, storable type.</p>
 <h2 id="struct-types-and-arrays"><a class="header" href="#struct-types-and-arrays">Struct types and arrays</a></h2>
 <pre><code class="language-text">pkt: Slot           // user-defined struct — declared in the .fis data layer
 buf: uint8[16]       // fixed-size array — length is a literal or const name
