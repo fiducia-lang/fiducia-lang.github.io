@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-b12647a5.js";
+            window.path_to_searchindex_js = "searchindex-09211a5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -192,7 +192,7 @@ per-query PASS / FAIL results.</p>
 versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p>
 </blockquote>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
-<pre><code class="language-bash">fire verify [PROJECT_DIR] [-q &lt;QUERY_FILE&gt;]
+<pre><code class="language-bash">fire verify [PROJECT_DIR] [-q &lt;QUERY_FILE&gt;] [-o &lt;OUTPUT_FILE&gt;]
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -202,6 +202,7 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 <tbody>
 <tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
 <tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code> next to the sources).</td></tr>
+<tr><td><code>-o, --output &lt;OUTPUT_FILE&gt;</code></td><td>Save the verification report as plain text (the same content printed to stderr, without ANSI color). Written even when the run fails.</td></tr>
 </tbody>
 </table>
 </div>
@@ -223,13 +224,14 @@ E&lt;&gt; dd.L1
 <h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
 <ol>
 <li>Reads <code>fire.toml</code> and resolves the source directory.</li>
-<li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the
-UPPAAL model).</li>
+<li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the UPPAAL
+model) — skipped when it’s already newer than every source file,
+incremental like <code>fire build</code>’s own image check.</li>
 <li>Locates the query file: the <code>-q</code> flag, or <code>&lt;src&gt;/&lt;name&gt;.q</code>. Errors
 if neither exists.</li>
-<li>Locates <code>verifyta</code> — <code>[verify] path</code> → <code>$VERIFYTA</code> → <code>PATH</code> — and
-runs it with <code>-t 0</code> (request a counterexample / witness trace),
-the model, the query file, and any <code>[verify] args</code>.</li>
+<li>Locates <code>verifyta</code> — <code>[verify.model_checker] path</code> → <code>$VERIFYTA</code> → <code>PATH</code> —
+and runs it with <code>-t 0</code> (request a counterexample / witness trace),
+the model, the query file, and any <code>[verify.model_checker] args</code>.</li>
 <li>Parses the output and prints one PASS / FAIL line per query.
 Exits non-zero if any query fails.</li>
 </ol>

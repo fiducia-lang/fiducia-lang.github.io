@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-b12647a5.js";
+            window.path_to_searchindex_js = "searchindex-09211a5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -376,9 +376,13 @@ profile = "debug"               # debug | release
 # sdk / gcc / ld — optional, fall back to $MICROKIT_SDK / $GCC / $LD
 # allow_wf2_cycles = true       # skip WF2 when `fire verify` covers deadlock-freedom
 
-[verify]
+[verify.model_checker]
 mode = "verifyta"               # verification engine
 # path / args — optional; path falls back to $VERIFYTA / PATH
+
+# [[verify.code_verifier]]      # optional — one entry per foreign language
+# language = "pnk"          # only needed by projects with .pnk imports
+# path / args — optional; path falls back to $PANCAKE2VIPER / PATH
 </code></pre>
 <h2 id="project--identity-and-sources"><a class="header" href="#project--identity-and-sources"><code>[project]</code> — identity and sources</a></h2>
 <div class="table-wrapper">
@@ -423,8 +427,9 @@ mode = "verifyta"               # verification engine
 <p>When <code>sdk</code> / <code>gcc</code> / <code>ld</code> are set they are passed to the <code>fic</code> child
 process as environment variables, overriding any values already in
 your environment — useful for pinning a toolchain per project.</p>
-<h2 id="verify--formal-verification"><a class="header" href="#verify--formal-verification"><code>[verify]</code> — formal verification</a></h2>
-<p>Optional section; configures <a href="#verifying-fire-verify"><code>fire verify</code></a>.</p>
+<h2 id="verifymodel_checker--the-model-checker"><a class="header" href="#verifymodel_checker--the-model-checker"><code>[verify.model_checker]</code> — the model checker</a></h2>
+<p>Configures the model checker <a href="#verifying-fire-verify"><code>fire verify</code></a> runs against
+the emitted model.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -432,8 +437,25 @@ your environment — useful for pinning a toolchain per project.</p>
 </thead>
 <tbody>
 <tr><td><code>mode</code></td><td>yes</td><td>Verification engine. Currently <code>verifyta</code> (UPPAAL); <code>spin</code>, <code>prism</code>, … may follow.</td></tr>
-<tr><td><code>path</code></td><td>no</td><td>Path to the verifier binary. Falls back to <code>$VERIFYTA</code>, then to <code>verifyta</code> on <code>PATH</code>.</td></tr>
+<tr><td><code>path</code></td><td>no</td><td>Path to the model checker binary. Falls back to <code>$VERIFYTA</code>, then to <code>verifyta</code> on <code>PATH</code>.</td></tr>
 <tr><td><code>args</code></td><td>no</td><td>Extra flags appended after the model and query arguments.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="verifycode_verifier--code-verifiers"><a class="header" href="#verifycode_verifier--code-verifiers"><code>[[verify.code_verifier]]</code> — code verifiers</a></h2>
+<p>Optional array of tables, one entry per foreign language with a code
+verifier configured — each proves the contracts the model assumes for that
+language’s imports (e.g. Pancake’s <code>requires</code>/<code>ensures</code>). Absent for a
+project with no such imports.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>language</code></td><td>yes</td><td>Foreign extension this entry verifies (<code>"pnk"</code> today).</td></tr>
+<tr><td><code>path</code></td><td>no</td><td>Path to the code verifier binary. Falls back to <code>$PANCAKE2VIPER</code>, then <code>pancake2viper</code> on <code>PATH</code>.</td></tr>
+<tr><td><code>args</code></td><td>no</td><td>Extra flags appended after the code verifier’s own arguments.</td></tr>
 </tbody>
 </table>
 </div>
@@ -543,7 +565,7 @@ per-query PASS / FAIL results.</p>
 versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p>
 </blockquote>
 <h2 id="usage-1"><a class="header" href="#usage-1">Usage</a></h2>
-<pre><code class="language-bash">fire verify [PROJECT_DIR] [-q &lt;QUERY_FILE&gt;]
+<pre><code class="language-bash">fire verify [PROJECT_DIR] [-q &lt;QUERY_FILE&gt;] [-o &lt;OUTPUT_FILE&gt;]
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -553,6 +575,7 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 <tbody>
 <tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
 <tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code> next to the sources).</td></tr>
+<tr><td><code>-o, --output &lt;OUTPUT_FILE&gt;</code></td><td>Save the verification report as plain text (the same content printed to stderr, without ANSI color). Written even when the run fails.</td></tr>
 </tbody>
 </table>
 </div>
@@ -574,13 +597,14 @@ E&lt;&gt; dd.L1
 <h2 id="what-it-does-1"><a class="header" href="#what-it-does-1">What it does</a></h2>
 <ol>
 <li>Reads <code>fire.toml</code> and resolves the source directory.</li>
-<li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the
-UPPAAL model).</li>
+<li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the UPPAAL
+model) — skipped when it’s already newer than every source file,
+incremental like <code>fire build</code>’s own image check.</li>
 <li>Locates the query file: the <code>-q</code> flag, or <code>&lt;src&gt;/&lt;name&gt;.q</code>. Errors
 if neither exists.</li>
-<li>Locates <code>verifyta</code> — <code>[verify] path</code> → <code>$VERIFYTA</code> → <code>PATH</code> — and
-runs it with <code>-t 0</code> (request a counterexample / witness trace),
-the model, the query file, and any <code>[verify] args</code>.</li>
+<li>Locates <code>verifyta</code> — <code>[verify.model_checker] path</code> → <code>$VERIFYTA</code> → <code>PATH</code> —
+and runs it with <code>-t 0</code> (request a counterexample / witness trace),
+the model, the query file, and any <code>[verify.model_checker] args</code>.</li>
 <li>Parses the output and prints one PASS / FAIL line per query.
 Exits non-zero if any query fails.</li>
 </ol>

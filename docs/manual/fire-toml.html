@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-b12647a5.js";
+            window.path_to_searchindex_js = "searchindex-09211a5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -216,9 +216,13 @@ profile = "debug"               # debug | release
 # sdk / gcc / ld — optional, fall back to $MICROKIT_SDK / $GCC / $LD
 # allow_wf2_cycles = true       # skip WF2 when `fire verify` covers deadlock-freedom
 
-[verify]
+[verify.model_checker]
 mode = "verifyta"               # verification engine
 # path / args — optional; path falls back to $VERIFYTA / PATH
+
+# [[verify.code_verifier]]      # optional — one entry per foreign language
+# language = "pnk"          # only needed by projects with .pnk imports
+# path / args — optional; path falls back to $PANCAKE2VIPER / PATH
 </code></pre>
 <h2 id="project--identity-and-sources"><a class="header" href="#project--identity-and-sources"><code>[project]</code> — identity and sources</a></h2>
 <div class="table-wrapper">
@@ -263,8 +267,9 @@ mode = "verifyta"               # verification engine
 <p>When <code>sdk</code> / <code>gcc</code> / <code>ld</code> are set they are passed to the <code>fic</code> child
 process as environment variables, overriding any values already in
 your environment — useful for pinning a toolchain per project.</p>
-<h2 id="verify--formal-verification"><a class="header" href="#verify--formal-verification"><code>[verify]</code> — formal verification</a></h2>
-<p>Optional section; configures <a href="fire-verify.html"><code>fire verify</code></a>.</p>
+<h2 id="verifymodel_checker--the-model-checker"><a class="header" href="#verifymodel_checker--the-model-checker"><code>[verify.model_checker]</code> — the model checker</a></h2>
+<p>Configures the model checker <a href="fire-verify.html"><code>fire verify</code></a> runs against
+the emitted model.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -272,8 +277,25 @@ your environment — useful for pinning a toolchain per project.</p>
 </thead>
 <tbody>
 <tr><td><code>mode</code></td><td>yes</td><td>Verification engine. Currently <code>verifyta</code> (UPPAAL); <code>spin</code>, <code>prism</code>, … may follow.</td></tr>
-<tr><td><code>path</code></td><td>no</td><td>Path to the verifier binary. Falls back to <code>$VERIFYTA</code>, then to <code>verifyta</code> on <code>PATH</code>.</td></tr>
+<tr><td><code>path</code></td><td>no</td><td>Path to the model checker binary. Falls back to <code>$VERIFYTA</code>, then to <code>verifyta</code> on <code>PATH</code>.</td></tr>
 <tr><td><code>args</code></td><td>no</td><td>Extra flags appended after the model and query arguments.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="verifycode_verifier--code-verifiers"><a class="header" href="#verifycode_verifier--code-verifiers"><code>[[verify.code_verifier]]</code> — code verifiers</a></h2>
+<p>Optional array of tables, one entry per foreign language with a code
+verifier configured — each proves the contracts the model assumes for that
+language’s imports (e.g. Pancake’s <code>requires</code>/<code>ensures</code>). Absent for a
+project with no such imports.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>language</code></td><td>yes</td><td>Foreign extension this entry verifies (<code>"pnk"</code> today).</td></tr>
+<tr><td><code>path</code></td><td>no</td><td>Path to the code verifier binary. Falls back to <code>$PANCAKE2VIPER</code>, then <code>pancake2viper</code> on <code>PATH</code>.</td></tr>
+<tr><td><code>args</code></td><td>no</td><td>Extra flags appended after the code verifier’s own arguments.</td></tr>
 </tbody>
 </table>
 </div>
