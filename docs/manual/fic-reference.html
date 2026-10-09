@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-09211a5a.js";
+            window.path_to_searchindex_js = "searchindex-b3d5a61b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -221,7 +221,7 @@ representation:</p>
 <tbody>
 <tr><td><code>rawast</code></td><td>stdout / <code>-o</code></td><td>Parsed AST as JSON, before validation.</td></tr>
 <tr><td><code>ast</code></td><td>stdout / <code>-o</code></td><td>Validated AST as JSON (vaddrs allocated, names resolved).</td></tr>
-<tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>Generated per-PD C state machines plus <code>&lt;project&gt;_types.h</code>/<code>&lt;pd&gt;_types.h</code>. No image is built.</td></tr>
+<tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>Generated per-PD C state machines plus <code>&lt;pd&gt;_types.h</code>; they include the data layer from <code>&lt;project&gt;/include/gen/types.h</code>, written on every run. No image is built.</td></tr>
 <tr><td><code>sdf</code></td><td><code>&lt;project&gt;.system</code></td><td>SDF IR as XML — debug bridge for Microkit developers.</td></tr>
 <tr><td><code>dot</code></td><td><code>&lt;project&gt;.dot</code></td><td>Graphviz topology graph. Render with <code>dot -Tpng &lt;project&gt;.dot -o topology.png</code>.</td></tr>
 <tr><td><code>xta</code></td><td><code>&lt;project&gt;.xml</code></td><td>UPPAAL XTA model. Queries are user-authored — see <a href="fire-verify.html#writing-queries"><code>fire verify</code></a>.</td></tr>
