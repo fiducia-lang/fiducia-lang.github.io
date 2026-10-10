@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-89bd4e47.js";
+            window.path_to_searchindex_js = "../searchindex-3186da07.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -196,23 +196,27 @@ from the imported source’s <code>init()</code> function (see
 <a href="init-process.html">Boot Initialisation</a>).</em></p>
 </blockquote>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
-<p>Variables can appear in two positions inside a <code>.fi</code> file:</p>
+<p>Variables can appear in three positions inside a <code>.fi</code> file:</p>
 <ul>
 <li><strong>Global</strong> — at the top level of the file, alongside <code>Mapping</code> and
 <code>import</code> declarations. Globals are visible everywhere in the PD,
 read/write inside event bodies.</li>
-<li><strong>Local</strong> — inside a computation <a href="event-blocks.html">event body</a>. Locals
-shadow globals of the same name. Their scope ends where the enclosing
-event’s body ends — implicitly, at the next top-level item (<code>evt</code>,
-<code>proc</code>, <code>import</code>, <code>Mapping</code>), since there is no explicit terminator
-keyword.</li>
+<li><strong>Event local</strong> — inside a computation <a href="event-blocks.html">event body</a>,
+from its declaration to the end of the event (the next top-level item,
+since there is no explicit terminator keyword).</li>
+<li><strong>Process variable</strong> — inside a <a href="process-blocks.html">process body</a>: a
+parameter (<code>proc Drain(pkt: Slot)</code>, read-only, in scope for the whole
+body), a declaration <code>x: T;</code> (in scope for the rest of its sequence),
+or a receive binder <code>c?x</code> (in scope for the rest of its prefix).</li>
 </ul>
-<p>Process bodies cannot declare variables; any state needed by guards or
-process expressions must be promoted to a global.</p>
-<p>The full scope-resolution order inside an event body is:</p>
-<pre><code class="language-text">local → carrier → global
+<p>A name in a body is looked up among that body’s own variables first,
+then the program’s globals, then the system’s constants:</p>
+<pre><code class="language-text">body variable → global → constant
 </code></pre>
-<p>Carriers are the read-only inputs declared in the event header — see
+<p>Event and process variables never see each other: a process value reaches
+an event only as a carrier. Shadowing a global, a mapping or a constant is
+a warning; declaring a name twice in one body while the first is still in
+scope is an error. Carriers are read-only — see
 <a href="event-blocks.html#carriers">Event Declarations</a>.</p>
 <h2 id="primitive-types"><a class="header" href="#primitive-types">Primitive types</a></h2>
 <p>The primitive types accepted in declarations are:</p>
@@ -256,7 +260,8 @@ evt handle_packet.|size: int|:
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
 <li>A variable name is unique within its enclosing scope (multiple globals
-with the same name are rejected; a local may legally shadow a global).</li>
+with the same name are rejected; a body variable may shadow a global,
+with a warning).</li>
 <li>The type must be a recognised primitive, <code>Address</code>, a fixed-size array
 of one, or a struct name that resolves to a real <code>.fis</code> struct
 declaration.</li>

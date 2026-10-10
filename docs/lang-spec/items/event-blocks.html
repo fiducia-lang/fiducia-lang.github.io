@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-89bd4e47.js";
+            window.path_to_searchindex_js = "../searchindex-3186da07.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd6ef858.js"></script>
@@ -233,10 +233,10 @@ boundary is distinct from sub-process parameter lists. Multiple carriers
 may be <strong>grouped</strong> in a single <code>.|x: int, y: int|</code> clause or <strong>chained</strong>
 across multiple <code>.|x: int|.|y: int|</code> clauses; both forms parse to the
 same <code>Vec&lt;(Type, String)&gt;</code> and behave identically.</p>
-<p>Inside the body, carriers are used like any other variable — passed to
-external calls (<code>eth.handle_rx(idx)</code>), read in expressions
-(<code>local_buf = eth.alloc(size)</code>), or updated by assignment. Three kinds of
-variable names can appear in an event body:</p>
+<p>Inside the body, carriers are read like any other variable: passed to
+external calls (<code>eth.handle_rx(idx)</code>) or read in expressions
+(<code>local_buf = eth.alloc(size)</code>). They are <strong>read-only</strong>; assigning one is
+an error. Three kinds of variable names can appear in an event body:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -245,11 +245,13 @@ variable names can appear in an event body:</p>
 <tbody>
 <tr><td>Global</td><td>Top-level of the <code>.fi</code> file</td><td>yes</td></tr>
 <tr><td>Carrier</td><td>The event’s `.</td><td>name: type</td></tr>
-<tr><td>Local</td><td>Inside the body via <code>Type name;</code></td><td>yes</td></tr>
+<tr><td>Local</td><td>Inside the body via <code>name: Type;</code></td><td>yes</td></tr>
 </tbody>
 </table>
 </div>
-<p>Name resolution searches in order: local → carrier → global. To carry
+<p>An event sees its own locals and carriers, then the program’s globals and
+the system’s constants, never a process variable; lookup and shadowing
+are in <a href="variable-declarations.html#scopes">Scopes</a>. To carry
 mutable state across event invocations, use a <a href="variable-declarations.html">global</a>;
 to carry mutable scratch within one invocation, declare a local variable.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
@@ -284,8 +286,10 @@ domains. The channel name on the LHS is resolved against the <a href="../system/
 declarations</a> in the surrounding <code>.fis</code>.</p>
 <p>Channel events appear inline inside <a href="process-blocks.html">process expressions</a>
 — they have no top-level declaration. The receive form <code>c?x</code> binds the
-incoming value to a local <code>x</code>; the send form <code>c!e</code> transmits the
-expression <code>e</code>.</p>
+incoming value to <code>x</code> for the rest of that prefix only (<code>c?x -&gt; P</code>): the
+binder is gone at the next <code>;</code>, and a referenced process does not see it
+unless it is passed as an argument (<code>c?x -&gt; Drain(x)</code>). The send form
+<code>c!e</code> transmits the expression <code>e</code>.</p>
 <h3 id="no-selective-receive"><a class="header" href="#no-selective-receive">No selective receive</a></h3>
 <p>The RHS of <code>?</code> is always a single identifier (a binder), never a value
 pattern. Traditional CSP / CSP# accepts <code>c?ACK</code> as “wait only for the
