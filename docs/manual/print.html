@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-b3d5a61b.js";
+            window.path_to_searchindex_js = "searchindex-796b8b3c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -354,7 +354,7 @@ applies — see the <code>CHEATSHEET.md</code> of your installed version.</p>
 </blockquote>
 <h2 id="complete-example"><a class="header" href="#complete-example">Complete example</a></h2>
 <pre><code class="language-toml">[project]
-name = "datadiode"     # output filename stem: build/datadiode.img / .xml
+name = "datadiode"     # output filename stem: build/datadiode.img / .xta
 src  = "."             # directory with the .fis/.fi files, relative to this file
 
 [run]
@@ -391,7 +391,7 @@ mode = "verifyta"               # verification engine
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>name</code></td><td>yes</td><td>Short name used as the output filename stem: <code>fire build</code> / <code>fire run</code> write <code>build/&lt;name&gt;.img</code>, <code>fire verify</code> writes <code>build/&lt;name&gt;.xml</code> and reads the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code>.</td></tr>
+<tr><td><code>name</code></td><td>yes</td><td>Short name used as the output filename stem: <code>fire build</code> / <code>fire run</code> write <code>build/&lt;name&gt;.img</code>, <code>fire build</code> writes <code>build/&lt;name&gt;.xta</code>, which <code>fire verify</code> reads with the hand-written queries in <code>&lt;src&gt;/spec/</code>.</td></tr>
 <tr><td><code>src</code></td><td>yes</td><td>Directory containing the <code>.fis</code> / <code>.fi</code> files, relative to <code>fire.toml</code>. Build artifacts go to <code>&lt;src&gt;/build/</code>.</td></tr>
 </tbody>
 </table>
@@ -555,10 +555,10 @@ setvar patches applied to each PD.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="verifying-fire-verify"><a class="header" href="#verifying-fire-verify">Verifying: <code>fire verify</code></a></h1>
 <p><code>fire verify</code> checks a project’s process-algebra model with the
-<a href="https://uppaal.org/">UPPAAL</a> model checker. It emits a UPPAAL XTA
-model of the system (every PD’s processes as timed automata, channels
-as synchronisations), then runs <code>verifyta</code> and pretty-prints
-per-query PASS / FAIL results.</p>
+<a href="https://uppaal.org/">UPPAAL</a> model checker. It runs <code>verifyta</code> on the UPPAAL
+XTA model <code>fire build</code> wrote (every PD’s processes as timed automata, channels
+as synchronisations) and pretty-prints per-query PASS / FAIL results. It only
+verifies: it never emits or rewrites the model, so run <code>fire build</code> first.</p>
 <blockquote>
 <p>🚧 The <code>verify</code> subcommand lands with
 <a href="https://github.com/fiducia-lang/fic/pull/174">PR #174</a>. On earlier
@@ -574,7 +574,7 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 </thead>
 <tbody>
 <tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
-<tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code> next to the sources).</td></tr>
+<tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to every hand-written <code>.q</code> in <code>&lt;src&gt;/spec/</code>).</td></tr>
 <tr><td><code>-o, --output &lt;OUTPUT_FILE&gt;</code></td><td>Save the verification report as plain text (the same content printed to stderr, without ANSI color). Written even when the run fails.</td></tr>
 </tbody>
 </table>
@@ -583,8 +583,9 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 <p>Queries are <strong>user-authored</strong> — which properties matter is
 application-dependent, so <code>fic</code> emits only the model and you state the
 properties. Write a <a href="https://docs.uppaal.org/language-reference/requirements-specification/">UPPAAL query file</a>
-named <code>&lt;name&gt;.q</code> next to your sources (it is part of the project, so
-commit it). The customary first line is deadlock-freedom:</p>
+in <code>&lt;src&gt;/spec/</code> (it is part of the project, so commit it; <code>fire clean</code>
+never touches it). <code>fire verify</code> runs every <code>.q</code> there, against the model
+<code>fire build</code> wrote. The customary first line is deadlock-freedom:</p>
 <pre><code class="language-text">/* the system never gets permanently stuck */
 A[] not deadlock
 
@@ -593,20 +594,23 @@ E&lt;&gt; dd.L1
 </code></pre>
 <p>Queries reference the process <em>instance</em> names from the emitted model
 (the PD names, snake_case) and template location names — inspect
-<code>build/&lt;name&gt;.xml</code> (or open it in the UPPAAL GUI) to find them.</p>
+<code>build/&lt;name&gt;.xta</code> (or open the pretty-printed <code>build/&lt;name&gt;.xml</code> from
+<code>fire build --pretty</code> in the UPPAAL GUI) to find them.</p>
 <h2 id="what-it-does-1"><a class="header" href="#what-it-does-1">What it does</a></h2>
 <ol>
 <li>Reads <code>fire.toml</code> and resolves the source directory.</li>
-<li>Invokes <code>fic &lt;src&gt; --emit=xta</code>, writing <code>build/&lt;name&gt;.xml</code> (the UPPAAL
-model) — skipped when it’s already newer than every source file,
-incremental like <code>fire build</code>’s own image check.</li>
-<li>Locates the query file: the <code>-q</code> flag, or <code>&lt;src&gt;/&lt;name&gt;.q</code>. Errors
-if neither exists.</li>
+<li>Reads the model <code>fire build</code> wrote, <code>build/&lt;name&gt;.xta</code> (the UPPAAL
+model, as text). <code>fire verify</code> never emits or rewrites it: run
+<code>fire build</code> first, and again after a source changes. The pretty-printed XML
+(<code>--pretty</code>) is only for the GUI and is never read here.</li>
+<li>Locates the query files: the <code>-q</code> flag, or every <code>.q</code> in <code>&lt;src&gt;/spec/</code>.
+Errors if there are none.</li>
 <li>Locates <code>verifyta</code> — <code>[verify.model_checker] path</code> → <code>$VERIFYTA</code> → <code>PATH</code> —
 and runs it with <code>-t 0</code> (request a counterexample / witness trace),
-the model, the query file, and any <code>[verify.model_checker] args</code>.</li>
+the model, each query file, and any <code>[verify.model_checker] args</code>.</li>
 <li>Parses the output and prints one PASS / FAIL line per query.
-Exits non-zero if any query fails.</li>
+Exits non-zero if any query fails, or if <code>verifyta</code> answered fewer
+queries than a file holds (a refused licence, a crash).</li>
 </ol>
 <h2 id="reading-the-output"><a class="header" href="#reading-the-output">Reading the output</a></h2>
 <pre><code class="language-console">$ fire verify demo/datadiode/
@@ -634,7 +638,7 @@ notification <code>ROUNDS</code> times over a genuinely cyclic channel
 (<code>ping &lt;-&gt; pong</code>), then go quiescent — a real case where WF2’s
 over-approximation would reject a topology that’s actually
 deadlock-free. Its hand-written <code>pingpong.q</code> states that, verified
-against the real emitted model (see <code>tests/uppaal/pingpong/expected.xml</code>
+against the real emitted model (see <code>tests/uppaal/pingpong/expected.xta</code>
 for a known-good snapshot):</p>
 <pre><code class="language-bash">fire verify demo/pingpong/
 #   A[] (deadlock imply ping.rounds == ROUNDS)   PASS
@@ -706,7 +710,7 @@ representation:</p>
 <tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>Generated per-PD C state machines plus <code>&lt;pd&gt;_types.h</code>; they include the data layer from <code>&lt;project&gt;/include/gen/types.h</code>, written on every run. No image is built.</td></tr>
 <tr><td><code>sdf</code></td><td><code>&lt;project&gt;.system</code></td><td>SDF IR as XML — debug bridge for Microkit developers.</td></tr>
 <tr><td><code>dot</code></td><td><code>&lt;project&gt;.dot</code></td><td>Graphviz topology graph. Render with <code>dot -Tpng &lt;project&gt;.dot -o topology.png</code>.</td></tr>
-<tr><td><code>xta</code></td><td><code>&lt;project&gt;.xml</code></td><td>UPPAAL XTA model. Queries are user-authored — see <a href="#writing-queries"><code>fire verify</code></a>.</td></tr>
+<tr><td><code>xta</code></td><td><code>&lt;project&gt;.xta</code> (<code>&lt;project&gt;.xml</code> with <code>--pretty</code>)</td><td>UPPAAL model: the text verifyta reads, or with <code>--pretty</code> the same model pretty-printed as XML for the UPPAAL GUI (verification uses the <code>.xta</code>). Queries are user-authored — see <a href="#writing-queries"><code>fire verify</code></a>.</td></tr>
 </tbody>
 </table>
 </div>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-b3d5a61b.js";
+            window.path_to_searchindex_js = "searchindex-796b8b3c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -194,7 +194,7 @@ applies — see the <code>CHEATSHEET.md</code> of your installed version.</p>
 </blockquote>
 <h2 id="complete-example"><a class="header" href="#complete-example">Complete example</a></h2>
 <pre><code class="language-toml">[project]
-name = "datadiode"     # output filename stem: build/datadiode.img / .xml
+name = "datadiode"     # output filename stem: build/datadiode.img / .xta
 src  = "."             # directory with the .fis/.fi files, relative to this file
 
 [run]
@@ -231,7 +231,7 @@ mode = "verifyta"               # verification engine
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>name</code></td><td>yes</td><td>Short name used as the output filename stem: <code>fire build</code> / <code>fire run</code> write <code>build/&lt;name&gt;.img</code>, <code>fire verify</code> writes <code>build/&lt;name&gt;.xml</code> and reads the hand-written <code>&lt;src&gt;/&lt;name&gt;.q</code>.</td></tr>
+<tr><td><code>name</code></td><td>yes</td><td>Short name used as the output filename stem: <code>fire build</code> / <code>fire run</code> write <code>build/&lt;name&gt;.img</code>, <code>fire build</code> writes <code>build/&lt;name&gt;.xta</code>, which <code>fire verify</code> reads with the hand-written queries in <code>&lt;src&gt;/spec/</code>.</td></tr>
 <tr><td><code>src</code></td><td>yes</td><td>Directory containing the <code>.fis</code> / <code>.fi</code> files, relative to <code>fire.toml</code>. Build artifacts go to <code>&lt;src&gt;/build/</code>.</td></tr>
 </tbody>
 </table>
