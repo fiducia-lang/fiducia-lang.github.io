@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1749926e.js";
+            window.path_to_searchindex_js = "../searchindex-7014e482.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c80c5641.js"></script>
+        <script src="../toc-95c1b5de.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -240,12 +240,12 @@ three ELF symbols:</p>
 declared in the PD’s compiled ELF are dropped — the implementation only
 receives the symbols it declares. The Microkit loader patches the
 surviving symbols before the PD starts.</p>
-<pre><code class="language-text">import "eth.c" as eth;
+<pre><code class="language-text">import "include/eth.h" as eth;
 
 Low Mapping ring_buffer(ring_buffer_outer, "rw");
 Low Mapping packet_buffer(packet_buffer_outer, "rw");
 </code></pre>
-<pre><code class="language-c">/* eth.c — declared symbols are patched by the loader */
+<pre><code class="language-c">/* src/eth.c — declared symbols are patched by the loader */
 uintptr_t ring_buffer_vaddr;    /* ← ring_buffer.vaddr  */
 uintptr_t ring_buffer_paddr;    /* ← ring_buffer.paddr  */
 uintptr_t packet_buffer_vaddr;  /* ← packet_buffer.vaddr */

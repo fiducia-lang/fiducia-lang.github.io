@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-1749926e.js";
+            window.path_to_searchindex_js = "searchindex-7014e482.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-c80c5641.js"></script>
+        <script src="toc-95c1b5de.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,6 +186,13 @@
 describes a <a href="https://github.com/seL4/microkit"><code>seL4 Microkit</code></a> system: its
 memory regions, protection domains, channels, the per-PD program logic, and
 the communication / computation events those programs orchestrate.</p>
+<p>Fiducia has two layers. The <strong>orchestration</strong> layer is written in Fiducia
+itself: it says which channel events occur in a protection domain and in what
+order, and <code>fic</code> generates the event loop and every Microkit call from it.
+The <strong>computation</strong> layer is <em>foreign</em> code (C or Pancake) that the
+orchestration calls from computation events; it holds the data flow.
+Orchestration communicates; foreign functions compute. The two meet at a
+narrow boundary that the compiler checks and the verifier reads.</p>
 <p>The reference is organised after the <a href="https://doc.rust-lang.org/reference/">Rust Reference</a>: each chapter pairs a
 formal grammar production with the prose semantics that surround it, then
 expands per syntactic feature with focused subsections and short examples.
@@ -193,61 +200,105 @@ Where the surface syntax is still in flight, the chapter calls out the
 incomplete forms with a 🚧 marker so the reference stays honest about what
 the parser actually accepts today.</p>
 <h2 id="source-surfaces"><a class="header" href="#source-surfaces">Source surfaces</a></h2>
-<p>A Fiducia project is two parallel surfaces that the compiler reads together:</p>
+<p>A Fiducia project is one directory holding the files the compiler reads
+together:</p>
 <ul>
 <li><strong>System description (<code>.fis</code>)</strong> — the static topology: the data layer
 (<code>struct</code> and <code>const</code> items), memory regions, protection domains,
 channels, the system composition. One per project; it is the project.</li>
-<li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
-C / Pancake files, memory mappings, program variable declarations,
+<li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD orchestration: imports of
+foreign C / Pancake files, memory mappings, program variable declarations,
 <code>evt</code> declarations, and <code>proc</code> definitions. One per protection domain.</li>
+<li><strong>Foreign implementations (<code>.c</code>, <code>.h</code>, <code>.pnk</code>)</strong> — the code a <code>.fi</code>
+imports. Not Fiducia source, but its signatures and contracts are read.</li>
 </ul>
-<p>The two are linked by name. Each protection domain <code>p</code> declared in the
-<code>.fis</code> is implemented by <code>p.fi</code> beside it: a PD without that file is an
-error at its declaration, and so is a PD declared twice; a <code>.fi</code> that no
-PD names is a warning and is never read. Within a program, a <code>Mapping</code>
-refers to a <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a
-process expression resolves against the <code>.fis</code> channel declarations; a
-computation event referenced by name from a process is declared in the
-same <code>.fi</code> with <code>evt</code>.</p>
-<h2 id="scope-of-this-revision"><a class="header" href="#scope-of-this-revision">Scope of this revision</a></h2>
-<p>The chapters so far cover the <code>.fis</code> items, the <code>.fi</code> items and the
-expression language:</p>
+<p>The <code>.fis</code> and the <code>.fi</code> files are linked by name. Each protection domain
+<code>p</code> declared in the <code>.fis</code> is implemented by <code>p.fi</code> beside it: a PD without
+that file is an error at its declaration, and so is a PD declared twice; a
+<code>.fi</code> that no PD names is a warning and is never read. Within a program, a
+<code>Mapping</code> refers to a <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel
+reference in a process expression resolves against the <code>.fis</code> channel
+declarations; a computation event referenced by name from a process is
+declared in the same <code>.fi</code> with <code>evt</code>. The <a href="system/project-layout.html">Project
+Layout</a> chapter gives the full rules.</p>
+<h2 id="what-the-compiler-does-with-a-project"><a class="header" href="#what-the-compiler-does-with-a-project">What the compiler does with a project</a></h2>
+<p><code>fic</code> reads the sources, resolves every name, types the result and runs the
+checks, then lowers each protection domain’s orchestration once into a
+control-flow graph that every backend reads. From that graph it produces:</p>
 <ul>
-<li>
-<p><a href="system/data-layer.html"><strong>System items</strong></a> — the data layer, memory
-regions, protection domains and channels declared in the <code>.fis</code>.</p>
-</li>
-<li>
-<p><a href="items/imports-and-mappings.html"><strong>Imports and Mappings</strong></a>, <a href="items/init-process.html"><strong>Boot
+<li>a <strong>bootable Microkit image</strong>: generated C per protection domain, built
+with the foreign code and assembled with the generated system
+description; and</li>
+<li>a <strong>system model</strong> for UPPAAL, in which each protection domain is one
+template and each foreign function’s contract stands for its body, so
+that queries about the whole system (deadlock freedom, ordering,
+reachability) can be model-checked.</li>
+</ul>
+<p>The same checks run whichever output is asked for. Running the model checker
+and the code verifiers, and building and launching the image, are covered by
+the <a href="https://fiducia-lang.github.io/docs/manual/">manual</a>; this reference
+covers the language those tools read.</p>
+<blockquote>
+<p>🚧 Type checking and well-formedness checking are not yet complete: the
+chapters on <a href="checks/well-formedness.html">well-formedness</a> and <a href="checks/information-flow.html">information
+flow</a> state exactly what is checked today.</p>
+</blockquote>
+<h2 id="how-this-reference-is-organised"><a class="header" href="#how-this-reference-is-organised">How this reference is organised</a></h2>
+<p>The chapters follow the project, outside in.</p>
+<p><strong>Foundations</strong></p>
+<ul>
+<li><a href="notation.html"><strong>Notation</strong></a> — the BNF dialect the productions use.</li>
+<li><a href="lexical-structure.html"><strong>Lexical Structure</strong></a> and <a href="types.html"><strong>Types</strong></a> —
+tokens, and the types shared by both source surfaces.</li>
+</ul>
+<p><strong>System (<code>.fis</code>) items</strong></p>
+<ul>
+<li><a href="system/project-layout.html"><strong>Project Layout</strong></a> — which files make a
+project and how a PD finds its program.</li>
+<li><a href="system/data-layer.html"><strong>Data Layer</strong></a>, <a href="system/memory-regions.html"><strong>Memory
+Regions</strong></a>, <a href="system/protection-domains.html"><strong>Protection
+Domains</strong></a> and
+<a href="system/channels.html"><strong>Channels</strong></a> — what the <code>.fis</code> declares.</li>
+</ul>
+<p><strong>Program (<code>.fi</code>) items</strong></p>
+<ul>
+<li><a href="items/imports-and-mappings.html"><strong>Imports and Mappings</strong></a>, <a href="items/init-process.html"><strong>Boot
 Initialisation</strong></a> and <a href="items/variable-declarations.html"><strong>Variable
 Declarations</strong></a> — what a <code>.fi</code> brings in
-and declares before its events and processes.</p>
-</li>
-<li>
-<p><a href="items/event-blocks.html"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
+and declares before its events and processes.</li>
+<li><a href="items/event-blocks.html"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
 for computation events, plus the inline channel and IRQ events used
-on the left of a process prefix.</p>
-</li>
-<li>
-<p><a href="items/process-blocks.html"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
+on the left of a process prefix.</li>
+<li><a href="items/debug-output.html"><strong>Debug Output</strong></a> — <code>dbg</code>, <code>fic</code>’s own output.</li>
+<li><a href="items/process-blocks.html"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
 for CSP-style processes composed from events, guards, choices, and
-sequential composition.</p>
-</li>
-<li>
-<p><a href="expressions.html"><strong>Expressions</strong></a> — the expression language available to
-carriers, guards, and send payloads.</p>
-</li>
+sequential composition.</li>
 </ul>
-<p>The lexical structure, the types and the project layout have their own
-chapters (<a href="lexical-structure.html">Lexical Structure</a>, <a href="types.html">Types</a>,
-<a href="system/project-layout.html">Project Layout</a>), as do <a href="items/debug-output.html">debug
-output</a> and the platform <a href="semantics/entry-points.html">entry
-points</a>. Not yet covered here:
-foreign-function contracts and the well-formedness and information-flow
-checks beyond what the items above state. Until those chapters land, the
-inline <code>///</code> doc comments in <code>src/parser/</code> and <code>src/tast/</code> are the
-reference for them.</p>
+<p><strong>Expressions and semantics</strong></p>
+<ul>
+<li><a href="expressions.html"><strong>Expressions</strong></a> — the expression language available to
+carriers, guards, and send payloads.</li>
+<li><a href="semantics/entry-points.html"><strong>Entry Points</strong></a> — how the platform reaches a
+process, through <code>@bind</code>.</li>
+</ul>
+<p><strong>Foreign functions</strong></p>
+<ul>
+<li><a href="ffi/foreign-functions.html"><strong>Foreign Functions</strong></a> — what an import exposes
+and how calls are checked.</li>
+<li><a href="ffi/contracts.html"><strong>Contracts</strong></a> — the <code>requires</code> / <code>ensures</code> subset <code>fic</code>
+reads, and what the model assumes of it.</li>
+<li><a href="ffi/generated-headers.html"><strong>Generated Headers</strong></a> — the layout <code>fic</code>
+generates for the data layer, shared with the foreign code.</li>
+</ul>
+<p><strong>Checks</strong></p>
+<ul>
+<li><a href="checks/well-formedness.html"><strong>Well-Formedness</strong></a> — the rules a system must
+satisfy before it is accepted, with the messages for each.</li>
+<li><a href="checks/information-flow.html"><strong>Information Flow</strong></a> — the <code>High</code> / <code>Low</code>
+lattice over regions and mappings.</li>
+</ul>
+<p>Where a chapter does not settle a point, the inline <code>///</code> doc comments in
+<code>src/parser/</code> and <code>src/tast/</code> are the reference for it.</p>
 <h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
 <ul>
 <li>Production blocks use the BNF dialect documented in <a href="notation.html">Notation</a>

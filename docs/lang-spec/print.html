@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-1749926e.js";
+            window.path_to_searchindex_js = "searchindex-7014e482.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-c80c5641.js"></script>
+        <script src="toc-95c1b5de.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,6 +184,13 @@
 describes a <a href="https://github.com/seL4/microkit"><code>seL4 Microkit</code></a> system: its
 memory regions, protection domains, channels, the per-PD program logic, and
 the communication / computation events those programs orchestrate.</p>
+<p>Fiducia has two layers. The <strong>orchestration</strong> layer is written in Fiducia
+itself: it says which channel events occur in a protection domain and in what
+order, and <code>fic</code> generates the event loop and every Microkit call from it.
+The <strong>computation</strong> layer is <em>foreign</em> code (C or Pancake) that the
+orchestration calls from computation events; it holds the data flow.
+Orchestration communicates; foreign functions compute. The two meet at a
+narrow boundary that the compiler checks and the verifier reads.</p>
 <p>The reference is organised after the <a href="https://doc.rust-lang.org/reference/">Rust Reference</a>: each chapter pairs a
 formal grammar production with the prose semantics that surround it, then
 expands per syntactic feature with focused subsections and short examples.
@@ -191,61 +198,105 @@ Where the surface syntax is still in flight, the chapter calls out the
 incomplete forms with a 🚧 marker so the reference stays honest about what
 the parser actually accepts today.</p>
 <h2 id="source-surfaces"><a class="header" href="#source-surfaces">Source surfaces</a></h2>
-<p>A Fiducia project is two parallel surfaces that the compiler reads together:</p>
+<p>A Fiducia project is one directory holding the files the compiler reads
+together:</p>
 <ul>
 <li><strong>System description (<code>.fis</code>)</strong> — the static topology: the data layer
 (<code>struct</code> and <code>const</code> items), memory regions, protection domains,
 channels, the system composition. One per project; it is the project.</li>
-<li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
-C / Pancake files, memory mappings, program variable declarations,
+<li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD orchestration: imports of
+foreign C / Pancake files, memory mappings, program variable declarations,
 <code>evt</code> declarations, and <code>proc</code> definitions. One per protection domain.</li>
+<li><strong>Foreign implementations (<code>.c</code>, <code>.h</code>, <code>.pnk</code>)</strong> — the code a <code>.fi</code>
+imports. Not Fiducia source, but its signatures and contracts are read.</li>
 </ul>
-<p>The two are linked by name. Each protection domain <code>p</code> declared in the
-<code>.fis</code> is implemented by <code>p.fi</code> beside it: a PD without that file is an
-error at its declaration, and so is a PD declared twice; a <code>.fi</code> that no
-PD names is a warning and is never read. Within a program, a <code>Mapping</code>
-refers to a <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a
-process expression resolves against the <code>.fis</code> channel declarations; a
-computation event referenced by name from a process is declared in the
-same <code>.fi</code> with <code>evt</code>.</p>
-<h2 id="scope-of-this-revision"><a class="header" href="#scope-of-this-revision">Scope of this revision</a></h2>
-<p>The chapters so far cover the <code>.fis</code> items, the <code>.fi</code> items and the
-expression language:</p>
+<p>The <code>.fis</code> and the <code>.fi</code> files are linked by name. Each protection domain
+<code>p</code> declared in the <code>.fis</code> is implemented by <code>p.fi</code> beside it: a PD without
+that file is an error at its declaration, and so is a PD declared twice; a
+<code>.fi</code> that no PD names is a warning and is never read. Within a program, a
+<code>Mapping</code> refers to a <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel
+reference in a process expression resolves against the <code>.fis</code> channel
+declarations; a computation event referenced by name from a process is
+declared in the same <code>.fi</code> with <code>evt</code>. The <a href="#project-layout">Project
+Layout</a> chapter gives the full rules.</p>
+<h2 id="what-the-compiler-does-with-a-project"><a class="header" href="#what-the-compiler-does-with-a-project">What the compiler does with a project</a></h2>
+<p><code>fic</code> reads the sources, resolves every name, types the result and runs the
+checks, then lowers each protection domain’s orchestration once into a
+control-flow graph that every backend reads. From that graph it produces:</p>
 <ul>
-<li>
-<p><a href="#data-layer-structs-and-constants"><strong>System items</strong></a> — the data layer, memory
-regions, protection domains and channels declared in the <code>.fis</code>.</p>
-</li>
-<li>
-<p><a href="#imports-and-mappings"><strong>Imports and Mappings</strong></a>, <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars"><strong>Boot
+<li>a <strong>bootable Microkit image</strong>: generated C per protection domain, built
+with the foreign code and assembled with the generated system
+description; and</li>
+<li>a <strong>system model</strong> for UPPAAL, in which each protection domain is one
+template and each foreign function’s contract stands for its body, so
+that queries about the whole system (deadlock freedom, ordering,
+reachability) can be model-checked.</li>
+</ul>
+<p>The same checks run whichever output is asked for. Running the model checker
+and the code verifiers, and building and launching the image, are covered by
+the <a href="https://fiducia-lang.github.io/docs/manual/">manual</a>; this reference
+covers the language those tools read.</p>
+<blockquote>
+<p>🚧 Type checking and well-formedness checking are not yet complete: the
+chapters on <a href="#well-formedness">well-formedness</a> and <a href="#information-flow">information
+flow</a> state exactly what is checked today.</p>
+</blockquote>
+<h2 id="how-this-reference-is-organised"><a class="header" href="#how-this-reference-is-organised">How this reference is organised</a></h2>
+<p>The chapters follow the project, outside in.</p>
+<p><strong>Foundations</strong></p>
+<ul>
+<li><a href="#notation"><strong>Notation</strong></a> — the BNF dialect the productions use.</li>
+<li><a href="#lexical-structure"><strong>Lexical Structure</strong></a> and <a href="#types"><strong>Types</strong></a> —
+tokens, and the types shared by both source surfaces.</li>
+</ul>
+<p><strong>System (<code>.fis</code>) items</strong></p>
+<ul>
+<li><a href="#project-layout"><strong>Project Layout</strong></a> — which files make a
+project and how a PD finds its program.</li>
+<li><a href="#data-layer-structs-and-constants"><strong>Data Layer</strong></a>, <a href="#memory-region-declarations"><strong>Memory
+Regions</strong></a>, <a href="#protection-domain-declarations"><strong>Protection
+Domains</strong></a> and
+<a href="#channel-declarations"><strong>Channels</strong></a> — what the <code>.fis</code> declares.</li>
+</ul>
+<p><strong>Program (<code>.fi</code>) items</strong></p>
+<ul>
+<li><a href="#imports-and-mappings"><strong>Imports and Mappings</strong></a>, <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars"><strong>Boot
 Initialisation</strong></a> and <a href="#variable-declarations"><strong>Variable
 Declarations</strong></a> — what a <code>.fi</code> brings in
-and declares before its events and processes.</p>
-</li>
-<li>
-<p><a href="#event-declarations"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
+and declares before its events and processes.</li>
+<li><a href="#event-declarations"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
 for computation events, plus the inline channel and IRQ events used
-on the left of a process prefix.</p>
-</li>
-<li>
-<p><a href="#process-definitions"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
+on the left of a process prefix.</li>
+<li><a href="#debug-output-1"><strong>Debug Output</strong></a> — <code>dbg</code>, <code>fic</code>’s own output.</li>
+<li><a href="#process-definitions"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
 for CSP-style processes composed from events, guards, choices, and
-sequential composition.</p>
-</li>
-<li>
-<p><a href="#expressions"><strong>Expressions</strong></a> — the expression language available to
-carriers, guards, and send payloads.</p>
-</li>
+sequential composition.</li>
 </ul>
-<p>The lexical structure, the types and the project layout have their own
-chapters (<a href="#lexical-structure">Lexical Structure</a>, <a href="#types">Types</a>,
-<a href="#project-layout">Project Layout</a>), as do <a href="#debug-output-1">debug
-output</a> and the platform <a href="#entry-points">entry
-points</a>. Not yet covered here:
-foreign-function contracts and the well-formedness and information-flow
-checks beyond what the items above state. Until those chapters land, the
-inline <code>///</code> doc comments in <code>src/parser/</code> and <code>src/tast/</code> are the
-reference for them.</p>
+<p><strong>Expressions and semantics</strong></p>
+<ul>
+<li><a href="#expressions"><strong>Expressions</strong></a> — the expression language available to
+carriers, guards, and send payloads.</li>
+<li><a href="#entry-points"><strong>Entry Points</strong></a> — how the platform reaches a
+process, through <code>@bind</code>.</li>
+</ul>
+<p><strong>Foreign functions</strong></p>
+<ul>
+<li><a href="#foreign-functions"><strong>Foreign Functions</strong></a> — what an import exposes
+and how calls are checked.</li>
+<li><a href="#contracts"><strong>Contracts</strong></a> — the <code>requires</code> / <code>ensures</code> subset <code>fic</code>
+reads, and what the model assumes of it.</li>
+<li><a href="#generated-headers"><strong>Generated Headers</strong></a> — the layout <code>fic</code>
+generates for the data layer, shared with the foreign code.</li>
+</ul>
+<p><strong>Checks</strong></p>
+<ul>
+<li><a href="#well-formedness"><strong>Well-Formedness</strong></a> — the rules a system must
+satisfy before it is accepted, with the messages for each.</li>
+<li><a href="#information-flow"><strong>Information Flow</strong></a> — the <code>High</code> / <code>Low</code>
+lattice over regions and mappings.</li>
+</ul>
+<p>Where a chapter does not settle a point, the inline <code>///</code> doc comments in
+<code>src/parser/</code> and <code>src/tast/</code> are the reference for it.</p>
 <h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
 <ul>
 <li>Production blocks use the BNF dialect documented in <a href="#notation">Notation</a>
@@ -661,7 +712,8 @@ level. The one rule is on mappings: a mapping’s label must be at least
 its region’s, so a <code>High</code> region is never mapped at <code>Low</code>; protection
 domains carry no labels. See
 <a href="#information-flow-labels">Information-flow labels</a>;
-a dedicated chapter on the check is planned.</li>
+the <a href="#information-flow">Information Flow</a> chapter covers the
+check.</li>
 <li><strong>Name</strong> — <code>snake_case</code> identifier; the same name is referenced from
 <code>Mapping</code> declarations in <code>.fi</code> files.</li>
 <li><strong>Size</strong> — required, hex literal, in bytes. Must be a multiple of the
@@ -878,7 +930,8 @@ bidirectional channel adds the edge in both directions, so every <code>&lt;-&gt;
 channel fails the check unless <code>--allow-wf2-cycles</code> is given (or
 <code>allow_wf2_cycles = true</code> in <code>fire.toml</code>), which defers deadlock-freedom to
 an external authority such as <code>fire verify</code>. The demos <code>pingpong</code> and
-<code>pingpongpan</code> use <code>&lt;-&gt;</code> this way.</p>
+<code>pingpongpan</code> use <code>&lt;-&gt;</code> this way. See <a href="#wf2-the-channel-dependency-graph-is-acyclic">Well-Formedness</a>
+for the check and its error.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
 <li>A struct payload types the receive binder in the generated C, but the
@@ -913,9 +966,9 @@ with libclang: every function that is neither <code>static</code> nor <code>inli
 For Pancake it scans the source for <code>export fun</code> declarations, which take
 at most four word arguments and return one word; their <code>/@ ... @/</code>
 contract blocks are read alongside.</p>
-<pre><code class="language-text">import "eth.c" as eth;             // call: eth.send_frame(...)
-import "dd.c" as dd;               // call: dd.forward_packet(...)
-import "uart.pnk" as uart;         // Pancake source — same call shape
+<pre><code class="language-text">import "include/eth.h" as eth;     // C header; src/eth.c is linked
+import "include/channel.h" as chan; // call: chan.o2d_has_msg()
+import "pingpong.pnk" as io;       // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —
 order does not matter for parsing. Each alias must be unique within the
@@ -983,10 +1036,10 @@ keyword; placing it elsewhere is a parse error.</p>
 after typing, rejects any mapping that violates
 <code>flows_to(region.label, mapping.label)</code>, so a <code>High</code> region is never read
 through a <code>Low</code> mapping. Protection domains carry no labels of their own.
-The data-diode demo uses this to enforce one-way information flow. A
-dedicated information-flow chapter will own the detail; the
-<a href="#memory-region-declarations">Memory Region Declarations</a> chapter states
-the same rule from the region’s side.</p>
+The data-diode demo uses this to enforce one-way information flow. The
+<a href="#information-flow">Information Flow</a> chapter has the detail,
+and the <a href="#memory-region-declarations">Memory Region Declarations</a> chapter
+states the same rule from the region’s side.</p>
 <h2 id="a-mappings-addresses"><a class="header" href="#a-mappings-addresses">A mapping’s addresses</a></h2>
 <p>A mapping is a value only through its addresses:</p>
 <ul>
@@ -1068,12 +1121,12 @@ three ELF symbols:</p>
 declared in the PD’s compiled ELF are dropped — the implementation only
 receives the symbols it declares. The Microkit loader patches the
 surviving symbols before the PD starts.</p>
-<pre><code class="language-text">import "eth.c" as eth;
+<pre><code class="language-text">import "include/eth.h" as eth;
 
 Low Mapping ring_buffer(ring_buffer_outer, "rw");
 Low Mapping packet_buffer(packet_buffer_outer, "rw");
 </code></pre>
-<pre><code class="language-c">/* eth.c — declared symbols are patched by the loader */
+<pre><code class="language-c">/* src/eth.c — declared symbols are patched by the loader */
 uintptr_t ring_buffer_vaddr;    /* ← ring_buffer.vaddr  */
 uintptr_t ring_buffer_paddr;    /* ← ring_buffer.paddr  */
 uintptr_t packet_buffer_vaddr;  /* ← packet_buffer.vaddr */
@@ -1476,7 +1529,8 @@ path at its head, through <code>[]</code>, the left of <code>;</code> and a help
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
 and no <code>default</code> at the top. The kernel invokes it for a message, which
 the head consumes; a handler that could run without one would never
-return to the kernel.</li>
+return to the kernel. See
+<a href="#the-notified-handler-is-receive-headed">Well-Formedness</a>.</li>
 <li>Both a <code>@bind(microkit.init)</code> <strong>and</strong> a <code>@bind(microkit.notified)</code>
 process are <strong>mandatory</strong> for every PD with a program when targeting
 Microkit — Microkit invokes both on every PD, and the front end
@@ -1539,7 +1593,8 @@ a sequence is judged by its first item.</p>
 needs no discriminator of its own, but when a choice has a <code>default</code>, no
 branch may begin with a receive (<code>c?x</code>, <code>irq?N</code>), through guards and
 nested plain choices: a guard cannot see that a buffer is empty, so the
-default could fire while a message waits.</p>
+default could fire while a message waits (see
+<a href="#a-default-branch-and-receives">Well-Formedness</a>).</p>
 <pre><code class="language-text">// Rejected: the second branch begins with a receive, and a default follows.
 [ready] c! -&gt; Skip [] c? -&gt; Skip default Skip;
 </code></pre>
@@ -1577,7 +1632,8 @@ followed by more work is rejected:</p>
 proc Notified() { ball? -&gt; tally -&gt; Notified(); }         // ok
 </code></pre>
 <p>Inside a non-final operand of <code>;</code>, no enclosing process may be referenced:
-its continuation would need a return stack.</p>
+its continuation would need a return stack. See
+<a href="#tail-recursion">Well-Formedness</a>.</p>
 <h2 id="sequential-composition"><a class="header" href="#sequential-composition">Sequential composition</a></h2>
 <p>Inside a <code>{}</code> body, <code>;</code> separates items. The last item may carry a
 trailing <code>;</code> before <code>}</code>:</p>
@@ -1778,6 +1834,357 @@ name <code>fic</code> has no backend for; today that is <code>microkit</code>. W
 compiles whatever the annotations bind. A process may name several
 platforms on one line, <code>@bind(microkit.notified, cheri.interrupt_handler)</code>:
 the pairs for a platform <code>fic</code> does not target are kept and not used.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="foreign-functions"><a class="header" href="#foreign-functions">Foreign Functions</a></h1>
+<p>A program reaches code written in another language through an
+<a href="#imports-and-mappings">import</a>: <code>import "pingpong.c" as io;</code>
+makes every function the file exports callable as <code>io.f(..)</code> from an
+event body or a guard. This chapter says what an import exposes, how a
+foreign signature becomes a Fiducia one, and where each failure is
+reported. <a href="#contracts">Contracts</a> covers the annotations a function may
+carry.</p>
+<h2 id="what-a-file-exports"><a class="header" href="#what-a-file-exports">What a file exports</a></h2>
+<p>fic reads the imported file itself; it does not run the foreign compiler
+to find out what the file offers.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Language</th><th>Read by</th><th>Exported functions</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.c</code>, <code>.h</code></td><td>C</td><td>libclang, the real C front end</td><td>every function that is neither <code>static</code> nor <code>inline</code></td></tr>
+<tr><td><code>.pnk</code></td><td>Pancake</td><td>a text scanner, no external tool</td><td>every <code>export fun</code>, with at most four word arguments and one word return</td></tr>
+</tbody>
+</table>
+</div>
+<p>The language is the extension’s: any other extension is rejected when the
+project loads (<code>import "x.rs": not a C or Pancake file</code>), and so is a file
+that cannot be read. A <code>.c</code> import is compiled into the protection
+domain’s unit; a <code>.h</code> import is a driver whose <code>.c</code> is found beside it, or in
+<code>src/</code> for a header under <code>include/</code> (<code>include/eth.h</code> is backed by
+<code>src/eth.c</code>), and is linked; a <code>.pnk</code> import is compiled by CakeML into the image.</p>
+<h2 id="from-a-foreign-signature-to-a-fiducia-one"><a class="header" href="#from-a-foreign-signature-to-a-fiducia-one">From a foreign signature to a Fiducia one</a></h2>
+<p>Each called function’s parameter and return types are lowered to
+Fiducia types, on <code>AArch64</code> LP64 widths:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>C spelling</th><th>Fiducia type</th></tr>
+</thead>
+<tbody>
+<tr><td><code>uint8_t</code>, <code>unsigned char</code>, <code>char</code></td><td><code>uint8</code> (plain <code>char</code> is unsigned on <code>AArch64</code>)</td></tr>
+<tr><td><code>uint16_t</code>, <code>unsigned short</code></td><td><code>uint16</code></td></tr>
+<tr><td><code>uint32_t</code>, <code>unsigned</code>, <code>unsigned int</code></td><td><code>uint32</code></td></tr>
+<tr><td><code>uint64_t</code>, <code>unsigned long</code>, <code>unsigned long long</code>, <code>size_t</code></td><td><code>uint64</code></td></tr>
+<tr><td><code>int8_t</code>, <code>signed char</code></td><td><code>int8</code></td></tr>
+<tr><td><code>int16_t</code>, <code>short</code></td><td><code>int16</code></td></tr>
+<tr><td><code>int32_t</code>, <code>int</code></td><td><code>int32</code></td></tr>
+<tr><td><code>int64_t</code>, <code>long</code>, <code>long long</code>, <code>ssize_t</code>, <code>ptrdiff_t</code></td><td><code>int64</code></td></tr>
+<tr><td><code>bool</code>, <code>_Bool</code></td><td><code>bool</code></td></tr>
+<tr><td><code>uintptr_t</code>, <code>intptr_t</code>, any pointer</td><td><code>Address</code></td></tr>
+<tr><td><code>struct S</code>, where the <code>.fis</code> declares a struct <code>S</code></td><td>that struct</td></tr>
+</tbody>
+</table>
+</div>
+<p>Every Pancake argument and return is one machine word, <code>uint64</code>. A
+<code>void</code> return is a function with no value. Anything else (<code>float</code>, an
+opaque typedef, a struct the <code>.fis</code> does not declare) has no Fiducia type,
+and calling such a function is an error:</p>
+<pre><code class="language-text">error: event 'e': 'io.scale' has a type fic cannot express: parameter 1
+('x') has type 'float', which has no fic type
+</code></pre>
+<p>A function that is never called is never lowered, so an unsupported
+signature elsewhere in the file costs nothing.</p>
+<h2 id="calls"><a class="header" href="#calls">Calls</a></h2>
+<p>A call <code>alias.f(args)</code> is typed against the lowered signature: the
+argument count and types must match, and a result is used at its own type
+(an <code>int32_t</code> result is not an <code>int</code>; convert it with <code>as</code>). Failures:</p>
+<ul>
+<li><strong>Unknown function.</strong> <code>io.nothing(1)</code> and a <code>static</code> function alike are
+<code>foreign function 'io.hidden' is not declared</code>, reported where the call
+is.</li>
+<li><strong>Wrong arity.</strong> <code>'twice' takes 1 argument(s), found 2</code>.</li>
+<li><strong>Type mismatch.</strong> <code>expected 'int64', found 'int32'</code>.</li>
+</ul>
+<p>A struct passed or returned is the <code>.fis</code> struct of that name, whose
+<a href="#generated-headers">layout</a> both sides share.</p>
+<h2 id="when-each-failure-is-reported"><a class="header" href="#when-each-failure-is-reported">When each failure is reported</a></h2>
+<p>An unreadable file or an unsupported extension is reported when the
+project loads, at the <code>import</code>. An unknown function, a wrong argument
+count or type, and a signature with no Fiducia type are reported at the
+call. An annotation outside the <a href="#contracts">contract subset</a>, or a call
+the contract cannot support, is reported by <code>--check</code> and <code>--emit=xta</code>,
+which read the contracts. The foreign compiler’s own errors surface only
+when an image is built.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="contracts"><a class="header" href="#contracts">Contracts</a></h1>
+<p>A foreign function may carry a contract: <code>requires</code> and <code>ensures</code> clauses
+written in the function’s own language. A contract does two jobs, and
+only one of them is fic’s.</p>
+<ul>
+<li>The <strong>model</strong> assumes it. <code>--emit=xta</code> turns a contracted function that a
+protection domain calls into a UPPAAL function <code>ffi_&lt;name&gt;</code>: each
+<code>requires</code> is an <code>assert</code> at every call (never a guard), and the
+deterministic <code>ensures</code> is the value the call returns.</li>
+<li>A <strong>verifier</strong> proves it against the code: Frama-C with <code>-wp</code> for C,
+<code>pancake2viper</code> for Pancake. <code>fire verify</code> runs them; see the
+<a href="https://fiducia-lang.github.io/docs/manual/fire-verify.html"><code>fire verify</code> chapter of the manual</a>
+for the tools and their setup.</li>
+</ul>
+<p>So the model is only as sound as the contracts, and fic never derives a
+clause itself: it translates what the annotation states.</p>
+<h2 id="the-subset-fic-reads"><a class="header" href="#the-subset-fic-reads">The subset fic reads</a></h2>
+<p>Both notations are lifted to one neutral form, so one subset applies:
+integer and boolean literals, parameters, <code>.fis</code> constants, the return
+value, the parameter’s value on entry, <code>+ - * / %</code>, the comparisons,
+<code>==</code> and <code>!=</code>, <code>! &amp;&amp; ||</code>, and <code>c ? a : b</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>C (ACSL)</th><th>Pancake</th></tr>
+</thead>
+<tbody>
+<tr><td>Notation</td><td><code>/*@ ... */</code> before the function</td><td>annotation lines inside the function body</td></tr>
+<tr><td>Preconditions</td><td><code>requires</code></td><td><code>requires</code></td></tr>
+<tr><td>Postconditions</td><td><code>ensures</code></td><td><code>ensures</code></td></tr>
+<tr><td>Return value</td><td><code>\result</code></td><td><code>retval</code></td></tr>
+<tr><td>Value on entry</td><td><code>\old(x)</code></td><td><code>old(x)</code></td></tr>
+<tr><td>Purity</td><td><code>assigns \nothing;</code></td><td>derived from the body</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-text">/*@ requires 0 &lt;= r &amp;&amp; r &lt; ROUNDS;
+  @ ensures \result == r + 1;
+  @ assigns \nothing;
+  @*/
+int64_t tally(int64_t r) { return r + 1; }
+</code></pre>
+<p>A constant declared in the <code>.fis</code> may be named in a clause (<code>ROUNDS</code>); the
+<a href="#generated-headers">generated header</a> gives each language its value.</p>
+<p>Anything outside the subset is rejected by its name, so a contract never
+seems read when it was not:</p>
+<pre><code class="language-text">error: cq/ping.fi: ACSL contract error in "pingpong.c": function `tally`:
+`ensures \forall integer k; ...` uses the quantifier `\forall`, which is
+outside fic's contract subset (arithmetic, comparisons, `! &amp;&amp; ||`, `? :`,
+`\old`, `\result`, parameters)
+</code></pre>
+<p>In ACSL, quantifiers, memory predicates (<code>\valid</code>, <code>*p</code>), implication,
+bit operators and C casts are outside it; in Pancake, so are permissions,
+quantifiers, the heap, implication, calls, bit operators and shifts.
+Clauses the subset does not cover at all are the verifier’s and are not an
+error: in ACSL named behaviours, <code>assumes</code>, <code>terminates</code> and <code>exits</code>, and
+in Pancake any annotation other than <code>requires</code> and <code>ensures</code> (a
+<code>trusted</code>, an invariant).</p>
+<h2 id="what-the-model-needs-of-a-call"><a class="header" href="#what-the-model-needs-of-a-call">What the model needs of a call</a></h2>
+<p>For a Pancake function the model checks each call site, because it must
+produce a value the automaton can use:</p>
+<ul>
+<li>A call whose <strong>value is used</strong>, rather than made as a bare statement,
+needs a deterministic <code>ensures retval == E</code>. Without one, <code>--check</code>
+reports that the function has “no deterministic <code>ensures retval == ...</code> clause”.</li>
+<li>A call in a <strong>guard</strong> must also be pure, because the generated C may
+evaluate a guard more than once. A Pancake function is impure if it
+calls a foreign function, stores to memory, reads shared memory, raises,
+or writes a <code>global</code>, directly or through a callee.</li>
+</ul>
+<p>An ACSL contract is lifted and rendered the same way. <code>assigns \nothing;</code>
+marks a C function pure, and a missing <code>assigns</code> clause counts as
+impure, since ACSL’s default permits every effect; the guard check
+currently runs for Pancake contracts only.</p>
+<h2 id="what-fire-verify-proves"><a class="header" href="#what-fire-verify-proves">What <code>fire verify</code> proves</a></h2>
+<p><code>fire verify</code> runs the contract prover first (Frama-C WP for a C import,
+<code>pancake2viper</code> for Pancake), then <code>verifyta</code> on the model that assumes
+the contracts. Both must pass: a model check over an unproved contract
+proves nothing about the code behind it.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="generated-headers"><a class="header" href="#generated-headers">Generated Headers</a></h1>
+<p>A <code>struct</code> or <code>const</code> declared in the <a href="#data-layer-structs-and-constants">data layer</a>
+is the one definition both sides of the foreign boundary use. fic writes
+it out for each foreign language, from the typed <code>.fis</code>, before any import
+is read.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>For</th><th>Written when</th></tr>
+</thead>
+<tbody>
+<tr><td><code>include/gen/types.h</code></td><td>C imports</td><td>the <code>.fis</code> declares a <code>struct</code> or a <code>const</code></td></tr>
+<tr><td><code>include/gen/types.pnk</code></td><td>Pancake imports</td><td>some program imports a <code>.pnk</code> file</td></tr>
+</tbody>
+</table>
+</div>
+<p>Both live under <code>&lt;project&gt;/include/gen/</code>; <code>&lt;project&gt;/include</code> is on every
+tool’s include path, so a foreign file writes <code>#include "gen/types.h"</code> (or
+<code>.pnk</code>). The rest of <code>include/</code> is yours. Each generated file opens with a
+<code>Generated by fic ... Do not edit.</code> marker and is rewritten on every
+build. fic refuses to overwrite a file in that place that it did not
+write. <code>fire clean</code> removes <code>include/gen/</code>.</p>
+<h2 id="typesh"><a class="header" href="#typesh"><code>types.h</code></a></h2>
+<p>Each struct is written in field order, followed by an assertion on its
+size:</p>
+<pre><code class="language-c">struct Message {
+    uint16_t length;
+    uint16_t kind;
+    uint32_t offset;
+};
+_Static_assert(sizeof(struct Message) == 8, "fic: struct Message layout");
+
+struct Slot {
+    uint16_t flags;
+    uint16_t seq;
+    struct Message msg;
+};
+_Static_assert(sizeof(struct Slot) == 12, "fic: struct Slot layout");
+</code></pre>
+<p>A Fiducia struct is <strong>packed</strong>: no padding between fields. The assertion
+makes a C compiler that would pad the struct differently fail the build,
+rather than disagree silently with the model. Order fields so the natural
+C layout is the packed one, as the data-diode demo does.</p>
+<p>A constant is a <code>#define</code>, except under Frama-C, where it is a <code>static const</code> object so that a contract keeps the constant’s name instead of its
+value:</p>
+<pre><code class="language-c">#ifdef __FRAMAC__
+static const uint64_t SLOT_SIZE = 2048;
+#else
+#define SLOT_SIZE 2048
+#endif
+</code></pre>
+<p>Fiducia scalars are spelled as the fixed-width C types (<code>int</code> as
+<code>int64_t</code>, <code>uint</code> as <code>uint64_t</code>, <code>Address</code> as <code>uintptr_t</code>, <code>bool</code> as
+<code>bool</code>). An array field is written with its length: the constant, when
+the <code>.fis</code> named one (<code>uint8_t buf[SLOT_SIZE]</code>), else the number.</p>
+<h2 id="typespnk"><a class="header" href="#typespnk"><code>types.pnk</code></a></h2>
+<p>Pancake has no structs here: <code>types.pnk</code> carries the folded constants as
+<code>#define</code>s, which the CakeML preprocessor and <code>pancake2viper</code> both read.</p>
+<pre><code class="language-text">#define ROUNDS 5
+</code></pre>
+<p>Structs are not translated.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="well-formedness"><a class="header" href="#well-formedness">Well-Formedness</a></h1>
+<p>After typing, <code>fic</code> checks four structural conditions that no typing rule
+expresses. Each one is a property the later stages rely on, and each is
+reported with the declaration it concerns. They are the checks of the
+CoreFi paper’s well-formedness, restricted to what a program text can
+violate: <strong>WF2</strong> over the whole system, and three conditions on process
+bodies. (WF1 and the rest of WF3 are not checked here.)</p>
+<h2 id="wf2-the-channel-dependency-graph-is-acyclic"><a class="header" href="#wf2-the-channel-dependency-graph-is-acyclic">WF2: the channel dependency graph is acyclic</a></h2>
+<p>A protection domain that receives from another waits for it. Draw an edge
+from each receiver to the sender it waits for: a cycle is a circular wait,
+a deadlock by construction. A unidirectional channel contributes one edge,
+receiver to sender; a bidirectional channel (<code>&lt;-&gt;</code>) contributes both, so
+<strong>every bidirectional channel fails WF2</strong>. Parallel channels between one
+ordered pair of PDs are one edge.</p>
+<pre><code class="language-text">error: WF2 violation: channel dependency graph contains a cycle:
+ping → pong → ping (via channels: ball, ball)
+ --&gt; pingpong.fis:9:1
+  | Chan ball = ping &lt;-&gt; pong;
+</code></pre>
+<p>The chain of the data-diode demo, <code>eth_outer --&gt; dd --&gt; eth_inner</code>, has no
+cycle and passes.</p>
+<p>WF2 is a structural over-approximation: it also rejects programs that are
+deadlock-free under a fair scheduler. When deadlock-freedom is established
+another way, typically by model-checking the emitted UPPAAL model with
+<code>fire verify</code>, skip the check with <code>--allow-wf2-cycles</code> (or
+<code>allow_wf2_cycles = true</code> under <code>[run.target]</code> in <code>fire.toml</code>). The
+<code>pingpong</code> and <code>pingpongpan</code> demos do exactly this, and their <code>.q</code> files
+state the deadlock property instead.</p>
+<h2 id="tail-recursion"><a class="header" href="#tail-recursion">Tail recursion</a></h2>
+<p>A process may refer to itself or to another process only as the last thing
+it does. The reference then compiles to a jump back to a process’s head
+and the control graph stays finite; a reference followed by more work
+would need a return stack.</p>
+<pre><code class="language-text">proc Notified() { ball? -&gt; Notified(); ball! -&gt; Skip; }   // rejected
+proc Notified() { ball? -&gt; ball! -&gt; Notified(); }         // accepted
+</code></pre>
+<pre><code class="language-text">error: process `Notified` is referenced in non-tail position inside
+`Notified` — its continuation would need a return stack
+</code></pre>
+<h2 id="a-default-branch-and-receives"><a class="header" href="#a-default-branch-and-receives">A <code>default</code> branch and receives</a></h2>
+<p>The <code>default</code> arm of a choice runs when no branch’s guard holds. A guard
+cannot see whether a channel’s buffer is empty, so if any other branch
+begins with a receive, the default could fire while a message is waiting.
+No branch of a choice with a <code>default</code> may therefore begin with a receive
+(<code>c?x</code> or <code>irq?N</code>), through guards and nested choices.</p>
+<pre><code class="language-text">proc Pick() { [ready] c? -&gt; Skip default Skip; }      // rejected
+proc Pick() { [ready] bump -&gt; Skip default Skip; }    // accepted: bump is an event
+</code></pre>
+<pre><code class="language-text">error: process `Pick`: a branch of a `default` choice may not begin with a
+receive (`c?…`) — the default's guard cannot see an empty buffer
+</code></pre>
+<h2 id="the-notified-handler-is-receive-headed"><a class="header" href="#the-notified-handler-is-receive-headed">The <code>notified</code> handler is receive-headed</a></h2>
+<p>Microkit invokes <code>notified</code> with a message to handle. The process bound to
+<code>microkit.notified</code> must therefore begin, on every path, with a receive
+(<code>c?x</code>) or an interrupt await (<code>irq?N</code>), through <code>[]</code>, the left of <code>;</code> and
+a helper process’s body, and with no guard and no <code>default</code> at the top.
+Otherwise the handler could run without consuming the message that woke it
+and never return to the kernel.</p>
+<pre><code class="language-text">@bind(microkit.notified)
+proc Notified() { ball! -&gt; ball? -&gt; Skip; }   // rejected: starts with a send
+@bind(microkit.notified)
+proc Notified() { Skip; }                     // rejected: starts with nothing
+@bind(microkit.notified)
+proc Notified() { ball? -&gt; ball! -&gt; Notified(); }   // accepted
+</code></pre>
+<pre><code class="language-text">error: process `Notified` bound to `microkit.notified` is not receive-headed:
+each path at its head must begin with a receive (`c?x`) or an IRQ await
+(`irq?N`) — the kernel invokes it for a message
+</code></pre>
+<h2 id="where-the-checks-run"><a class="header" href="#where-the-checks-run">Where the checks run</a></h2>
+<p><code>fic --check</code> runs all four after typing, and every backend assumes them.
+The process-body checks run first, then the entry-point binding, the
+contract read and <a href="#information-flow">information flow</a>; WF2 runs last.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="information-flow"><a class="header" href="#information-flow">Information Flow</a></h1>
+<p>Memory regions and the mappings that expose them carry a security label,
+<code>Low</code> or <code>High</code>, on the two-point lattice <code>Low ≤ High</code>. <code>fic</code> checks one
+rule over them.</p>
+<blockquote>
+<p>A mapping’s label must be at least its memory region’s.</p>
+</blockquote>
+<p>A <code>High</code> region is therefore never read through a <code>Low</code> mapping: <code>High</code>
+data cannot reach a context that is allowed to see only <code>Low</code>.</p>
+<pre><code class="language-text">// .fis
+High MemoryRegion secret(0x1000);
+Low  MemoryRegion open(0x1000);
+
+// .fi
+High Mapping a(secret, "r");     // accepted: label matches
+High Mapping b(open, "rw");      // accepted: upward, Low data seen as High
+Low  Mapping c(open, "r");       // accepted
+Low  Mapping d(secret, "r");     // rejected: a High region through a Low mapping
+</code></pre>
+<pre><code class="language-text">error: information flow violation: High memory region 'secret' is
+accessed through Low mapping 'd'
+ --&gt; p.fi:1:1
+  | Low Mapping d(secret, "r");
+</code></pre>
+<p>An unlabelled region or mapping is <code>Low</code>. The check reports one error per
+offending mapping, at the mapping, in the <code>.fi</code> that declares it.</p>
+<h2 id="what-the-labels-do-and-do-not-cover"><a class="header" href="#what-the-labels-do-and-do-not-cover">What the labels do and do not cover</a></h2>
+<ul>
+<li>Labels sit on <strong>regions and mappings</strong>. A protection domain carries no
+label of its own: what a PD can see is exactly what it maps.</li>
+<li>A channel buffer’s mapping takes its region’s label, so only a program’s
+own <code>Mapping</code> can violate the rule.</li>
+<li>The check is on mappings only. It does not follow values between
+variables or across channels, and a channel carries no label.</li>
+</ul>
+<h2 id="the-data-diode"><a class="header" href="#the-data-diode">The data diode</a></h2>
+<p>The data-diode demo labels the ring its outer side writes <code>Low</code> and the
+ring its inner side reads <code>High</code>, with one forwarding PD between them:</p>
+<pre><code class="language-text">Low  MemoryRegion eth_outer_output(0x200000, 0x200000);
+High MemoryRegion eth_inner_input(0x200000, 0x200000);
+
+Chan o2d = eth_outer --&gt; dd via eth_outer_output&lt;Slot&gt;;
+Chan d2i = dd --&gt; eth_inner via eth_inner_input&lt;Slot&gt;;
+</code></pre>
+<p>Frames enter on the <code>Low</code> side and leave on the <code>High</code> side. The rule
+keeps the labelling honest: the <code>High</code> ring can never be mapped with a
+<code>Low</code> label, by any program. It does not by itself make the diode one-way.
+That direction is the declared topology (<code>--&gt;</code>, outer to inner, and no
+channel back), which <code>fic --emit=dot</code> draws and the WF2 check keeps
+acyclic, but which the information-flow check does not inspect.</p>
+<p><code>fic --check</code> runs this check after typing and the
+<a href="#well-formedness">well-formedness</a> checks.</p>
 
                     </main>
 

@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1749926e.js";
+            window.path_to_searchindex_js = "../searchindex-7014e482.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c80c5641.js"></script>
+        <script src="../toc-95c1b5de.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -203,9 +203,9 @@ with libclang: every function that is neither <code>static</code> nor <code>inli
 For Pancake it scans the source for <code>export fun</code> declarations, which take
 at most four word arguments and return one word; their <code>/@ ... @/</code>
 contract blocks are read alongside.</p>
-<pre><code class="language-text">import "eth.c" as eth;             // call: eth.send_frame(...)
-import "dd.c" as dd;               // call: dd.forward_packet(...)
-import "uart.pnk" as uart;         // Pancake source — same call shape
+<pre><code class="language-text">import "include/eth.h" as eth;     // C header; src/eth.c is linked
+import "include/channel.h" as chan; // call: chan.o2d_has_msg()
+import "pingpong.pnk" as io;       // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —
 order does not matter for parsing. Each alias must be unique within the
@@ -273,10 +273,10 @@ keyword; placing it elsewhere is a parse error.</p>
 after typing, rejects any mapping that violates
 <code>flows_to(region.label, mapping.label)</code>, so a <code>High</code> region is never read
 through a <code>Low</code> mapping. Protection domains carry no labels of their own.
-The data-diode demo uses this to enforce one-way information flow. A
-dedicated information-flow chapter will own the detail; the
-<a href="../system/memory-regions.html">Memory Region Declarations</a> chapter states
-the same rule from the region’s side.</p>
+The data-diode demo uses this to enforce one-way information flow. The
+<a href="../checks/information-flow.html">Information Flow</a> chapter has the detail,
+and the <a href="../system/memory-regions.html">Memory Region Declarations</a> chapter
+states the same rule from the region’s side.</p>
 <h2 id="a-mappings-addresses"><a class="header" href="#a-mappings-addresses">A mapping’s addresses</a></h2>
 <p>A mapping is a value only through its addresses:</p>
 <ul>

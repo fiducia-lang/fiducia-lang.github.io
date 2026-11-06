@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1749926e.js";
+            window.path_to_searchindex_js = "../searchindex-7014e482.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c80c5641.js"></script>
+        <script src="../toc-95c1b5de.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -276,7 +276,8 @@ bidirectional channel adds the edge in both directions, so every <code>&lt;-&gt;
 channel fails the check unless <code>--allow-wf2-cycles</code> is given (or
 <code>allow_wf2_cycles = true</code> in <code>fire.toml</code>), which defers deadlock-freedom to
 an external authority such as <code>fire verify</code>. The demos <code>pingpong</code> and
-<code>pingpongpan</code> use <code>&lt;-&gt;</code> this way.</p>
+<code>pingpongpan</code> use <code>&lt;-&gt;</code> this way. See <a href="../checks/well-formedness.html#wf2-the-channel-dependency-graph-is-acyclic">Well-Formedness</a>
+for the check and its error.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
 <li>A struct payload types the receive binder in the generated C, but the
