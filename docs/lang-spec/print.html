@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-7014e482.js";
+            window.path_to_searchindex_js = "searchindex-182fd078.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -885,6 +885,8 @@ raw byte buffer is <code>via ring&lt;byte&gt;</code>. The slot type is a struct 
 scalar, never an array; it is the value the
 channel carries, <code>Σ(c)</code>. Without <code>via</code>, the channel is a Microkit
 notification: a pure synchronisation point that carries no value. A
+buffered channel is one-way and async: <code>via</code> requires <code>Chan … --&gt;</code>; <code>&lt;-&gt;</code>
+and <code>Sync</code> channels have no buffer, and <code>via</code> on them is a parse error. A
 struct payload is the channel’s
 <strong>communication type</strong>, a <a href="#data-layer-structs-and-constants">data-layer struct</a>, and the C
 backend types receive binders from it (<code>o2d?pkt</code> declares
@@ -907,7 +909,7 @@ Chan d2i = dd &lt;-&gt; eth_inner;
 Async Chan s2o = simulate &lt;-&gt; eth_outer;
 
 // Buffer-backed channel, typed slot.
-Chan packet = eth_outer &lt;-&gt; eth_inner via packet_buffer_outer&lt;int&gt;;
+Chan packet = eth_outer --&gt; eth_inner via packet_buffer_outer&lt;int&gt;;
 
 // Buffer-backed, raw bytes.
 Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer&lt;byte&gt;;
