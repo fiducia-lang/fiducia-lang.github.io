@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-3186da07.js";
+            window.path_to_searchindex_js = "searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cd6ef858.js"></script>
+        <script src="toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,35 +195,59 @@ the parser actually accepts today.</p>
 <h2 id="source-surfaces"><a class="header" href="#source-surfaces">Source surfaces</a></h2>
 <p>A Fiducia project is two parallel surfaces that the compiler reads together:</p>
 <ul>
-<li><strong>System description (<code>.fis</code>)</strong> — the static topology: memory regions,
-protection domains, channels, the system composition. One per project.</li>
+<li><strong>System description (<code>.fis</code>)</strong> — the static topology: the data layer
+(<code>struct</code> and <code>const</code> items), memory regions, protection domains,
+channels, the system composition. One per project; it is the project.</li>
 <li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
-C / Rust files, memory mappings, global variable
-declarations, flat <code>evt</code> declarations, and flat <code>proc</code> definitions
-covered by this reference. One per protection domain.</li>
+C / Pancake files, memory mappings, program variable declarations,
+<code>evt</code> declarations, and <code>proc</code> definitions. One per protection domain.</li>
 </ul>
-<p>The two are linked by name: a <code>Mapping</code> in a <code>.fi</code> file refers to a
-<code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a process
-expression resolves against the <code>.fis</code> channel declarations; a computation
-event referenced by name from a process is declared in the same <code>.fi</code> with
-<code>evt</code>.</p>
+<p>The two are linked by name. Each protection domain <code>p</code> declared in the
+<code>.fis</code> is implemented by <code>p.fi</code> beside it: a PD without that file is an
+error at its declaration, and so is a PD declared twice; a <code>.fi</code> that no
+PD names is a warning and is never read. Within a program, a <code>Mapping</code>
+refers to a <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a
+process expression resolves against the <code>.fis</code> channel declarations; a
+computation event referenced by name from a process is declared in the
+same <code>.fi</code> with <code>evt</code>.</p>
 <h2 id="scope-of-this-revision"><a class="header" href="#scope-of-this-revision">Scope of this revision</a></h2>
-<p>This revision covers the three constructs that participate in the Fiducia
-process algebra:</p>
+<p>The chapters so far cover the <code>.fis</code> items, the <code>.fi</code> items and the
+expression language:</p>
 <ul>
-<li><a href="items/event-blocks.html"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
+<li>
+<p><a href="system/data-layer.html"><strong>System items</strong></a> — the data layer, memory
+regions, protection domains and channels declared in the <code>.fis</code>.</p>
+</li>
+<li>
+<p><a href="items/imports-and-mappings.html"><strong>Imports and Mappings</strong></a>, <a href="items/init-process.html"><strong>Boot
+Initialisation</strong></a> and <a href="items/variable-declarations.html"><strong>Variable
+Declarations</strong></a> — what a <code>.fi</code> brings in
+and declares before its events and processes.</p>
+</li>
+<li>
+<p><a href="items/event-blocks.html"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
 for computation events, plus the inline channel and IRQ events used
-on the left of a process prefix.</li>
-<li><a href="items/process-blocks.html"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
+on the left of a process prefix.</p>
+</li>
+<li>
+<p><a href="items/process-blocks.html"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
 for CSP-style processes composed from events, guards, choices, and
-sequential composition.</li>
-<li><a href="expressions.html"><strong>Expressions</strong></a> — the expression language available to
-carriers, guards, and send payloads.</li>
+sequential composition.</p>
+</li>
+<li>
+<p><a href="expressions.html"><strong>Expressions</strong></a> — the expression language available to
+carriers, guards, and send payloads.</p>
+</li>
 </ul>
-<p>Other surfaces (lexical structure, system items, types, validation, the
-type system) belong in chapters that have not yet been ported into this
-revision; they remain in the inline <code>///</code> doc comments in <code>src/parser/</code>
-and on their tracking issues until the corresponding chapters land.</p>
+<p>The lexical structure, the types and the project layout have their own
+chapters (<a href="lexical-structure.html">Lexical Structure</a>, <a href="types.html">Types</a>,
+<a href="system/project-layout.html">Project Layout</a>), as do <a href="items/debug-output.html">debug
+output</a> and the platform <a href="semantics/entry-points.html">entry
+points</a>. Not yet covered here:
+foreign-function contracts and the well-formedness and information-flow
+checks beyond what the items above state. Until those chapters land, the
+inline <code>///</code> doc comments in <code>src/parser/</code> and <code>src/tast/</code> are the
+reference for them.</p>
 <h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
 <ul>
 <li>Production blocks use the BNF dialect documented in <a href="notation.html">Notation</a>

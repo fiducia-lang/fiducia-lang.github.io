@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-3186da07.js";
+            window.path_to_searchindex_js = "searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cd6ef858.js"></script>
+        <script src="toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,16 +191,18 @@ Expressions appear as:</p>
 carriers.</li>
 </ul>
 <p>One grammar (<code>Expr</code>) covers literals, variables, calls, <code>sizeof</code>, unary
-and binary operators, and field access. There’s no separate arithmetic
+and binary operators, field access, and casts. There’s no separate arithmetic
 vs. logical vs. boolean sub-grammar — a boolean-<em>shaped</em> subset of
 <code>Expr</code> is what’s required in guard position (see below), not a
 different grammar.</p>
 <pre><code class="language-text">Expr    ::= Lit | ident | CExpr | 'sizeof' '(' Type ')'
           | UnOp Expr | Expr BinOp Expr
           | FieldBase '.' ident           -- field access
+          | Expr 'as' Type                -- cast
 FieldBase ::= ident | CExpr | FieldBase '.' ident  -- var, call, or field chain
 
 Lit     ::= int_lit | hex_lit | bool_lit
+                                        -- hex_lit allows '_' (0xFE00_0000); int_lit does not
 UnOp    ::= '-' | '!' | '~'
 BinOp   ::= '+' | '-' | '*' | '/' | '%'
           | '==' | '!=' | '&lt;' | '&lt;=' | '&gt;' | '&gt;='
@@ -225,11 +227,30 @@ BinOp   ::= '+' | '-' | '*' | '/' | '%'
 <tr><td>8</td><td><code>&lt;&lt;</code>, <code>&gt;&gt;</code></td></tr>
 <tr><td>9</td><td><code>+</code>, <code>-</code></td></tr>
 <tr><td>10</td><td><code>*</code>, <code>/</code>, <code>%</code></td></tr>
-<tr><td>11</td><td>unary <code>-</code>, <code>!</code>, <code>~</code></td></tr>
-<tr><td>12</td><td>primary atoms</td></tr>
+<tr><td>11</td><td><code>as</code></td></tr>
+<tr><td>12</td><td>unary <code>-</code>, <code>!</code>, <code>~</code></td></tr>
+<tr><td>13</td><td>primary atoms</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="names-mappings-and-fields"><a class="header" href="#names-mappings-and-fields">Names, mappings and fields</a></h2>
+<p>A variable is a program or body variable or a system <code>const</code>. A mapping is
+not a value: <code>m</code> alone is an error, and only <code>m.vaddr</code> and <code>m.paddr</code> are
+expressions, the two <a href="items/imports-and-mappings.html#a-mappings-addresses">addresses of a mapping</a>.
+Any other <code>x.f</code> is field access on a struct value (a variable, a call, or
+a chain of fields).</p>
+<p>A constant subexpression is folded at compile time in the checked
+arithmetic of its type; a constant that overflows is a compile error, not
+a wrapped value.</p>
+<h2 id="casts"><a class="header" href="#casts">Casts</a></h2>
+<p><code>e as T</code> converts an integer or an address to another integer type or to
+<code>Address</code>, explicitly: fic never widens or narrows on its own, so
+<code>m.vaddr + w</code> with <code>w: uint32</code> is an error and <code>m.vaddr + w as uint</code> is the
+way to write it. The semantics are Rust’s: widening is lossless, narrowing
+is modulo 2ⁿ (<code>300 as uint8</code> is <code>44</code>, <code>200 as uint8 as int8</code> is <code>-56</code>), and
+a constant cast folds at compile time. <code>as</code> binds tighter than every binary
+operator and looser than unary: <code>-x as uint</code> is <code>(-x) as uint</code>. A cast to
+<code>bool</code>, to a struct or to an array is rejected, as is a cast of one.</p>
 <h2 id="call-expressions-cexpr"><a class="header" href="#call-expressions-cexpr">Call expressions (<a href="https://github.com/fiducia-lang/fic/blob/main/src/parser/expr.rs"><code>CExpr</code></a>)</a></h2>
 <pre><code class="language-text">CExpr ::= ident '.' ident '(' (Expr (',' Expr)*)? ')'
 </code></pre>
@@ -259,6 +280,9 @@ boolean-shaped expressions.</p>
 [true]                     // OK
 [a + b]                    // rejected — arithmetic isn't boolean-shaped
 </code></pre>
+<p>A call in a guard must be side-effect free, because the generated C may
+evaluate a guard more than once. For a Pancake function with a contract,
+<code>fic --check</code> and <code>--emit=xta</code> reject a call whose contract is impure.</p>
 
                     </main>
 
@@ -268,6 +292,9 @@ boolean-shaped expressions.</p>
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="semantics/entry-points.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -279,6 +306,9 @@ boolean-shaped expressions.</p>
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="semantics/entry-points.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>

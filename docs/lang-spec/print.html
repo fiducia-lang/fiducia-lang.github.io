@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-3186da07.js";
+            window.path_to_searchindex_js = "searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cd6ef858.js"></script>
+        <script src="toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,35 +193,59 @@ the parser actually accepts today.</p>
 <h2 id="source-surfaces"><a class="header" href="#source-surfaces">Source surfaces</a></h2>
 <p>A Fiducia project is two parallel surfaces that the compiler reads together:</p>
 <ul>
-<li><strong>System description (<code>.fis</code>)</strong> — the static topology: memory regions,
-protection domains, channels, the system composition. One per project.</li>
+<li><strong>System description (<code>.fis</code>)</strong> — the static topology: the data layer
+(<code>struct</code> and <code>const</code> items), memory regions, protection domains,
+channels, the system composition. One per project; it is the project.</li>
 <li><strong>Program implementations (<code>.fi</code>)</strong> — per-PD logic: imports of external
-C / Rust files, memory mappings, global variable
-declarations, flat <code>evt</code> declarations, and flat <code>proc</code> definitions
-covered by this reference. One per protection domain.</li>
+C / Pancake files, memory mappings, program variable declarations,
+<code>evt</code> declarations, and <code>proc</code> definitions. One per protection domain.</li>
 </ul>
-<p>The two are linked by name: a <code>Mapping</code> in a <code>.fi</code> file refers to a
-<code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a process
-expression resolves against the <code>.fis</code> channel declarations; a computation
-event referenced by name from a process is declared in the same <code>.fi</code> with
-<code>evt</code>.</p>
+<p>The two are linked by name. Each protection domain <code>p</code> declared in the
+<code>.fis</code> is implemented by <code>p.fi</code> beside it: a PD without that file is an
+error at its declaration, and so is a PD declared twice; a <code>.fi</code> that no
+PD names is a warning and is never read. Within a program, a <code>Mapping</code>
+refers to a <code>MemoryRegion</code> declared in the <code>.fis</code>; a channel reference in a
+process expression resolves against the <code>.fis</code> channel declarations; a
+computation event referenced by name from a process is declared in the
+same <code>.fi</code> with <code>evt</code>.</p>
 <h2 id="scope-of-this-revision"><a class="header" href="#scope-of-this-revision">Scope of this revision</a></h2>
-<p>This revision covers the three constructs that participate in the Fiducia
-process algebra:</p>
+<p>The chapters so far cover the <code>.fis</code> items, the <code>.fi</code> items and the
+expression language:</p>
 <ul>
-<li><a href="#event-declarations"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
+<li>
+<p><a href="#data-layer-structs-and-constants"><strong>System items</strong></a> — the data layer, memory
+regions, protection domains and channels declared in the <code>.fis</code>.</p>
+</li>
+<li>
+<p><a href="#imports-and-mappings"><strong>Imports and Mappings</strong></a>, <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars"><strong>Boot
+Initialisation</strong></a> and <a href="#variable-declarations"><strong>Variable
+Declarations</strong></a> — what a <code>.fi</code> brings in
+and declares before its events and processes.</p>
+</li>
+<li>
+<p><a href="#event-declarations"><strong>Event Declarations</strong></a> — <code>evt</code> declarations
 for computation events, plus the inline channel and IRQ events used
-on the left of a process prefix.</li>
-<li><a href="#process-definitions"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
+on the left of a process prefix.</p>
+</li>
+<li>
+<p><a href="#process-definitions"><strong>Process Definitions</strong></a> — <code>proc</code> definitions
 for CSP-style processes composed from events, guards, choices, and
-sequential composition.</li>
-<li><a href="#expressions"><strong>Expressions</strong></a> — the expression language available to
-carriers, guards, and send payloads.</li>
+sequential composition.</p>
+</li>
+<li>
+<p><a href="#expressions"><strong>Expressions</strong></a> — the expression language available to
+carriers, guards, and send payloads.</p>
+</li>
 </ul>
-<p>Other surfaces (lexical structure, system items, types, validation, the
-type system) belong in chapters that have not yet been ported into this
-revision; they remain in the inline <code>///</code> doc comments in <code>src/parser/</code>
-and on their tracking issues until the corresponding chapters land.</p>
+<p>The lexical structure, the types and the project layout have their own
+chapters (<a href="#lexical-structure">Lexical Structure</a>, <a href="#types">Types</a>,
+<a href="#project-layout">Project Layout</a>), as do <a href="#debug-output-1">debug
+output</a> and the platform <a href="#entry-points">entry
+points</a>. Not yet covered here:
+foreign-function contracts and the well-formedness and information-flow
+checks beyond what the items above state. Until those chapters land, the
+inline <code>///</code> doc comments in <code>src/parser/</code> and <code>src/tast/</code> are the
+reference for them.</p>
 <h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
 <ul>
 <li>Production blocks use the BNF dialect documented in <a href="#notation">Notation</a>
@@ -245,7 +269,7 @@ familiar with Rust documentation can read it without a separate primer.</p>
 <p>A production has the form <code>LHS ::= RHS</code>, where the right-hand side is a
 sequence of terminals, non-terminals, and meta-operators. Productions are
 written in <code>text</code>-tagged code blocks:</p>
-<pre><code class="language-text">EventDecl ::= 'evt' ident carriers? ':' stmt*
+<pre><code class="language-text">EventDecl ::= 'evt' ident carriers? ':' (stmt | '{' stmt* '}')
 carriers  ::= carrier_group+
 carrier_group ::= '.' '|' param (',' param)* '|'
 param     ::= ident ':' type
@@ -258,15 +282,34 @@ param     ::= ident ':' type
 </thead>
 <tbody>
 <tr><td><code>'literal'</code></td><td>A literal token (keyword, symbol). Matches verbatim.</td></tr>
-<tr><td><code>ident</code></td><td>An identifier, defined in the lexical structure chapter.</td></tr>
+<tr><td><code>ident</code></td><td>An identifier: an ASCII letter or <code>_</code>, then letters, digits or <code>_</code>, and not a reserved keyword.</td></tr>
+<tr><td><code>UIdent</code></td><td>An <code>ident</code> whose first character is an uppercase ASCII letter (<code>UpperCamelCase</code>); process names and references.</td></tr>
+<tr><td><code>UPPER_IDENT</code></td><td>An <code>ident</code> written in upper case by convention (constants such as <code>SLOT_SIZE</code>); the parser accepts any <code>ident</code>.</td></tr>
 <tr><td><code>X?</code></td><td>Zero or one of <code>X</code>.</td></tr>
 <tr><td><code>X*</code></td><td>Zero or more of <code>X</code>.</td></tr>
 <tr><td><code>X+</code></td><td>One or more of <code>X</code>.</td></tr>
-<tr><td>`X</td><td>Y`</td></tr>
+<tr><td><code>X | Y</code></td><td>Either <code>X</code> or <code>Y</code>. Listed alternatives appear on separate lines for readability when the disjunction is long.</td></tr>
 <tr><td><code>(X Y)</code></td><td>Grouping; otherwise meta-operators bind tighter than juxtaposition.</td></tr>
 </tbody>
 </table>
 </div>
+<p>Literals in a production are named by their lexical class (the
+<a href="#lexical-structure">lexical structure</a> has the full rules):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Matches</th></tr>
+</thead>
+<tbody>
+<tr><td><code>int_lit</code></td><td>A decimal integer (<code>42</code>); digits only, no <code>_</code> separators.</td></tr>
+<tr><td><code>hex</code> / <code>hex_lit</code></td><td><code>0x</code> then hex digits; <code>_</code> may separate them (<code>0xFE00_0000</code>).</td></tr>
+<tr><td><code>bool_lit</code> / <code>bool_literal</code></td><td><code>true</code> or <code>false</code>.</td></tr>
+<tr><td><code>string_literal</code> / <code>text_literal</code></td><td><code>"..."</code> of printable ASCII, with the escapes <code>\\</code>, <code>\"</code>, <code>\n</code> and <code>\t</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Comments inside a production start with <code>--</code>; examples, which are Fiducia
+source, use the language’s own <code>//</code> and <code>/* */</code>.</p>
 <p>Whitespace between symbols in a production is significant only when called
 out — most productions allow inter-token whitespace and comments, exactly
 as the lexer does.</p>
@@ -297,12 +340,235 @@ the tracking issue:</p>
 <p>🚧 <em>Not yet implemented</em> — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="lexical-structure"><a class="header" href="#lexical-structure">Lexical Structure</a></h1>
+<p>A <code>.fis</code> and a <code>.fi</code> file are ASCII text read with the same lexer. This
+chapter fixes the words the <a href="#notation">grammars</a> use: what separates
+tokens, what a name is, which words are reserved, and how literals are
+written.</p>
+<h2 id="whitespace-and-comments"><a class="header" href="#whitespace-and-comments">Whitespace and comments</a></h2>
+<p>Spaces, tabs and newlines separate tokens and are otherwise ignored.
+Comments count as whitespace:</p>
+<pre><code class="language-text">// A line comment runs to the end of the line.
+/* A block comment runs to the first closing star-slash. */
+</code></pre>
+<p>Block comments do not nest: <code>/* a /* b */ c */</code> ends at the first <code>*/</code>,
+and <code> c */</code> is then read as source.</p>
+<h2 id="identifiers"><a class="header" href="#identifiers">Identifiers</a></h2>
+<pre><code class="language-text">ident  ::= (letter | '_') (letter | digit | '_')*   -- not a reserved word
+UIdent ::= ident whose first character is an uppercase letter
+</code></pre>
+<p><code>letter</code> and <code>digit</code> are ASCII. Case matters. A word that merely starts
+with a reserved word is an identifier: <code>irq_count</code> and <code>Mapping_x</code> are
+names.</p>
+<p><code>UIdent</code> is what a process is called, in its <code>proc</code> declaration and at
+each reference to it (<code>Notified</code>, <code>Drain(x)</code>). Everything else (variables,
+events, parameters, mappings, memory regions, protection domains,
+channels, structs, constants) takes any <code>ident</code>; the upper and lower case
+styles in the other chapters are conventions the parser does not check.</p>
+<h2 id="reserved-words"><a class="header" href="#reserved-words">Reserved words</a></h2>
+<p>A reserved word is not an identifier, so none can name a variable,
+event, mapping, region, protection domain, channel, struct or constant.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Group</th><th>Words</th></tr>
+</thead>
+<tbody>
+<tr><td>Security labels</td><td><code>High</code>, <code>Low</code></td></tr>
+<tr><td>System items</td><td><code>struct</code>, <code>const</code>, <code>MemoryRegion</code>, <code>ProtectionDomain</code>, <code>System</code>, <code>Chan</code>, <code>Sync</code>, <code>Async</code>, <code>via</code></td></tr>
+<tr><td>Program items</td><td><code>import</code>, <code>as</code>, <code>Mapping</code>, <code>irq</code>, <code>evt</code>, <code>proc</code>, <code>default</code>, <code>dbg</code></td></tr>
+<tr><td>Process terms</td><td><code>Skip</code>, <code>Div</code></td></tr>
+<tr><td>Types</td><td><code>bool</code>, <code>byte</code>, <code>Address</code>, <code>int</code>, <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code>, <code>uint</code>, <code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td></tr>
+<tr><td>Literals</td><td><code>true</code>, <code>false</code></td></tr>
+<tr><td>Reserved, unused</td><td><code>void</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>void</code> is reserved so it cannot be read as a struct name; Fiducia has no
+<code>void</code> type and no pointers (see <a href="#types">Types</a>).</p>
+<p><code>sizeof</code> is not on the list: a variable may be named <code>sizeof</code>. In an
+expression, <code>sizeof(</code> followed by a type is the size operator (see
+<a href="#expressions">Expressions</a>).</p>
+<p><code>microkit</code>, <code>init</code> and <code>notified</code> are ordinary identifiers; they have
+meaning only inside an <code>@bind</code> annotation (see
+<a href="#entry-points">Entry Points</a>).</p>
+<h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Literal</th><th>Form</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Decimal</td><td><code>0</code>, <code>42</code></td><td>Digits only: no <code>_</code> separators, no leading zeros (<code>07</code> is an error), no sign. The value must fit an <code>int64</code>.</td></tr>
+<tr><td>Hexadecimal</td><td><code>0x1000</code>, <code>0xFE00_0000</code></td><td>Lower-case <code>0x</code>, then hex digits in either case; <code>_</code> may separate digits after the first. The value must fit a <code>uint64</code>.</td></tr>
+<tr><td>Boolean</td><td><code>true</code>, <code>false</code></td><td></td></tr>
+<tr><td>Text</td><td><code>"..."</code></td><td>Printable ASCII, with the escapes <code>\\</code>, <code>\"</code>, <code>\n</code> and <code>\t</code>. Used for <a href="#imports-and-mappings">mapping permissions</a> and <a href="#debug-output-1">debug output</a>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>A leading <code>-</code> is never part of a literal: <code>-5</code> is the unary minus applied
+to <code>5</code>, which the compiler folds to one constant. There are no binary,
+octal, character or floating-point literals.</p>
+<p>An <a href="#imports-and-mappings">import</a> path is not a text literal: it
+is any characters between the quotes, up to the closing <code>"</code> or the end of
+the line.</p>
+<h2 id="punctuation"><a class="header" href="#punctuation">Punctuation</a></h2>
+<p>The process algebra’s operators are <code>-&gt;</code> (event prefix), <code>--&gt;</code> and <code>&lt;-&gt;</code>
+(channel directions), <code>|||</code> (interleave), <code>[]</code> (choice), <code>!</code> (send), <code>?</code>
+(receive) and <code>;</code> (sequence); <code>@</code> introduces an annotation. The
+expression operators and their precedence are in
+<a href="#expressions">Expressions</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="types"><a class="header" href="#types">Types</a></h1>
+<pre><code class="language-text">Type     ::= BaseType ('[' ArrayLen ']')?
+BaseType ::= ScalarType | ident            -- ident names a declared struct
+ScalarType ::= 'bool' | 'byte' | 'Address'
+             | 'int'  | 'int8'  | 'int16'  | 'int32'  | 'int64'
+             | 'uint' | 'uint8' | 'uint16' | 'uint32' | 'uint64'
+ArrayLen ::= int_lit | ident               -- ident names a declared constant
+</code></pre>
+<p>Every variable, parameter, carrier, struct field and constant has a type
+written this way. Fiducia has no pointer types and no <code>void</code> type.</p>
+<h2 id="scalars"><a class="header" href="#scalars">Scalars</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code></td><td>Signed integers of that many bits.</td></tr>
+<tr><td><code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td><td>Unsigned integers of that many bits.</td></tr>
+<tr><td><code>int</code></td><td><code>int64</code>. The type of an integer literal with nothing to give it another.</td></tr>
+<tr><td><code>uint</code></td><td><code>uint64</code>.</td></tr>
+<tr><td><code>byte</code></td><td><code>uint8</code>, spelled <code>uint8_t</code> in the generated C.</td></tr>
+<tr><td><code>bool</code></td><td><code>true</code> or <code>false</code>; not an integer.</td></tr>
+<tr><td><code>Address</code></td><td>A virtual or physical address, as wide as the platform’s. Arithmetic is defined on it.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>int</code>, <code>uint</code> and <code>byte</code> are other names for <code>int64</code>, <code>uint64</code> and
+<code>uint8</code>: the same types, not conversions of them. The
+<a href="#data-layer-structs-and-constants">data layer</a> still rejects <code>int</code> and <code>uint</code> in a
+struct field, since they name no fixed size there; use the sized types.</p>
+<p><code>Address</code> is the type of a mapping’s <code>m.vaddr</code> and <code>m.paddr</code> (see
+<a href="#a-mappings-addresses">Imports and Mappings</a>).</p>
+<h2 id="structs-and-arrays"><a class="header" href="#structs-and-arrays">Structs and arrays</a></h2>
+<p>A <strong>struct</strong> is declared in the <code>.fis</code>’s data layer and is visible to every
+program by name. A <strong>fixed array</strong> <code>T[N]</code> holds <code>N</code> elements of one type;
+<code>N</code> is an integer literal or a declared constant, and a type has at most
+one array suffix: <code>T[N]</code>, never <code>T[N][M]</code>.</p>
+<pre><code class="language-text">const LEN: uint = 4;
+
+struct Header {
+    kind:  uint8;
+    seq:   uint8;
+    flags: uint16;
+}
+
+struct Frame {
+    head: Header;
+    data: byte[4];
+}
+</code></pre>
+<pre><code class="language-text">done:  bool;
+raw:   byte;
+level: int8;
+count: uint;
+frame: Frame;
+codes: uint16[LEN];
+</code></pre>
+<p><code>sizeof(T)</code> is the size of any type in bytes, a constant: <code>sizeof(Frame)</code>,
+<code>sizeof(uint16[LEN])</code>. A struct’s fields are laid out packed, in
+declaration order (see <a href="#data-layer-structs-and-constants">Data Layer</a>).</p>
+<p>A struct or array variable is assigned whole. A field of a
+struct value is read with <code>x.f</code> (<code>frame.head.kind</code>); a field cannot be
+assigned to, and there is no indexing of an array element in a <code>.fi</code>.
+A channel’s slot type is a struct or a scalar, never an array (see
+<a href="#channel-declarations">Channel Declarations</a>).</p>
+<h2 id="conversion"><a class="header" href="#conversion">Conversion</a></h2>
+<p>There are no implicit conversions. Both operands of an arithmetic,
+bitwise or comparison operator have one type, and a literal takes the
+type of the operand beside it. An assignment must match the type of the
+variable it assigns exactly: <code>a = raw</code> is an error for an <code>int</code> <code>a</code> and a
+<code>byte</code> <code>raw</code>.</p>
+<p>The one conversion is the cast <code>e as T</code>:</p>
+<pre><code class="language-text">done  = step &gt; 0;
+level = step as int8;
+count = step as uint + 1;
+raw   = frame.head.kind as byte;
+</code></pre>
+<ul>
+<li>The target <code>T</code> is an integer type or <code>Address</code>; the operand is an
+integer or an address. A <code>bool</code>, a struct and an array can be neither.</li>
+<li><code>as</code> binds tighter than the binary operators and looser than the unary
+ones, so <code>step as uint + 1</code> is <code>(step as uint) + 1</code> (see
+<a href="#expressions">Expressions</a>).</li>
+<li>A narrowing cast of a constant is not a constant overflow: <code>300 as uint8</code>
+type-checks as a <code>uint8</code>, where a bare <code>300</code> would not fit.</li>
+<li>Unary <code>-</code> is defined only on signed types; <code>!</code> only on <code>bool</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="project-layout"><a class="header" href="#project-layout">Project Layout</a></h1>
+<p>A Fiducia project is one directory. The compiler is given that directory
+and reads these files from it:</p>
+<pre><code class="language-text">datadiode/
+    datadiode.fis     the system: one per project
+    eth_outer.fi      the program of protection domain eth_outer
+    dd.fi             the program of protection domain dd
+    eth_inner.fi      the program of protection domain eth_inner
+    fire.toml         read by fire, not by fic
+</code></pre>
+<h2 id="the-fis"><a class="header" href="#the-fis">The <code>.fis</code></a></h2>
+<p>The directory holds exactly one <code>.fis</code>; it is the project. Its name is
+free, and a directory with none, or with two, is an error. Everything the
+system declares (the <a href="#data-layer-structs-and-constants">data layer</a>, regions, protection
+domains, channels and the <code>System</code> composition) is in it.</p>
+<h2 id="the-fi-files"><a class="header" href="#the-fi-files">The <code>.fi</code> files</a></h2>
+<p>Each protection domain <code>p</code> is implemented by <code>p.fi</code>, in the same directory
+as the <code>.fis</code>: the file name is the binding, and nothing inside either file
+names the other. The directory is read for <code>.fi</code> files, not searched below:</p>
+<ul>
+<li>A protection domain with no <code>p.fi</code> is an error at its declaration in the
+<code>.fis</code>, and so is a protection domain declared twice.</li>
+<li>A <code>.fi</code> that no protection domain names is a warning, and the file is
+never parsed.</li>
+<li>A <code>.fi</code> in a subdirectory is not seen.</li>
+</ul>
+<h2 id="imports"><a class="header" href="#imports">Imports</a></h2>
+<p>An <a href="#imports-and-mappings">import</a> path is relative to the
+project directory, not to the <code>.fi</code> that writes it, so <code>import "include/eth.h" as eth;</code> reads <code>datadiode/include/eth.h</code> from any program in
+the project. The extension picks the reader: <code>.c</code> and <code>.h</code> are C, <code>.pnk</code>
+is Pancake.</p>
+<h2 id="generated-files"><a class="header" href="#generated-files">Generated files</a></h2>
+<p>Compiling writes under the project directory, and nothing outside it
+unless <code>-o</code> says so:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Path</th><th>Written by</th><th>Holds</th></tr>
+</thead>
+<tbody>
+<tr><td><code>include/gen/types.h</code></td><td><code>fic</code>, <code>--check</code> included</td><td>the data layer as C: structs with <code>_Static_assert</code> layout checks, constants</td></tr>
+<tr><td><code>include/gen/types.pnk</code></td><td>the same, when a program imports Pancake</td><td>the same constants and structs for Pancake</td></tr>
+<tr><td><code>build/</code></td><td><code>--emit=c</code>, <code>fire build</code>, <code>fire verify</code></td><td>the generated C (<code>build/gen/</code>), the image and the UPPAAL model</td></tr>
+<tr><td><code>&lt;dir&gt;.xta</code>, <code>&lt;dir&gt;.dot</code></td><td><code>fic --emit=xta</code>, <code>--emit=dot</code></td><td>the UPPAAL model and the topology graph, named after the project directory <code>&lt;dir&gt;</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Both are generated on every run and are not to be edited or committed.
+<code>fire clean</code> removes <code>build/</code> and <code>include/gen/</code>, and <code>include/</code> if that
+leaves it empty; sources are never touched.</p>
+<p><code>fire</code> adds <code>fire.toml</code> beside the sources and a hand-written query file
+<code>&lt;name&gt;.q</code> for verification. Their contents, and the commands, are in the
+<a href="https://fiducia-lang.github.io/docs/manual">user manual</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="data-layer-structs-and-constants"><a class="header" href="#data-layer-structs-and-constants">Data Layer: Structs and Constants</a></h1>
-<pre><code class="language-text">StructDecl ::= 'struct' UIdent '{' Field* '}'
+<pre><code class="language-text">StructDecl ::= 'struct' ident '{' Field* '}'
 Field      ::= ident ':' Type ';'
-Type       ::= ScalarType | Type '[' ArrayLen ']'
-ArrayLen   ::= integer-literal | CONST_NAME
-ConstDecl  ::= 'const' UPPER_IDENT ':' Type '=' Expr ';'
+Type       ::= BaseType ('[' ArrayLen ']')?
+BaseType   ::= ScalarType | ident            // ident names a declared struct
+ArrayLen   ::= integer-literal | ident       // ident names a declared constant
+ConstDecl  ::= 'const' ident ':' Type '=' Expr ';'
 </code></pre>
 <p>The <em>data layer</em> is the system-wide vocabulary of payload struct types
 and layout constants. It is shared by every protection domain — and,
@@ -331,16 +597,24 @@ stays statically known: <code>sizeof(T[N]) = N * sizeof(T)</code>.</li>
 <li><strong>No recursion</strong>: a struct may not contain itself, directly or
 indirectly. This guarantees <code>sizeof</code> is computable at compile time by
 recursive field traversal.</li>
-<li>Fields must have <strong>fixed-width</strong> types (<code>uint32</code>, not <code>int</code>; arrays of
-fixed-width elements) so the layout is well-defined.</li>
+<li>Fields must have <strong>fixed-width</strong> types so the layout is well-defined:
+<code>int</code>, <code>uint</code> and <code>Address</code> have no fixed size and are rejected in a
+struct (<code>uint32</code>, not <code>uint</code>), as is a struct nesting one that has none.
+An array has one length: <code>T[N]</code>, not <code>T[N][M]</code>.</li>
+<li>Field names within a struct are distinct.</li>
+<li>Layout is <strong>packed</strong>, fields in declaration order with no padding.
+The generated headers assert it (a <code>_Static_assert</code> on each struct’s
+size in <code>types.h</code>), so a C compiler that would pad the struct differently
+fails the build; order fields so the natural C layout is the packed one.</li>
 <li>Struct names are usable wherever a type is expected — variable
 declarations, <a href="#channel-declarations">typed channel buffers</a> (<code>via buf&lt;Packet&gt;</code>),
 and <code>sizeof</code>.</li>
 </ul>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
 <ul>
-<li>Names use <code>SCREAMING_SNAKE_CASE</code> by convention; a declared type is
-required.</li>
+<li>Names use <code>SCREAMING_SNAKE_CASE</code> by convention (any identifier is
+accepted); a declared type is required. Unlike a struct field, a
+constant may have an unsized type such as <code>int</code> or <code>uint</code>.</li>
 <li>The right-hand side is a full <a href="#expressions">expression</a>, folded
 at <strong>compile time</strong> (rustc-style, before any lowering). The const
 subset covers: literals, references to <em>previously declared</em>
@@ -352,41 +626,18 @@ declare in dependency order.</li>
 <li>The folded value must match the declared type (<code>bool</code> constants take
 boolean values; integer-family types take integers).</li>
 </ul>
-<h2 id="program-local-structs"><a class="header" href="#program-local-structs">Program-local structs</a></h2>
-<p>A <code>.fi</code> program may declare structs of its own, with the same grammar and
-rules as system structs. These are <strong>PD-internal types</strong> — device-ring
-descriptors, driver bookkeeping — that never cross a channel:</p>
-<pre><code class="language-text">// eth_outer.fi
-struct Rbd {
-    data_length: uint16;
-    flags:       uint16;
-    addr:        uint32;
-}
-
-ring: Rbd;
-</code></pre>
-<p>Scoping:</p>
-<ul>
-<li>A local struct is visible <strong>only within its own program</strong> — other PDs
-and the <code>.fis</code> cannot reference it. Channel buffer payload types must
-be system structs: system structs are the project’s <em>communication
-types</em> (what may cross a <a href="#channel-declarations">channel</a>), local structs are
-<em>program types</em> (PD-internal state) — the two tiers of the data model.</li>
-<li>A local struct may contain system structs in its fields; the reverse
-is impossible.</li>
-<li>A local struct may <strong>not</strong> reuse the name of a system struct
-(shadowing is an error), so every type name means one thing across
-the project.</li>
-<li>Array lengths in local fields may reference system constants.</li>
-</ul>
-<p><code>fic</code> writes system structs and constants to <code>include/gen/types.h</code>
-(and, for Pancake, <code>include/gen/types.pnk</code>), included as <code>"gen/types.h"</code>
-with <code>&lt;project&gt;/include</code> on the include path. Each PD’s local structs go
-into a per-PD header, <code>&lt;pd&gt;_types.h</code> (e.g. <code>eth_outer_types.h</code>), included
-by the PD’s generated unit and importable by its driver code.</p>
+<h2 id="one-home-for-structs"><a class="header" href="#one-home-for-structs">One home for structs</a></h2>
+<p>Every struct is declared in the <code>.fis</code>. A program names them as any
+other type, for its locals and body variables, and so do the C and
+Pancake files it imports.</p>
+<p><code>fic</code> writes the structs and constants to <code>include/gen/types.h</code> (and, for
+Pancake, <code>include/gen/types.pnk</code>), included as <code>"gen/types.h"</code> with
+<code>&lt;project&gt;/include</code> on the include path.</p>
 <h2 id="global-state"><a class="header" href="#global-state">Global state</a></h2>
-<p>The data layer declares <em>types and constants</em>, not mutable state. In
-CoreFi, shared global state is exactly the channel-buffer view: mutable
+<p>The data layer declares <em>types and constants</em>, not mutable state. A
+program’s own variables are its protection domain’s state (see
+<a href="#variable-declarations">Variable Declarations</a>); state shared
+across domains is exactly the channel-buffer view: mutable
 data lives in declared <a href="#memory-region-declarations">memory regions</a>, mapped
 explicitly into the PDs that may touch it and labelled for information
 flow. A shared scalar is a typed slot of a declared region — never an
@@ -406,15 +657,20 @@ they are pure topology and carry no per-PD program logic.</p>
 <h2 id="fields"><a class="header" href="#fields">Fields</a></h2>
 <ul>
 <li><strong>Security label</strong> (optional, defaults to <code>Low</code>). Tags information-flow
-level. <code>High</code> regions can be mapped only into PDs that themselves carry
-flow restrictions consistent with the <code>flows_to</code> lattice — see
-<a href="#information-flow-labels">Information-flow labels</a>.</li>
+level. The one rule is on mappings: a mapping’s label must be at least
+its region’s, so a <code>High</code> region is never mapped at <code>Low</code>; protection
+domains carry no labels. See
+<a href="#information-flow-labels">Information-flow labels</a>;
+a dedicated chapter on the check is planned.</li>
 <li><strong>Name</strong> — <code>snake_case</code> identifier; the same name is referenced from
 <code>Mapping</code> declarations in <code>.fi</code> files.</li>
 <li><strong>Size</strong> — required, hex literal, in bytes. Must be a multiple of the
-region’s page size (validation runs post-parse and reports a <code>size not aligned</code> error if not).</li>
+region’s page size; the parser rejects a size that is not.</li>
 <li><strong>Page size</strong> — optional, defaults to <code>0x1000</code> (4 KiB). The other accepted
-value is <code>0x200000</code> (2 MiB / Large).</li>
+value is <code>0x200000</code> (2 MiB / Large). The slot may be left empty to give
+a physical address alone (<code>MemoryRegion mmio(0x1000, , 0xfe000000);</code>),
+and any other value is not an error: it silently falls back to 4 KiB, so
+a mistyped page size changes which alignment is checked.</li>
 <li><strong>Physical address</strong> — optional. When present, must be aligned to the
 region’s page size. Used for device MMIO regions (clock controller,
 ethernet registers) where the seL4 loader maps a fixed physical frame
@@ -429,14 +685,19 @@ High MemoryRegion ring_buffer_inner(0x1000, 0x1000);     // High
 High MemoryRegion eth_clk(0x1000, 0x1000, 0x5b200000);   // High MMIO
 </code></pre>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
-<p>The following checks run after parsing:</p>
+<p>Two checks run in the parser, each reported at the declaration:</p>
 <ol>
-<li><code>size</code> is a positive multiple of <code>page_size</code>.</li>
+<li><code>size</code> is a multiple of <code>page_size</code>.</li>
 <li><code>phys_addr</code> (if present) is aligned to <code>page_size</code>.</li>
-<li>The region name is unique within the system file.</li>
 </ol>
-<p>A region is referenced from <code>.fi</code> files by its name; the validator confirms
+<p>Resolution then checks that the region name is unique within the system
+file. A region is referenced from <code>.fi</code> files by its name; the validator confirms
 each <code>Mapping</code>’s <code>mem_region</code> points at a declared <code>MemoryRegion</code>.</p>
+<h2 id="channel-buffers"><a class="header" href="#channel-buffers">Channel buffers</a></h2>
+<p>A region named in a channel’s <a href="#fields-2"><code>via</code> clause</a> is a
+channel buffer. It is mapped into both endpoint PDs implicitly, backs one
+channel only, and must not also appear in an explicit <code>Mapping</code>; each of
+these is an error otherwise. Any other region may be mapped by several PDs.</p>
 <h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
 <pre><code class="language-text">// Anonymous shared buffer, default 4 KiB page, allocator-assigned phys_addr.
 MemoryRegion ring_buffer_outer(0x1000, 0x1000);
@@ -450,7 +711,7 @@ Low MemoryRegion eth_outer_register(0x1000, 0x1000, 0xf000000);
 // 64 KiB device register window.
 Low MemoryRegion eth0(0x10000, 0x10000, 0x5b040000);
 
-// High-side region (any access from a Low PD will be rejected by the
+// High-side region (a `Low` mapping of it is rejected by the
 // information-flow check).
 High MemoryRegion eth_clk(0x1000, 0x1000, 0x5b200000);
 </code></pre>
@@ -466,17 +727,18 @@ period               ::= integer_literal       // microseconds, default = budget
 protection domain (PD): an isolated thread of execution with its own
 address space, scheduling parameters, and (optionally) one IRQ binding.
 Each <code>ProtectionDomain</code> listed in a <code>.fis</code> system file pairs with one
-<code>.fi</code> program file by name.</p>
+<code>.fi</code> program file, <code>&lt;name&gt;.fi</code> beside the <code>.fis</code>.</p>
 <h2 id="fields-1"><a class="header" href="#fields-1">Fields</a></h2>
 <ul>
 <li><strong>Name</strong> — <code>snake_case</code> identifier. The matching <code>&lt;name&gt;.fi</code> file holds
 the PD’s mappings, events, and processes.</li>
-<li><strong>Priority</strong> — required, range <code>0..=254</code>. Out-of-range values are
-rejected with a parse-time error. Higher numbers run first under the
+<li><strong>Priority</strong> — required, range <code>0..=254</code> (it is read as a <code>u8</code> below 255).
+Out-of-range values are rejected with a parse-time error. Higher numbers run first under the
 Microkit fixed-priority scheduler.</li>
 <li><strong>IRQ</strong> — optional; any value fitting a <code>u16</code> parses (no range check is
 enforced by the compiler — pick a number the target board’s IRQ
-controller actually has). When present, the PD is wired to
+controller actually has), but one IRQ may be claimed by only one PD.
+When present, the PD is wired to
 receive that hardware interrupt on the reserved <code>irq</code> channel and can
 observe it via <a href="#hardware-interrupt-events"><code>irq?N</code> / <code>irq!N</code></a>
 events.</li>
@@ -491,11 +753,14 @@ set to. Setting <code>period &gt; budget</code> produces a sub-rate scheduling p
 <h2 id="validation-1"><a class="header" href="#validation-1">Validation</a></h2>
 <ul>
 <li><code>priority</code> must be in <code>0..=254</code>.</li>
-<li>A PD name is unique within the system file.</li>
+<li>A PD name is unique within the system file; a second declaration is an
+error at the later one.</li>
+<li>An IRQ number belongs to one PD.</li>
 <li>A PD that is referenced from a <code>Channel</code> or from the <code>System =</code>
 composition must be declared.</li>
-<li>A PD without a corresponding <code>&lt;name&gt;.fi</code> is rejected at link time (not
-at parse time).</li>
+<li>A PD without a <code>&lt;name&gt;.fi</code> beside the <code>.fis</code> is an error when the
+project is loaded, not when the <code>.fis</code> is parsed. A <code>.fi</code> that no PD
+names is only a warning, and the file is never opened.</li>
 </ul>
 <h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
 <pre><code class="language-text">// Three PDs with distinct priorities; IRQ on the outer driver only.
@@ -511,8 +776,7 @@ ProtectionDomain monitor(120, 0, 200, 1000);  // priority 120, IRQ 0, 200 µs / 
 </code></pre>
 <h2 id="system-composition"><a class="header" href="#system-composition">System composition</a></h2>
 <p>A <code>.fis</code> file ends with a <code>System = ...</code> clause that names the PDs to
-include and their composition operator (currently always <code>|||</code>,
-interleave). Every PD referenced in <code>System</code> must be declared above:</p>
+include, joined by the interleave operator <code>|||</code>, the only composition. Every PD referenced in <code>System</code> must be declared above:</p>
 <pre><code class="language-text">System = eth_outer ||| dd ||| eth_inner ||| simulate;
 </code></pre>
 <p>PDs declared but omitted from <code>System</code> are dead code and currently produce
@@ -525,12 +789,13 @@ SyncChannelDecl   ::= 'Sync' 'Chan' ident '=' ident '--&gt;' ident ';'?
 
 AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident ('&lt;-&gt;' | '--&gt;') ident ViaClause? ';'?
 
-ViaClause         ::= 'via' ident ('&lt;' Type '&gt;')?
+ViaClause         ::= 'via' ident '&lt;' Type '&gt;'
 </code></pre>
 <p>A <em>channel declaration</em> introduces one named communication endpoint between
 two protection domains. Channels carry the events that show up inside a
-process expression — <code>c?x</code> (receive) and <code>c!e</code> (send). They live in <code>.fis</code>
-system files; the <code>.fi</code> files reference channels by name only.</p>
+process expression — <code>c?x</code> (receive) and <code>c!e</code> (send) on a buffered
+channel, <code>c?</code> and <code>c!</code> on an unbuffered one. They live in <code>.fis</code> system
+files; the <code>.fi</code> files reference channels by name only.</p>
 <h2 id="channel-kinds"><a class="header" href="#channel-kinds">Channel kinds</a></h2>
 <div class="table-wrapper">
 <table>
@@ -538,9 +803,9 @@ system files; the <code>.fi</code> files reference channels by name only.</p>
 <tr><th>Kind</th><th>Direction</th><th>Notation</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>SyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Synchronous call/reply; only the unidirectional shape is allowed.</td></tr>
+<tr><td><code>SyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Synchronous call/reply; only the unidirectional shape is allowed, from the lower-priority PD to the higher.</td></tr>
 <tr><td><code>AsyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Notification-only; no payload acknowledgement.</td></tr>
-<tr><td><code>AsyncBi</code></td><td>Bidirectional</td><td><code>pd_a &lt;-&gt; pd_b</code></td><td>Each side can send and receive on the same channel.</td></tr>
+<tr><td><code>AsyncBi</code></td><td>Bidirectional</td><td><code>pd_a &lt;-&gt; pd_b</code></td><td>Each side can send and receive on the same channel. Parses, but see <a href="#wf2-and-bidirectional-channels">WF2</a>.</td></tr>
 </tbody>
 </table>
 </div>
@@ -554,18 +819,22 @@ require the unidirectional <code>--&gt;</code> form.</p>
 expressions on the LHS of <code>?</code> / <code>!</code>.</p>
 </li>
 <li>
-<p><strong>Endpoints</strong> — two protection-domain names. Both must be declared in
-the same <code>.fis</code> file.</p>
+<p><strong>Endpoints</strong> — two <em>distinct</em> protection-domain names. Both must be
+declared in the same <code>.fis</code> file. A <code>Sync</code> channel’s sender must have a
+strictly lower priority than its receiver (seL4 protected procedure
+calls run low to high); a <code>Sync</code> channel takes no <code>via</code> clause.</p>
 </li>
 <li>
 <p><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
-channel’s payload buffer, optionally annotated with a typed slot:
+channel’s payload buffer and its slot type, which every buffer names:
 <code>via packet_buffer_outer&lt;int&gt;</code> or a declared
-<a href="#data-layer-structs-and-constants">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>).
-Without <code>via</code>, the channel is treated as a pure synchronisation point
-with no shared payload buffer. A struct payload is the channel’s
-<strong>communication type</strong>: it must be a system (<code>.fis</code>) struct — never a
-<a href="#program-local-structs">program-local struct</a> — and the C
+<a href="#data-layer-structs-and-constants">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>); a
+raw byte buffer is <code>via ring&lt;byte&gt;</code>. The slot type is a struct or a
+scalar, never an array; it is the value the
+channel carries, <code>Σ(c)</code>. Without <code>via</code>, the channel is a Microkit
+notification: a pure synchronisation point that carries no value. A
+struct payload is the channel’s
+<strong>communication type</strong>, a <a href="#data-layer-structs-and-constants">data-layer struct</a>, and the C
 backend types receive binders from it (<code>o2d?pkt</code> declares
 <code>static struct Slot pkt;</code>).</p>
 <p>A buffer region is <strong>implicitly mapped into both endpoint PDs</strong> (<code>rw</code>,
@@ -588,25 +857,34 @@ Async Chan s2o = simulate &lt;-&gt; eth_outer;
 // Buffer-backed channel, typed slot.
 Chan packet = eth_outer &lt;-&gt; eth_inner via packet_buffer_outer&lt;int&gt;;
 
-// Buffer-backed, untyped (slot type defaults later).
-Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer;
+// Buffer-backed, raw bytes.
+Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer&lt;byte&gt;;
 </code></pre>
 <h2 id="channel-events-in-process-bodies"><a class="header" href="#channel-events-in-process-bodies">Channel events in process bodies</a></h2>
 <p>Inside a process, channel events are written <code>chan_name '?' ident</code> (receive)
-and <code>chan_name '!' ident</code> (send). The names must match exactly; the
-validator resolves each event back to the declared <code>ChannelDecl</code> to check
-direction and payload type.</p>
+and <code>chan_name '!' expr</code> (send) on a buffered channel, and <code>chan_name '?'</code>
+and <code>chan_name '!'</code> on an unbuffered one, which carries no value. The
+names must match exactly; typing resolves each event back to the declared
+<code>ChannelDecl</code> and checks that the PD is one of its endpoints, that it may
+send or receive there (either end may do both on a <code>&lt;-&gt;</code> channel), and
+that the value matches the payload type.</p>
 <p>See <a href="#channel-events">Event Declarations → Channel events</a>
 for the inline event grammar and <a href="#process-definitions">Process Definitions</a>
 for how channel events sit in a process expression.</p>
+<h2 id="wf2-and-bidirectional-channels"><a class="header" href="#wf2-and-bidirectional-channels">WF2 and bidirectional channels</a></h2>
+<p><code>fic</code> requires the channel dependency graph to be acyclic (WF2): a PD that
+receives from another waits for it, and a cycle is a circular wait. A
+bidirectional channel adds the edge in both directions, so every <code>&lt;-&gt;</code>
+channel fails the check unless <code>--allow-wf2-cycles</code> is given (or
+<code>allow_wf2_cycles = true</code> in <code>fire.toml</code>), which defers deadlock-freedom to
+an external authority such as <code>fire verify</code>. The demos <code>pingpong</code> and
+<code>pingpongpan</code> use <code>&lt;-&gt;</code> this way.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
 <li>A struct payload types the receive binder in the generated C, but the
 payload <strong>transport</strong> (the ring copy through the backing region) is not
 generated yet — it is an explicit follow-up under the data-diode case
 study (#201). The generated code marks the pending copy with a comment.</li>
-<li>Send-site type checking (<code>c!e</code> against the declared payload) needs
-expression typing and is tracked under the type-system work (#117).</li>
 <li>The <code>Sync</code> modifier rejects bidirectional <code>&lt;-&gt;</code> syntactically; sync
 bidirectional channels would require a richer call/reply protocol than
 the current implementation supports.</li>
@@ -614,21 +892,30 @@ the current implementation supports.</li>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="imports-and-mappings"><a class="header" href="#imports-and-mappings">Imports and Mappings</a></h1>
 <p>Two declarations sit at the top of every <code>.fi</code> file: <code>import</code> brings an
-external C or Rust source file into scope under a chosen alias, and
+external C or Pancake source file into scope under a chosen alias, and
 <code>Mapping</code> puts a <a href="#memory-region-declarations">memory region</a> declared in
 the <code>.fis</code> into the protection domain’s address space.</p>
-<h2 id="imports"><a class="header" href="#imports">Imports</a></h2>
+<h2 id="imports-1"><a class="header" href="#imports-1">Imports</a></h2>
 <pre><code class="language-text">ImportDecl ::= 'import' '"' FilePath '"' 'as' ident ';'
-FilePath   ::= ident '.' ('c' | 'rs')
+FilePath   ::= any text up to the closing quote   -- one line, relative to the project
 </code></pre>
 <p>An <em>import declaration</em> names the external implementation that backs the
-PD’s <a href="#event-declarations">computation events</a>. The path is a single bare file
-name (no directories) ending in <code>.c</code> or <code>.rs</code>; the parser dispatches on
-the extension to record it as a C or Rust source. The alias becomes the
-prefix on every external call inside the PD.</p>
+PD’s <a href="#event-declarations">computation events</a>. The parser takes the path as written,
+up to the closing quote, and decides nothing about it; the front end reads
+it relative to the project directory (<code>import "include/eth.h" as eth;</code> is
+valid) and picks the reader from the extension: <code>.c</code> and <code>.h</code> are C, <code>.pnk</code>
+is Pancake. Any other extension is rejected when the project loads. Every
+<code>alias.f(..)</code> call then resolves to a function the file exports, or the
+build fails. The alias becomes the prefix on every external call inside
+the PD.</p>
+<p>What counts as exported depends on the language. For C, fic reads the file
+with libclang: every function that is neither <code>static</code> nor <code>inline</code>.
+For Pancake it scans the source for <code>export fun</code> declarations, which take
+at most four word arguments and return one word; their <code>/@ ... @/</code>
+contract blocks are read alongside.</p>
 <pre><code class="language-text">import "eth.c" as eth;             // call: eth.send_frame(...)
 import "dd.c" as dd;               // call: dd.forward_packet(...)
-import "driver.rs" as driver;      // Rust source — same call shape
+import "uart.pnk" as uart;         // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —
 order does not matter for parsing. Each alias must be unique within the
@@ -636,10 +923,10 @@ file.</p>
 <h2 id="mappings"><a class="header" href="#mappings">Mappings</a></h2>
 <pre><code class="language-text">MappingDecl ::= SecurityLabel? 'Mapping' ident '(' region (',' vaddr)? ',' perms (',' cached)? ')' ';'
 
-region      ::= ident                      // a MemoryRegion declared in .fis
-vaddr       ::= hex                        // explicit virtual address (optional)
-perms       ::= string_literal             // 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
-cached      ::= bool_literal               // default: true
+region      ::= ident                      -- a MemoryRegion declared in .fis
+vaddr       ::= hex                        -- explicit virtual address (optional)
+perms       ::= string_literal             -- 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
+cached      ::= bool_literal               -- default: true
 </code></pre>
 <p>A <em>mapping declaration</em> installs a <code>MemoryRegion</code> into the PD’s address
 space. The mapping’s name derives the auto-emitted setvar symbols
@@ -647,10 +934,10 @@ space. The mapping’s name derives the auto-emitted setvar symbols
 <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>.</p>
 <h3 id="fields-3"><a class="header" href="#fields-3">Fields</a></h3>
 <ul>
-<li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. The mapping
-inherits the region’s confidentiality; the type-checker rejects a <code>Low</code>
-mapping over a <code>High</code> region. See
-<a href="#information-flow-labels">Information-flow labels</a> below.</li>
+<li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. A mapping’s
+label must be at least its region’s: a <code>Low</code> mapping of a <code>High</code> region
+is rejected. See <a href="#information-flow-labels">Information-flow labels</a>
+below.</li>
 <li><strong>Name</strong> — the mapping’s own identifier. Distinct from the region’s name;
 one region can have multiple mappings under different names.</li>
 <li><strong>Region</strong> — the <code>MemoryRegion</code> declared in the <code>.fis</code> file.</li>
@@ -674,8 +961,8 @@ Mapping packet_buffer(packet_buffer_outer, "rw");
 // shared layout that pre-allocates virtual addresses.
 Low Mapping eth0(eth0, 0x2_000_000, "rw");
 
-// High-side mapping. Backed by a High MemoryRegion; rejected if the PD
-// or the region's label disagrees.
+// High-side mapping of a High MemoryRegion. A Low mapping of that region
+// would be rejected.
 High Mapping eth_clk(eth_clk, 0x2_200_000, "rw");
 
 // Read-only mapping (data-diode input).
@@ -692,9 +979,26 @@ flows_to(High, High) = true
 <p>In source: <code>Low</code> is the default — omitting the prefix is equivalent to
 writing <code>Low</code>. Place the prefix <strong>before</strong> the <code>MemoryRegion</code> / <code>Mapping</code>
 keyword; placing it elsewhere is a parse error.</p>
-<p>The validator runs after parsing and rejects any mapping that violates
-<code>flows_to(region.label, mapping.label)</code>. The data-diode demo uses this to
-enforce one-way information flow at the type-checker.</p>
+<p>This is the one information-flow rule: the information-flow check, run
+after typing, rejects any mapping that violates
+<code>flows_to(region.label, mapping.label)</code>, so a <code>High</code> region is never read
+through a <code>Low</code> mapping. Protection domains carry no labels of their own.
+The data-diode demo uses this to enforce one-way information flow. A
+dedicated information-flow chapter will own the detail; the
+<a href="#memory-region-declarations">Memory Region Declarations</a> chapter states
+the same rule from the region’s side.</p>
+<h2 id="a-mappings-addresses"><a class="header" href="#a-mappings-addresses">A mapping’s addresses</a></h2>
+<p>A mapping is a value only through its addresses:</p>
+<ul>
+<li><code>m.vaddr</code> is its virtual address, which fic chose (or you pinned). It
+compiles to that constant.</li>
+<li><code>m.paddr</code> is the physical address of its region. It may be known only
+when the system boots, so it compiles to the symbol <code>m_paddr</code>, which the
+loader patches. fic declares and patches <code>m_paddr</code> only in a PD that reads
+it. On Microkit, a region whose <code>paddr</code> is read must be physically
+contiguous; Microkit picks its address when the region declares none, and
+on x86-64 the region must declare one.</li>
+</ul>
 <h2 id="validation-2"><a class="header" href="#validation-2">Validation</a></h2>
 <ul>
 <li>Each <code>Mapping</code>’s <code>region</code> must reference a declared <code>MemoryRegion</code>.</li>
@@ -708,7 +1012,7 @@ is rejected.</li>
 <p>Boot-time behaviour of a protection domain is expressed in two ways:</p>
 <ol>
 <li><strong>Address binding</strong> is automatic: every <a href="#imports-and-mappings"><code>Mapping</code></a>
-exports its addresses to the imported C / Rust implementation through
+exports its addresses to the imported C / Pancake implementation through
 a <em>naming convention</em> (the <code>setvar</code> mechanism below). No syntax is
 required.</li>
 <li><strong>Boot-time logic</strong> is modelled by an ordinary
@@ -716,11 +1020,6 @@ required.</li>
 with <code>@bind(microkit.init)</code> — the model-level counterpart of Microkit’s
 <code>void init(void)</code> entrypoint, which the imported source file implements.</li>
 </ol>
-<blockquote>
-<p>ℹ️ Earlier versions of Fiducia used a special <code>(): { ... }</code>
-<em>constructor block</em> for both purposes. It was removed in <a href="https://github.com/fiducia-lang/fic/issues/168">#168</a>;
-<code>(): {</code> is now a parse error.</p>
-</blockquote>
 <h2 id="the-boot-process"><a class="header" href="#the-boot-process">The boot process</a></h2>
 <p>The boot process is the one annotated <code>@bind(microkit.init)</code>. Its <em>name</em>
 carries no meaning — <code>Init</code> is a common choice, but the binding, not the
@@ -744,6 +1043,8 @@ optional). A PD with no boot work still declares a no-op:</p>
 <pre><code class="language-text">@bind(microkit.init)
 proc Init() { Skip; }
 </code></pre>
+<p>The <code>@bind(microkit.notified)</code> process, in turn, must be receive-headed;
+see <a href="#annotations-bind">Annotations</a>.</p>
 <blockquote>
 <p>The requirement is enforced on the C / image path only. Pure
 verification models (<code>--emit=xta</code>) do not require kernel entry points.</p>
@@ -784,8 +1085,7 @@ implementation uses.</p>
 <p><code>setvar</code> only supports literal-substitution patching: it cannot
 evaluate arithmetic. Values derived from a mapping address (for
 example, an offset into a ring buffer) are computed at runtime inside
-the implementation’s <code>init</code> function — or, in future, in <code>proc Init</code>
-once compile-time expression evaluation (<a href="https://github.com/fiducia-lang/fic/issues/111">#111</a>) lands.</p>
+the implementation’s <code>init</code> function.</p>
 <h2 id="validation-3"><a class="header" href="#validation-3">Validation</a></h2>
 <ul>
 <li>Mapping names must be unique within a PD (checked by name
@@ -818,12 +1118,13 @@ from the imported source’s <code>init()</code> function (see
 <code>import</code> declarations. Globals are visible everywhere in the PD,
 read/write inside event bodies.</li>
 <li><strong>Event local</strong> — inside a computation <a href="#event-declarations">event body</a>,
-from its declaration to the end of the event (the next top-level item,
-since there is no explicit terminator keyword).</li>
+from its declaration to the end of the event body (the statement’s <code>;</code>,
+or the closing <code>}</code>).</li>
 <li><strong>Process variable</strong> — inside a <a href="#process-definitions">process body</a>: a
 parameter (<code>proc Drain(pkt: Slot)</code>, read-only, in scope for the whole
 body), a declaration <code>x: T;</code> (in scope for the rest of its sequence),
-or a receive binder <code>c?x</code> (in scope for the rest of its prefix).</li>
+or a receive binder <code>c?x</code> on a buffered channel (in scope for the rest
+of its prefix).</li>
 </ul>
 <p>A name in a body is looked up among that body’s own variables first,
 then the program’s globals, then the system’s constants:</p>
@@ -852,7 +1153,8 @@ scope is an error. Carriers are read-only — see
 </div>
 <p><code>int</code> and <code>uint</code> are aliases of <code>int64</code> and <code>uint64</code> on every target.
 <code>byte</code> is an alias for <code>uint8</code>. There is no <code>void</code> type — every
-declared variable has a concrete, storable type.</p>
+declared variable has a concrete, storable type; <code>void</code> is a reserved word,
+so <code>v: void;</code> is a parse error.</p>
 <h2 id="struct-types-and-arrays"><a class="header" href="#struct-types-and-arrays">Struct types and arrays</a></h2>
 <pre><code class="language-text">pkt: Slot           // user-defined struct — declared in the .fis data layer
 buf: uint8[16]       // fixed-size array — length is a literal or const name
@@ -868,10 +1170,11 @@ ready: bool;
 last_irq_ts: uint64;
 
 // Local declarations inside an event body.
-evt handle_packet.|size: int|:
+evt handle_packet.|size: int|: {
     local_buf: uint8[64];     // local
     ok: bool;                 // local
     local_buf = eth.alloc();  // assignment uses globals/locals/carriers
+}
 </code></pre>
 <h2 id="validation-4"><a class="header" href="#validation-4">Validation</a></h2>
 <ul>
@@ -884,19 +1187,18 @@ declaration.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="event-declarations"><a class="header" href="#event-declarations">Event Declarations</a></h1>
-<pre><code class="language-text">EventDecl   ::= 'evt' ident Carriers? ':' Statement*
+<pre><code class="language-text">EventDecl   ::= 'evt' ident Carriers? ':' Body
+Body        ::= Statement | '{' Statement* '}'
 Carriers    ::= ('.' '|' Param (',' Param)* '|')+
 Param       ::= ident ':' Type
 </code></pre>
 <p>An <em>event declaration</em> introduces one named atom of computation at the
 top level of a <code>.fi</code> file using the <code>evt</code> keyword. Processes reference
 it by name on the left of a prefix (<code>my_event -&gt; ...</code>).</p>
-<p><code>evt</code> declarations must appear <strong>before</strong> any <code>proc</code> definition in the
-same file; the compiler rejects an <code>evt</code> that follows a <code>proc</code> with a
-diagnostic. (Single-pass files are scannable top-to-bottom: all events
-visible before the processes that use them.)</p>
+<p><code>evt</code> declarations and <code>proc</code> definitions may appear in any order in a
+<code>.fi</code> file: a process can use an event declared below it.</p>
 <p>Computation events are one of three event kinds in CoreFi (paper §4.2);
-the other two — <em>channel events</em> (<code>c?x</code> / <code>c!e</code>) and <em>hardware-interrupt
+the other two — <em>channel events</em> (<code>c?x</code> / <code>c!e</code>, or <code>c?</code> / <code>c!</code>) and <em>hardware-interrupt
 events</em> (<code>irq?N</code> / <code>irq!N</code>) — are inline atoms that appear in process
 bodies and have no top-level declaration.</p>
 <h2 id="computation-events"><a class="header" href="#computation-events">Computation events</a></h2>
@@ -908,23 +1210,26 @@ mid-flight.</p>
 <p>Names follow <code>snake_case</code> and start with a lowercase letter. This both
 signals intent and lets the parser disambiguate between a computation
 event reference and a sub-process reference (which uses <code>UpperCamelCase</code>).</p>
-<h3 id="body-and-termination"><a class="header" href="#body-and-termination">Body and termination</a></h3>
-<p>After the <code>:</code>, the body is a sequence of <a href="#variable-declarations">statements</a>:
-local variable declarations, assignments, and external function calls.
-There is no explicit terminator — the body ends implicitly when the next
-top-level keyword (<code>evt</code>, <code>proc</code>, <code>import</code>, <code>Mapping</code>, etc.) is reached
-or when the file ends. Single-statement bodies terminate at <code>;</code>.</p>
-<pre><code class="language-text">// Single-statement body — ends at ;
+<h3 id="body"><a class="header" href="#body">Body</a></h3>
+<p>After the <code>:</code>, the body is either one <a href="#variable-declarations">statement</a>
+(a local variable declaration, an assignment, an external function call or
+<a href="#debug-output-1">debug output</a>),
+ending at its <code>;</code>, or any number of statements in braces. Either way the
+body ends where it says, so what follows it is never read as part of it: a
+global declared below an event stays a global.</p>
+<pre><code class="language-text">// One statement: no braces, ends at its ;
 evt setup_eth: eth.eth_setup();
 
-// Multi-statement body — ends at the next top-level item; size carrier used in alloc.
-evt handle_packet.|size: int|:
+// Several statements: braces.
+evt handle_packet.|size: int|: {
     local_buf: int;
     local_buf = eth.alloc(size);
     counter = counter + 1;
-
-evt next_event: ...   // body above ends here
+}
 </code></pre>
+<h3 id="debug-output"><a class="header" href="#debug-output">Debug output</a></h3>
+<p>A <code>dbg(...)</code> statement prints values from an event body; see
+<a href="#debug-output-1">Debug Output</a>.</p>
 <h3 id="carriers"><a class="header" href="#carriers">Carriers</a></h3>
 <pre><code class="language-text">evt handle_packet.|size: int|:                  // single carrier
 evt ack.|chan: int, slot: int|:                 // grouped carriers
@@ -934,8 +1239,8 @@ evt ack.|chan: int|.|slot: int|:                // chained carriers (equivalent)
 syntax uses pipes (<code>.|...|</code>) — chosen over parentheses so the visual
 boundary is distinct from sub-process parameter lists. Multiple carriers
 may be <strong>grouped</strong> in a single <code>.|x: int, y: int|</code> clause or <strong>chained</strong>
-across multiple <code>.|x: int|.|y: int|</code> clauses; both forms parse to the
-same <code>Vec&lt;(Type, String)&gt;</code> and behave identically.</p>
+across multiple <code>.|x: int|.|y: int|</code> clauses; both forms behave
+identically.</p>
 <p>Inside the body, carriers are read like any other variable: passed to
 external calls (<code>eth.handle_rx(idx)</code>) or read in expressions
 (<code>local_buf = eth.alloc(size)</code>). They are <strong>read-only</strong>; assigning one is
@@ -957,6 +1262,20 @@ the system’s constants, never a process variable; lookup and shadowing
 are in <a href="#scopes">Scopes</a>. To carry
 mutable state across event invocations, use a <a href="#variable-declarations">global</a>;
 to carry mutable scratch within one invocation, declare a local variable.</p>
+<h3 id="referencing-an-event"><a class="header" href="#referencing-an-event">Referencing an event</a></h3>
+<pre><code class="language-text">EventRef ::= ident ('.' ident)*
+</code></pre>
+<p>A process runs an event by naming it, followed by one <code>.ident</code> per
+carrier, written without whitespace around the dots. The identifiers are
+the process’s own variables (a parameter, a receive binder, a declaration
+or a global), supplied in the order the event declares its carriers:</p>
+<pre><code class="language-text">evt forward.|pkt: Slot|: { ... }
+evt ack.|chan: int, slot: int|: eth.ack_slot(chan, slot);
+
+proc Relay(pkt: Slot, c: int, s: int) {
+    forward.pkt -&gt; ack.c.s -&gt; Skip;
+}
+</code></pre>
 <h3 id="examples-6"><a class="header" href="#examples-6">Examples</a></h3>
 <pre><code class="language-text">// No carriers — the event is a fixed call.
 evt setup_eth: eth.eth_setup();
@@ -964,11 +1283,12 @@ evt setup_eth: eth.eth_setup();
 // Single carrier, single-statement body — idx is the carrier.
 evt read_frame.|idx: int|: eth.handle_rx(idx);
 
-// Multi-statement body — size carrier passed to alloc.
-evt handle_packet.|size: int|:
+// Several statements, in braces — size carrier passed to alloc.
+evt handle_packet.|size: int|: {
     local_buf: int;
     local_buf = eth.alloc(size);
     counter = counter + 1;
+}
 
 // Multiple carriers, grouped form.
 evt ack.|chan: int, slot: int|: eth.ack_slot(chan, slot);
@@ -977,22 +1297,27 @@ evt ack.|chan: int, slot: int|: eth.ack_slot(chan, slot);
 evt ack.|chan: int|.|slot: int|: eth.ack_slot(chan, slot);
 </code></pre>
 <h3 id="empty-body-events"><a class="header" href="#empty-body-events">Empty-body events</a></h3>
-<p><code>evt noop: </code> (no statements before the next item) is accepted; the body
-is zero statements. Useful as a placeholder while a process expression is
-being prototyped.</p>
+<p><code>evt noop: {}</code> is an event with no statements. Useful as a placeholder
+while a process expression is being prototyped.</p>
 <h2 id="channel-events"><a class="header" href="#channel-events">Channel events</a></h2>
-<pre><code class="language-text">ChannelEvent ::= ident '?' ident             // c?x — receive
-              |  ident '!' ident             // c!e — send
+<pre><code class="language-text">ChannelEvent ::= ident '?' ident?            // c?x / c? — receive
+              |  ident '!' Expr?             // c!e / c! — send
 </code></pre>
 <p>A <em>channel event</em> is an atomic communication action between two protection
 domains. The channel name on the LHS is resolved against the <a href="#channel-declarations"><code>Chan</code>
 declarations</a> in the surrounding <code>.fis</code>.</p>
 <p>Channel events appear inline inside <a href="#process-definitions">process expressions</a>
-— they have no top-level declaration. The receive form <code>c?x</code> binds the
-incoming value to <code>x</code> for the rest of that prefix only (<code>c?x -&gt; P</code>): the
-binder is gone at the next <code>;</code>, and a referenced process does not see it
-unless it is passed as an argument (<code>c?x -&gt; Drain(x)</code>). The send form
-<code>c!e</code> transmits the expression <code>e</code>.</p>
+— they have no top-level declaration.</p>
+<p>A channel carries a value if and only if it has a buffer (<code>via r&lt;T&gt;</code>),
+whose type <code>T</code> is the value’s. On a buffered channel the receive form
+<code>c?x</code> binds the incoming value to <code>x</code> for the rest of that prefix only
+(<code>c?x -&gt; P</code>): the binder is gone at the next <code>;</code>, and a referenced
+process does not see it unless it is passed as an argument
+(<code>c?x -&gt; Drain(x)</code>). The send form <code>c!e</code> transmits the expression <code>e</code>,
+of type <code>T</code>. An unbuffered channel is a Microkit notification, which
+carries no value: its events are <code>c?</code> and <code>c!</code>, and a value or binder on
+it is an error (<code>channel 'ball' has no buffer, so it carries no value</code>),
+as is leaving one off a buffered channel.</p>
 <h3 id="no-selective-receive"><a class="header" href="#no-selective-receive">No selective receive</a></h3>
 <p>The RHS of <code>?</code> is always a single identifier (a binder), never a value
 pattern. Traditional CSP / CSP# accepts <code>c?ACK</code> as “wait only for the
@@ -1026,7 +1351,9 @@ proc P() { get_pkt -&gt; c!pkt -&gt; ... }
 <p>A <em>hardware-interrupt event</em> is a special-cased channel event on the
 reserved channel name <code>irq</code>. The integer is the IRQ number declared on
 the <a href="#protection-domain-declarations">protection domain</a>. <code>irq?N</code> blocks
-until the IRQ fires; <code>irq!N</code> acknowledges the IRQ back to the kernel.</p>
+until the IRQ fires; <code>irq!N</code> acknowledges the IRQ back to the kernel. The
+literal is not checked against the IRQ the protection domain declares: a
+mismatch is not reported.</p>
 <p>Like channel events, IRQ events appear only inside process expressions
 and have no top-level declaration:</p>
 <pre><code class="language-text">proc Notified() { irq?159 -&gt; Handle_eth(); irq!159 -&gt; Notified(); }
@@ -1035,6 +1362,41 @@ and have no top-level declaration:</p>
 <p>🚧 <em><code>self.IRQ</code> syntax is planned (<a href="https://github.com/fiducia-lang/fic/issues/164">#164</a>) — <code>irq?self.IRQ</code> / <code>irq!self.IRQ</code>
 will resolve the protection domain’s IRQ number without a magic literal.</em></p>
 </blockquote>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="debug-output-1"><a class="header" href="#debug-output-1">Debug Output</a></h1>
+<pre><code class="language-text">Dbg    ::= 'dbg' '(' (DbgArg (',' DbgArg)*)? ')' ';'
+DbgArg ::= text_literal | Expr
+</code></pre>
+<p><code>dbg</code> prints its arguments in order, then a newline. A text literal is
+printable ASCII between double quotes, with the escapes <code>\\</code>, <code>\"</code>, <code>\n</code>
+and <code>\t</code>. Any other argument is an expression of an integer type, or a
+<code>bool</code>, which prints as <code>true</code> or <code>false</code>.</p>
+<pre><code class="language-text">evt tally: {
+    dbg("round ", rounds);
+    rounds = io.tally(rounds);
+}
+</code></pre>
+<p><code>dbg</code> is a statement, so it is valid only in an event body: not in a
+<code>proc</code> body, a guard or an expression. It is for debugging only. The model
+leaves it out, so no argument may call a function: removing the <code>dbg</code> must
+not change what the event does.
+Put a <code>dbg</code> in an event that does other work, as above. An event that only
+prints does nothing in the model, and <code>fic</code> warns about it when it emits
+the model.</p>
+<p>Each line starts with the name of the protection domain that printed it,
+then <code>: </code>, so <code>dbg("round ", rounds);</code> in <code>ping</code> prints <code>ping: round 3</code>.
+An integer prints in decimal at its full width, a signed one with its
+sign: <code>-1</code> prints <code>-1</code>, and every <code>uint64</code> prints in full; a <code>bool</code>
+prints <code>true</code> or <code>false</code>. fic’s runtime, <code>filib</code>, which every protection
+domain links, writes each byte as it comes, so lines from protection
+domains running at once can interleave on the shared console.</p>
+<p>All output is the <code>.fi</code>’s. By convention, imported C and Pancake use
+neither Microkit nor seL4 directly: no <code>microkit.h</code> or <code>sel4/…</code> include,
+no <code>microkit_…</code> or <code>seL4_…</code> call, no <code>@microkit_…</code> FFI, in the import or
+in the C linked beside it (a header’s source, a Pancake file’s FFI shims).
+A channel operation or a print there would be invisible to the model, so
+what <code>fire verify</code> proves would not be about the system that runs. <code>fic</code>
+does not check this yet.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="process-definitions"><a class="header" href="#process-definitions">Process Definitions</a></h1>
 <pre><code class="language-text">ProcessDecl ::= Bind? 'proc' UIdent '(' (Param (',' Param)*)? ')' '{' ProcessBody '}'
@@ -1061,8 +1423,8 @@ domain — a CSP-style algebraic expression composed from
 Each <code>proc</code> declaration introduces one named process; all <code>proc</code>
 declarations in the same <code>.fi</code> file are mutually visible and may reference
 each other by name.</p>
-<p><code>proc</code> definitions must appear <strong>after</strong> all <code>evt</code> declarations in the
-same file; the compiler rejects a <code>proc</code> that is followed by an <code>evt</code>.</p>
+<p><code>proc</code> definitions and <code>evt</code> declarations may appear in any order in the
+file.</p>
 <p>Following CoreFi paper §4.2, a process expression is one of:</p>
 <div class="table-wrapper">
 <table>
@@ -1109,11 +1471,18 @@ and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
 boot body) and the <code>microkit.notified</code>-bound process becomes the
 <code>notified()</code> event loop.</li>
+<li>The process bound to <code>microkit.notified</code> must be <em>receive-headed</em>: every
+path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
+begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
+and no <code>default</code> at the top. The kernel invokes it for a message, which
+the head consumes; a handler that could run without one would never
+return to the kernel.</li>
 <li>Both a <code>@bind(microkit.init)</code> <strong>and</strong> a <code>@bind(microkit.notified)</code>
 process are <strong>mandatory</strong> for every PD with a program when targeting
-Microkit (<code>--emit=c</code> or image generation) — Microkit invokes both on
-every PD. See <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>. <code>--emit=xta</code>
-(verification only) does not require them. Other platform entry points
+Microkit — Microkit invokes both on every PD, and the front end
+reports a PD that lacks one whatever the output (<code>--check</code>, <code>--emit=xta</code>,
+<code>--emit=c</code>, an image). See <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a> and
+<a href="#entry-points">Entry Points</a>. Other platform entry points
 are optional.</li>
 <li><strong>Each entry point binds at most one process.</strong> Two processes both
 <code>@bind(microkit.notified)</code> is an error — resolution rejects the second
@@ -1163,7 +1532,17 @@ only for <code>ProcessRef</code> (the validator follows the name).</p>
 [b] P()                 // guard
 c?x -&gt; ...              // channel-event prefix
 </code></pre>
-<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds.</p>
+<p>A branch that is bare <code>Skip</code>, <code>Div</code> or a variable declaration is a parse
+error: it is always enabled, so it discriminates nothing. A branch that is
+a sequence is judged by its first item.</p>
+<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds. It
+needs no discriminator of its own, but when a choice has a <code>default</code>, no
+branch may begin with a receive (<code>c?x</code>, <code>irq?N</code>), through guards and
+nested plain choices: a guard cannot see that a buffer is empty, so the
+default could fire while a message waits.</p>
+<pre><code class="language-text">// Rejected: the second branch begins with a receive, and a default follows.
+[ready] c! -&gt; Skip [] c? -&gt; Skip default Skip;
+</code></pre>
 <h3 id="examples-7"><a class="header" href="#examples-7">Examples</a></h3>
 <pre><code class="language-text">// Two branches, no default.
 proc Dispatch() {
@@ -1178,21 +1557,27 @@ proc Reply(pkt: int) {
 }
 </code></pre>
 <h2 id="guards"><a class="header" href="#guards">Guards</a></h2>
-<pre><code class="language-text">Guard ::= ident | '!' ident
+<pre><code class="language-text">Guard ::= Expr   -- boolean-shaped: comparison, &amp;&amp;, ||, !, a boolean
+                 -- variable, call or field access; not arithmetic
 </code></pre>
-<p>A <em>guard</em> gates the next process expression on a boolean variable. Today
-the parser accepts only <code>[var]</code> (variable read) and <code>[!var]</code> (negation);
-the variable must be a <a href="#variable-declarations">global</a> declared in the
-same <code>.fi</code> file. The guard binds tighter than <code>[]</code>:</p>
+<p>A <em>guard</em> gates the next process expression on a boolean
+<a href="#expressions">expression</a>: <code>[rounds &lt; 3]</code>, <code>[!ready]</code>,
+<code>[io.keep_playing(rounds) != 0]</code>. A guard whose top node is arithmetic (<code>[a + b]</code>),
+an integer literal or <code>sizeof</code> is rejected; arithmetic inside a comparison
+(<code>[a + b == c]</code>) is fine. The guard binds tighter than <code>[]</code>:</p>
 <pre><code class="language-text">[b] e -&gt; P [] e2 -&gt; Q   ≡   ([b] (e -&gt; P)) [] (e2 -&gt; Q)
 </code></pre>
 <p>The guard applies only to the first branch.</p>
-<blockquote>
-<p>🚧 <em>Full boolean / relational guard expressions (<code>[x == 3]</code>, <code>[x &amp;&amp; y]</code>,
-etc.) land with the <a href="#expressions">expression grammar</a> — see
-<a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. Until then, decompose with intermediate globals if a guard
-needs richer logic.</em></p>
-</blockquote>
+<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
+<p>A process refers to itself, or to another process, only in <em>tail
+position</em>: as the last thing it does, so the reference is a jump back to
+that process’s head and the control graph stays finite. A reference
+followed by more work is rejected:</p>
+<pre><code class="language-text">proc Notified() { ball? -&gt; Notified(); tally -&gt; Skip; }   // error: non-tail
+proc Notified() { ball? -&gt; tally -&gt; Notified(); }         // ok
+</code></pre>
+<p>Inside a non-final operand of <code>;</code>, no enclosing process may be referenced:
+its continuation would need a return stack.</p>
 <h2 id="sequential-composition"><a class="header" href="#sequential-composition">Sequential composition</a></h2>
 <p>Inside a <code>{}</code> body, <code>;</code> separates items. The last item may carry a
 trailing <code>;</code> before <code>}</code>:</p>
@@ -1226,13 +1611,13 @@ proc Stuck() { Div; }
 <li>Argument lists for <code>ProcessRef</code> and computation-event references are
 restricted to identifiers. Channel-receive RHS accepts identifiers <em>or</em>
 integer literals (so <code>irq?159</code> parses).</li>
-<li>Guards accept <code>[var]</code> / <code>[!var]</code> only.</li>
 <li>Currently only variable declarations (<code>x: int;</code>) are permitted as inline
 body items alongside process expressions. Assignment statements and external
 calls must live in <code>evt</code> declarations. This restriction is planned to be
 lifted: future versions will allow statements directly in <code>proc</code> bodies,
 with flexible interleaving of statements and process expressions.</li>
-<li>Recursion is modeled as a sub-process call by name.</li>
+<li>Recursion is modeled as a sub-process call by name, in tail position
+only (see <a href="#recursion">Recursion</a>).</li>
 <li>A receive binder does not reach a referenced process: pass it as an
 argument, <code>c?x -&gt; Drain(x)</code> with <code>proc Drain(x: T)</code> (see
 <a href="#scopes">Scopes</a>). An entry point (<code>@bind</code>)
@@ -1250,16 +1635,18 @@ Expressions appear as:</p>
 carriers.</li>
 </ul>
 <p>One grammar (<code>Expr</code>) covers literals, variables, calls, <code>sizeof</code>, unary
-and binary operators, and field access. There’s no separate arithmetic
+and binary operators, field access, and casts. There’s no separate arithmetic
 vs. logical vs. boolean sub-grammar — a boolean-<em>shaped</em> subset of
 <code>Expr</code> is what’s required in guard position (see below), not a
 different grammar.</p>
 <pre><code class="language-text">Expr    ::= Lit | ident | CExpr | 'sizeof' '(' Type ')'
           | UnOp Expr | Expr BinOp Expr
           | FieldBase '.' ident           -- field access
+          | Expr 'as' Type                -- cast
 FieldBase ::= ident | CExpr | FieldBase '.' ident  -- var, call, or field chain
 
 Lit     ::= int_lit | hex_lit | bool_lit
+                                        -- hex_lit allows '_' (0xFE00_0000); int_lit does not
 UnOp    ::= '-' | '!' | '~'
 BinOp   ::= '+' | '-' | '*' | '/' | '%'
           | '==' | '!=' | '&lt;' | '&lt;=' | '&gt;' | '&gt;='
@@ -1284,17 +1671,36 @@ BinOp   ::= '+' | '-' | '*' | '/' | '%'
 <tr><td>8</td><td><code>&lt;&lt;</code>, <code>&gt;&gt;</code></td></tr>
 <tr><td>9</td><td><code>+</code>, <code>-</code></td></tr>
 <tr><td>10</td><td><code>*</code>, <code>/</code>, <code>%</code></td></tr>
-<tr><td>11</td><td>unary <code>-</code>, <code>!</code>, <code>~</code></td></tr>
-<tr><td>12</td><td>primary atoms</td></tr>
+<tr><td>11</td><td><code>as</code></td></tr>
+<tr><td>12</td><td>unary <code>-</code>, <code>!</code>, <code>~</code></td></tr>
+<tr><td>13</td><td>primary atoms</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="names-mappings-and-fields"><a class="header" href="#names-mappings-and-fields">Names, mappings and fields</a></h2>
+<p>A variable is a program or body variable or a system <code>const</code>. A mapping is
+not a value: <code>m</code> alone is an error, and only <code>m.vaddr</code> and <code>m.paddr</code> are
+expressions, the two <a href="#a-mappings-addresses">addresses of a mapping</a>.
+Any other <code>x.f</code> is field access on a struct value (a variable, a call, or
+a chain of fields).</p>
+<p>A constant subexpression is folded at compile time in the checked
+arithmetic of its type; a constant that overflows is a compile error, not
+a wrapped value.</p>
+<h2 id="casts"><a class="header" href="#casts">Casts</a></h2>
+<p><code>e as T</code> converts an integer or an address to another integer type or to
+<code>Address</code>, explicitly: fic never widens or narrows on its own, so
+<code>m.vaddr + w</code> with <code>w: uint32</code> is an error and <code>m.vaddr + w as uint</code> is the
+way to write it. The semantics are Rust’s: widening is lossless, narrowing
+is modulo 2ⁿ (<code>300 as uint8</code> is <code>44</code>, <code>200 as uint8 as int8</code> is <code>-56</code>), and
+a constant cast folds at compile time. <code>as</code> binds tighter than every binary
+operator and looser than unary: <code>-x as uint</code> is <code>(-x) as uint</code>. A cast to
+<code>bool</code>, to a struct or to an array is rejected, as is a cast of one.</p>
 <h2 id="call-expressions-cexpr"><a class="header" href="#call-expressions-cexpr">Call expressions (<a href="https://github.com/fiducia-lang/fic/blob/main/src/parser/expr.rs"><code>CExpr</code></a>)</a></h2>
 <pre><code class="language-text">CExpr ::= ident '.' ident '(' (Expr (',' Expr)*)? ')'
 </code></pre>
 <p>A <em>call expression</em> invokes a function defined in an imported <code>.c</code>
 file, prefixed with the import alias chosen at the
-<a href="#imports"><code>import</code> declaration</a>. The alias
+<a href="#imports-1"><code>import</code> declaration</a>. The alias
 is <strong>required</strong> — there are no local callables in Fiducia, only
 externally-implemented functions reached through an alias.</p>
 <p>The first <code>ident</code> is the alias; the second is the function name. No
@@ -1318,6 +1724,60 @@ boolean-shaped expressions.</p>
 [true]                     // OK
 [a + b]                    // rejected — arithmetic isn't boolean-shaped
 </code></pre>
+<p>A call in a guard must be side-effect free, because the generated C may
+evaluate a guard more than once. For a Pancake function with a contract,
+<code>fic --check</code> and <code>--emit=xta</code> reject a call whose contract is impure.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="entry-points"><a class="header" href="#entry-points">Entry Points</a></h1>
+<p>A protection domain does nothing until the platform calls it. The handlers
+the platform calls are the PD’s <em>entry points</em>, and a <code>proc</code> becomes one
+with a <code>@bind</code> annotation:</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() { ball! -&gt; Skip; }
+
+@bind(microkit.notified)
+proc Notified() {
+    ball? -&gt; tally -&gt; Skip;
+    [io.keep_playing(rounds) != 0] ball! -&gt; Notified()
+ default Skip;
+}
+</code></pre>
+<p><code>@bind(&lt;platform&gt;.&lt;entry&gt;)</code> is platform-neutral: the parser records the
+pairs on the process and decides nothing about them. The entry points a
+platform has, and what each means, belong to that platform. A process
+with no <code>@bind</code> is internal: it runs only when a bound process references
+it.</p>
+<h2 id="microkit"><a class="header" href="#microkit">Microkit</a></h2>
+<p>Microkit is the platform fic targets, and it has two entry points:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Entry</th><th>Microkit’s</th><th>Runs</th></tr>
+</thead>
+<tbody>
+<tr><td><code>microkit.init</code></td><td><code>init()</code></td><td>once, when the PD boots. See <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>.</td></tr>
+<tr><td><code>microkit.notified</code></td><td><code>notified(channel)</code></td><td>each time the kernel notifies the PD, for a channel message or an interrupt.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Both are <strong>mandatory</strong>. Every protection domain binds both, and the front
+end reports one that does not, naming the PD and the missing entry, before
+any backend runs: <code>fic --check</code>, <code>--emit=xta</code> and <code>--emit=c</code> all stop.
+Each entry point binds at most one process.</p>
+<p>The <code>notified</code> process must be <em>receive-headed</em>: it starts by consuming
+the message or interrupt that woke it (see
+<a href="#annotations-bind">Process Definitions</a>). The
+generated C makes each receive or interrupt await in the process a
+resume point that <code>notified()</code> dispatches to, and <code>init()</code> runs the boot
+process.</p>
+<p>A <code>microkit.</code> name other than <code>init</code> and <code>notified</code> is accepted by the
+grammar and ignored.</p>
+<h2 id="choosing-the-platform"><a class="header" href="#choosing-the-platform">Choosing the platform</a></h2>
+<p><code>--platform=&lt;name&gt;</code> asks <code>fic</code> to compile for one platform, and rejects a
+name <code>fic</code> has no backend for; today that is <code>microkit</code>. Without it, <code>fic</code>
+compiles whatever the annotations bind. A process may name several
+platforms on one line, <code>@bind(microkit.notified, cheri.interrupt_handler)</code>:
+the pairs for a platform <code>fic</code> does not target are kept and not used.</p>
 
                     </main>
 

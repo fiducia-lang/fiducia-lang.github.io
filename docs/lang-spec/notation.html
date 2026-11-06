@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-3186da07.js";
+            window.path_to_searchindex_js = "searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cd6ef858.js"></script>
+        <script src="toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,7 +188,7 @@ familiar with Rust documentation can read it without a separate primer.</p>
 <p>A production has the form <code>LHS ::= RHS</code>, where the right-hand side is a
 sequence of terminals, non-terminals, and meta-operators. Productions are
 written in <code>text</code>-tagged code blocks:</p>
-<pre><code class="language-text">EventDecl ::= 'evt' ident carriers? ':' stmt*
+<pre><code class="language-text">EventDecl ::= 'evt' ident carriers? ':' (stmt | '{' stmt* '}')
 carriers  ::= carrier_group+
 carrier_group ::= '.' '|' param (',' param)* '|'
 param     ::= ident ':' type
@@ -201,15 +201,34 @@ param     ::= ident ':' type
 </thead>
 <tbody>
 <tr><td><code>'literal'</code></td><td>A literal token (keyword, symbol). Matches verbatim.</td></tr>
-<tr><td><code>ident</code></td><td>An identifier, defined in the lexical structure chapter.</td></tr>
+<tr><td><code>ident</code></td><td>An identifier: an ASCII letter or <code>_</code>, then letters, digits or <code>_</code>, and not a reserved keyword.</td></tr>
+<tr><td><code>UIdent</code></td><td>An <code>ident</code> whose first character is an uppercase ASCII letter (<code>UpperCamelCase</code>); process names and references.</td></tr>
+<tr><td><code>UPPER_IDENT</code></td><td>An <code>ident</code> written in upper case by convention (constants such as <code>SLOT_SIZE</code>); the parser accepts any <code>ident</code>.</td></tr>
 <tr><td><code>X?</code></td><td>Zero or one of <code>X</code>.</td></tr>
 <tr><td><code>X*</code></td><td>Zero or more of <code>X</code>.</td></tr>
 <tr><td><code>X+</code></td><td>One or more of <code>X</code>.</td></tr>
-<tr><td>`X</td><td>Y`</td></tr>
+<tr><td><code>X | Y</code></td><td>Either <code>X</code> or <code>Y</code>. Listed alternatives appear on separate lines for readability when the disjunction is long.</td></tr>
 <tr><td><code>(X Y)</code></td><td>Grouping; otherwise meta-operators bind tighter than juxtaposition.</td></tr>
 </tbody>
 </table>
 </div>
+<p>Literals in a production are named by their lexical class (the
+<a href="lexical-structure.html">lexical structure</a> has the full rules):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Matches</th></tr>
+</thead>
+<tbody>
+<tr><td><code>int_lit</code></td><td>A decimal integer (<code>42</code>); digits only, no <code>_</code> separators.</td></tr>
+<tr><td><code>hex</code> / <code>hex_lit</code></td><td><code>0x</code> then hex digits; <code>_</code> may separate them (<code>0xFE00_0000</code>).</td></tr>
+<tr><td><code>bool_lit</code> / <code>bool_literal</code></td><td><code>true</code> or <code>false</code>.</td></tr>
+<tr><td><code>string_literal</code> / <code>text_literal</code></td><td><code>"..."</code> of printable ASCII, with the escapes <code>\\</code>, <code>\"</code>, <code>\n</code> and <code>\t</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Comments inside a production start with <code>--</code>; examples, which are Fiducia
+source, use the language’s own <code>//</code> and <code>/* */</code>.</p>
 <p>Whitespace between symbols in a production is significant only when called
 out — most productions allow inter-token whitespace and comments, exactly
 as the lexer does.</p>
@@ -248,7 +267,7 @@ the tracking issue:</p>
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="system/data-layer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="lexical-structure.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -262,7 +281,7 @@ the tracking issue:</p>
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="system/data-layer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="lexical-structure.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

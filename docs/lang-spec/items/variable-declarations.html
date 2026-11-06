@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -202,12 +202,13 @@ from the imported source’s <code>init()</code> function (see
 <code>import</code> declarations. Globals are visible everywhere in the PD,
 read/write inside event bodies.</li>
 <li><strong>Event local</strong> — inside a computation <a href="event-blocks.html">event body</a>,
-from its declaration to the end of the event (the next top-level item,
-since there is no explicit terminator keyword).</li>
+from its declaration to the end of the event body (the statement’s <code>;</code>,
+or the closing <code>}</code>).</li>
 <li><strong>Process variable</strong> — inside a <a href="process-blocks.html">process body</a>: a
 parameter (<code>proc Drain(pkt: Slot)</code>, read-only, in scope for the whole
 body), a declaration <code>x: T;</code> (in scope for the rest of its sequence),
-or a receive binder <code>c?x</code> (in scope for the rest of its prefix).</li>
+or a receive binder <code>c?x</code> on a buffered channel (in scope for the rest
+of its prefix).</li>
 </ul>
 <p>A name in a body is looked up among that body’s own variables first,
 then the program’s globals, then the system’s constants:</p>
@@ -236,7 +237,8 @@ scope is an error. Carriers are read-only — see
 </div>
 <p><code>int</code> and <code>uint</code> are aliases of <code>int64</code> and <code>uint64</code> on every target.
 <code>byte</code> is an alias for <code>uint8</code>. There is no <code>void</code> type — every
-declared variable has a concrete, storable type.</p>
+declared variable has a concrete, storable type; <code>void</code> is a reserved word,
+so <code>v: void;</code> is a parse error.</p>
 <h2 id="struct-types-and-arrays"><a class="header" href="#struct-types-and-arrays">Struct types and arrays</a></h2>
 <pre><code class="language-text">pkt: Slot           // user-defined struct — declared in the .fis data layer
 buf: uint8[16]       // fixed-size array — length is a literal or const name
@@ -252,10 +254,11 @@ ready: bool;
 last_irq_ts: uint64;
 
 // Local declarations inside an event body.
-evt handle_packet.|size: int|:
+evt handle_packet.|size: int|: {
     local_buf: uint8[64];     // local
     ok: bool;                 // local
     local_buf = eth.alloc();  // assignment uses globals/locals/carriers
+}
 </code></pre>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>

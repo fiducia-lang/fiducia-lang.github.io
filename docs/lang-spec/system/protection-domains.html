@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,17 +191,18 @@ period               ::= integer_literal       // microseconds, default = budget
 protection domain (PD): an isolated thread of execution with its own
 address space, scheduling parameters, and (optionally) one IRQ binding.
 Each <code>ProtectionDomain</code> listed in a <code>.fis</code> system file pairs with one
-<code>.fi</code> program file by name.</p>
+<code>.fi</code> program file, <code>&lt;name&gt;.fi</code> beside the <code>.fis</code>.</p>
 <h2 id="fields"><a class="header" href="#fields">Fields</a></h2>
 <ul>
 <li><strong>Name</strong> — <code>snake_case</code> identifier. The matching <code>&lt;name&gt;.fi</code> file holds
 the PD’s mappings, events, and processes.</li>
-<li><strong>Priority</strong> — required, range <code>0..=254</code>. Out-of-range values are
-rejected with a parse-time error. Higher numbers run first under the
+<li><strong>Priority</strong> — required, range <code>0..=254</code> (it is read as a <code>u8</code> below 255).
+Out-of-range values are rejected with a parse-time error. Higher numbers run first under the
 Microkit fixed-priority scheduler.</li>
 <li><strong>IRQ</strong> — optional; any value fitting a <code>u16</code> parses (no range check is
 enforced by the compiler — pick a number the target board’s IRQ
-controller actually has). When present, the PD is wired to
+controller actually has), but one IRQ may be claimed by only one PD.
+When present, the PD is wired to
 receive that hardware interrupt on the reserved <code>irq</code> channel and can
 observe it via <a href="../items/event-blocks.html#hardware-interrupt-events"><code>irq?N</code> / <code>irq!N</code></a>
 events.</li>
@@ -216,11 +217,14 @@ set to. Setting <code>period &gt; budget</code> produces a sub-rate scheduling p
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
 <li><code>priority</code> must be in <code>0..=254</code>.</li>
-<li>A PD name is unique within the system file.</li>
+<li>A PD name is unique within the system file; a second declaration is an
+error at the later one.</li>
+<li>An IRQ number belongs to one PD.</li>
 <li>A PD that is referenced from a <code>Channel</code> or from the <code>System =</code>
 composition must be declared.</li>
-<li>A PD without a corresponding <code>&lt;name&gt;.fi</code> is rejected at link time (not
-at parse time).</li>
+<li>A PD without a <code>&lt;name&gt;.fi</code> beside the <code>.fis</code> is an error when the
+project is loaded, not when the <code>.fis</code> is parsed. A <code>.fi</code> that no PD
+names is only a warning, and the file is never opened.</li>
 </ul>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <pre><code class="language-text">// Three PDs with distinct priorities; IRQ on the outer driver only.
@@ -236,8 +240,7 @@ ProtectionDomain monitor(120, 0, 200, 1000);  // priority 120, IRQ 0, 200 µs / 
 </code></pre>
 <h2 id="system-composition"><a class="header" href="#system-composition">System composition</a></h2>
 <p>A <code>.fis</code> file ends with a <code>System = ...</code> clause that names the PDs to
-include and their composition operator (currently always <code>|||</code>,
-interleave). Every PD referenced in <code>System</code> must be declared above:</p>
+include, joined by the interleave operator <code>|||</code>, the only composition. Every PD referenced in <code>System</code> must be declared above:</p>
 <pre><code class="language-text">System = eth_outer ||| dd ||| eth_inner ||| simulate;
 </code></pre>
 <p>PDs declared but omitted from <code>System</code> are dead code and currently produce

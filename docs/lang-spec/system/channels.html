@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,12 +187,13 @@ SyncChannelDecl   ::= 'Sync' 'Chan' ident '=' ident '--&gt;' ident ';'?
 
 AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident ('&lt;-&gt;' | '--&gt;') ident ViaClause? ';'?
 
-ViaClause         ::= 'via' ident ('&lt;' Type '&gt;')?
+ViaClause         ::= 'via' ident '&lt;' Type '&gt;'
 </code></pre>
 <p>A <em>channel declaration</em> introduces one named communication endpoint between
 two protection domains. Channels carry the events that show up inside a
-process expression — <code>c?x</code> (receive) and <code>c!e</code> (send). They live in <code>.fis</code>
-system files; the <code>.fi</code> files reference channels by name only.</p>
+process expression — <code>c?x</code> (receive) and <code>c!e</code> (send) on a buffered
+channel, <code>c?</code> and <code>c!</code> on an unbuffered one. They live in <code>.fis</code> system
+files; the <code>.fi</code> files reference channels by name only.</p>
 <h2 id="channel-kinds"><a class="header" href="#channel-kinds">Channel kinds</a></h2>
 <div class="table-wrapper">
 <table>
@@ -200,9 +201,9 @@ system files; the <code>.fi</code> files reference channels by name only.</p>
 <tr><th>Kind</th><th>Direction</th><th>Notation</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>SyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Synchronous call/reply; only the unidirectional shape is allowed.</td></tr>
+<tr><td><code>SyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Synchronous call/reply; only the unidirectional shape is allowed, from the lower-priority PD to the higher.</td></tr>
 <tr><td><code>AsyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Notification-only; no payload acknowledgement.</td></tr>
-<tr><td><code>AsyncBi</code></td><td>Bidirectional</td><td><code>pd_a &lt;-&gt; pd_b</code></td><td>Each side can send and receive on the same channel.</td></tr>
+<tr><td><code>AsyncBi</code></td><td>Bidirectional</td><td><code>pd_a &lt;-&gt; pd_b</code></td><td>Each side can send and receive on the same channel. Parses, but see <a href="#wf2-and-bidirectional-channels">WF2</a>.</td></tr>
 </tbody>
 </table>
 </div>
@@ -216,18 +217,22 @@ require the unidirectional <code>--&gt;</code> form.</p>
 expressions on the LHS of <code>?</code> / <code>!</code>.</p>
 </li>
 <li>
-<p><strong>Endpoints</strong> — two protection-domain names. Both must be declared in
-the same <code>.fis</code> file.</p>
+<p><strong>Endpoints</strong> — two <em>distinct</em> protection-domain names. Both must be
+declared in the same <code>.fis</code> file. A <code>Sync</code> channel’s sender must have a
+strictly lower priority than its receiver (seL4 protected procedure
+calls run low to high); a <code>Sync</code> channel takes no <code>via</code> clause.</p>
 </li>
 <li>
 <p><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
-channel’s payload buffer, optionally annotated with a typed slot:
+channel’s payload buffer and its slot type, which every buffer names:
 <code>via packet_buffer_outer&lt;int&gt;</code> or a declared
-<a href="data-layer.html">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>).
-Without <code>via</code>, the channel is treated as a pure synchronisation point
-with no shared payload buffer. A struct payload is the channel’s
-<strong>communication type</strong>: it must be a system (<code>.fis</code>) struct — never a
-<a href="data-layer.html#program-local-structs">program-local struct</a> — and the C
+<a href="data-layer.html">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>); a
+raw byte buffer is <code>via ring&lt;byte&gt;</code>. The slot type is a struct or a
+scalar, never an array; it is the value the
+channel carries, <code>Σ(c)</code>. Without <code>via</code>, the channel is a Microkit
+notification: a pure synchronisation point that carries no value. A
+struct payload is the channel’s
+<strong>communication type</strong>, a <a href="data-layer.html">data-layer struct</a>, and the C
 backend types receive binders from it (<code>o2d?pkt</code> declares
 <code>static struct Slot pkt;</code>).</p>
 <p>A buffer region is <strong>implicitly mapped into both endpoint PDs</strong> (<code>rw</code>,
@@ -250,25 +255,34 @@ Async Chan s2o = simulate &lt;-&gt; eth_outer;
 // Buffer-backed channel, typed slot.
 Chan packet = eth_outer &lt;-&gt; eth_inner via packet_buffer_outer&lt;int&gt;;
 
-// Buffer-backed, untyped (slot type defaults later).
-Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer;
+// Buffer-backed, raw bytes.
+Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer&lt;byte&gt;;
 </code></pre>
 <h2 id="channel-events-in-process-bodies"><a class="header" href="#channel-events-in-process-bodies">Channel events in process bodies</a></h2>
 <p>Inside a process, channel events are written <code>chan_name '?' ident</code> (receive)
-and <code>chan_name '!' ident</code> (send). The names must match exactly; the
-validator resolves each event back to the declared <code>ChannelDecl</code> to check
-direction and payload type.</p>
+and <code>chan_name '!' expr</code> (send) on a buffered channel, and <code>chan_name '?'</code>
+and <code>chan_name '!'</code> on an unbuffered one, which carries no value. The
+names must match exactly; typing resolves each event back to the declared
+<code>ChannelDecl</code> and checks that the PD is one of its endpoints, that it may
+send or receive there (either end may do both on a <code>&lt;-&gt;</code> channel), and
+that the value matches the payload type.</p>
 <p>See <a href="../items/event-blocks.html#channel-events">Event Declarations → Channel events</a>
 for the inline event grammar and <a href="../items/process-blocks.html">Process Definitions</a>
 for how channel events sit in a process expression.</p>
+<h2 id="wf2-and-bidirectional-channels"><a class="header" href="#wf2-and-bidirectional-channels">WF2 and bidirectional channels</a></h2>
+<p><code>fic</code> requires the channel dependency graph to be acyclic (WF2): a PD that
+receives from another waits for it, and a cycle is a circular wait. A
+bidirectional channel adds the edge in both directions, so every <code>&lt;-&gt;</code>
+channel fails the check unless <code>--allow-wf2-cycles</code> is given (or
+<code>allow_wf2_cycles = true</code> in <code>fire.toml</code>), which defers deadlock-freedom to
+an external authority such as <code>fire verify</code>. The demos <code>pingpong</code> and
+<code>pingpongpan</code> use <code>&lt;-&gt;</code> this way.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
 <li>A struct payload types the receive binder in the generated C, but the
 payload <strong>transport</strong> (the ring copy through the backing region) is not
 generated yet — it is an explicit follow-up under the data-diode case
 study (#201). The generated code marks the pending copy with a comment.</li>
-<li>Send-site type checking (<code>c!e</code> against the declared payload) needs
-expression typing and is tracked under the type-system work (#117).</li>
 <li>The <code>Sync</code> modifier rejects bidirectional <code>&lt;-&gt;</code> syntactically; sync
 bidirectional channels would require a richer call/reply protocol than
 the current implementation supports.</li>

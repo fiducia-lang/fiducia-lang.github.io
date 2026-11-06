@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,11 +181,12 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="data-layer-structs-and-constants"><a class="header" href="#data-layer-structs-and-constants">Data Layer: Structs and Constants</a></h1>
-<pre><code class="language-text">StructDecl ::= 'struct' UIdent '{' Field* '}'
+<pre><code class="language-text">StructDecl ::= 'struct' ident '{' Field* '}'
 Field      ::= ident ':' Type ';'
-Type       ::= ScalarType | Type '[' ArrayLen ']'
-ArrayLen   ::= integer-literal | CONST_NAME
-ConstDecl  ::= 'const' UPPER_IDENT ':' Type '=' Expr ';'
+Type       ::= BaseType ('[' ArrayLen ']')?
+BaseType   ::= ScalarType | ident            // ident names a declared struct
+ArrayLen   ::= integer-literal | ident       // ident names a declared constant
+ConstDecl  ::= 'const' ident ':' Type '=' Expr ';'
 </code></pre>
 <p>The <em>data layer</em> is the system-wide vocabulary of payload struct types
 and layout constants. It is shared by every protection domain — and,
@@ -214,16 +215,24 @@ stays statically known: <code>sizeof(T[N]) = N * sizeof(T)</code>.</li>
 <li><strong>No recursion</strong>: a struct may not contain itself, directly or
 indirectly. This guarantees <code>sizeof</code> is computable at compile time by
 recursive field traversal.</li>
-<li>Fields must have <strong>fixed-width</strong> types (<code>uint32</code>, not <code>int</code>; arrays of
-fixed-width elements) so the layout is well-defined.</li>
+<li>Fields must have <strong>fixed-width</strong> types so the layout is well-defined:
+<code>int</code>, <code>uint</code> and <code>Address</code> have no fixed size and are rejected in a
+struct (<code>uint32</code>, not <code>uint</code>), as is a struct nesting one that has none.
+An array has one length: <code>T[N]</code>, not <code>T[N][M]</code>.</li>
+<li>Field names within a struct are distinct.</li>
+<li>Layout is <strong>packed</strong>, fields in declaration order with no padding.
+The generated headers assert it (a <code>_Static_assert</code> on each struct’s
+size in <code>types.h</code>), so a C compiler that would pad the struct differently
+fails the build; order fields so the natural C layout is the packed one.</li>
 <li>Struct names are usable wherever a type is expected — variable
 declarations, <a href="channels.html">typed channel buffers</a> (<code>via buf&lt;Packet&gt;</code>),
 and <code>sizeof</code>.</li>
 </ul>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
 <ul>
-<li>Names use <code>SCREAMING_SNAKE_CASE</code> by convention; a declared type is
-required.</li>
+<li>Names use <code>SCREAMING_SNAKE_CASE</code> by convention (any identifier is
+accepted); a declared type is required. Unlike a struct field, a
+constant may have an unsized type such as <code>int</code> or <code>uint</code>.</li>
 <li>The right-hand side is a full <a href="../expressions.html">expression</a>, folded
 at <strong>compile time</strong> (rustc-style, before any lowering). The const
 subset covers: literals, references to <em>previously declared</em>
@@ -235,41 +244,18 @@ declare in dependency order.</li>
 <li>The folded value must match the declared type (<code>bool</code> constants take
 boolean values; integer-family types take integers).</li>
 </ul>
-<h2 id="program-local-structs"><a class="header" href="#program-local-structs">Program-local structs</a></h2>
-<p>A <code>.fi</code> program may declare structs of its own, with the same grammar and
-rules as system structs. These are <strong>PD-internal types</strong> — device-ring
-descriptors, driver bookkeeping — that never cross a channel:</p>
-<pre><code class="language-text">// eth_outer.fi
-struct Rbd {
-    data_length: uint16;
-    flags:       uint16;
-    addr:        uint32;
-}
-
-ring: Rbd;
-</code></pre>
-<p>Scoping:</p>
-<ul>
-<li>A local struct is visible <strong>only within its own program</strong> — other PDs
-and the <code>.fis</code> cannot reference it. Channel buffer payload types must
-be system structs: system structs are the project’s <em>communication
-types</em> (what may cross a <a href="channels.html">channel</a>), local structs are
-<em>program types</em> (PD-internal state) — the two tiers of the data model.</li>
-<li>A local struct may contain system structs in its fields; the reverse
-is impossible.</li>
-<li>A local struct may <strong>not</strong> reuse the name of a system struct
-(shadowing is an error), so every type name means one thing across
-the project.</li>
-<li>Array lengths in local fields may reference system constants.</li>
-</ul>
-<p><code>fic</code> writes system structs and constants to <code>include/gen/types.h</code>
-(and, for Pancake, <code>include/gen/types.pnk</code>), included as <code>"gen/types.h"</code>
-with <code>&lt;project&gt;/include</code> on the include path. Each PD’s local structs go
-into a per-PD header, <code>&lt;pd&gt;_types.h</code> (e.g. <code>eth_outer_types.h</code>), included
-by the PD’s generated unit and importable by its driver code.</p>
+<h2 id="one-home-for-structs"><a class="header" href="#one-home-for-structs">One home for structs</a></h2>
+<p>Every struct is declared in the <code>.fis</code>. A program names them as any
+other type, for its locals and body variables, and so do the C and
+Pancake files it imports.</p>
+<p><code>fic</code> writes the structs and constants to <code>include/gen/types.h</code> (and, for
+Pancake, <code>include/gen/types.pnk</code>), included as <code>"gen/types.h"</code> with
+<code>&lt;project&gt;/include</code> on the include path.</p>
 <h2 id="global-state"><a class="header" href="#global-state">Global state</a></h2>
-<p>The data layer declares <em>types and constants</em>, not mutable state. In
-CoreFi, shared global state is exactly the channel-buffer view: mutable
+<p>The data layer declares <em>types and constants</em>, not mutable state. A
+program’s own variables are its protection domain’s state (see
+<a href="../items/variable-declarations.html">Variable Declarations</a>); state shared
+across domains is exactly the channel-buffer view: mutable
 data lives in declared <a href="memory-regions.html">memory regions</a>, mapped
 explicitly into the PDs that may touch it and labelled for information
 flow. A shared scalar is a typed slot of a declared region — never an
@@ -279,7 +265,7 @@ ambient global.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../system/project-layout.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -293,7 +279,7 @@ ambient global.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../system/project-layout.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

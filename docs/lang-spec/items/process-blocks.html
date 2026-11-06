@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -205,8 +205,8 @@ domain — a CSP-style algebraic expression composed from
 Each <code>proc</code> declaration introduces one named process; all <code>proc</code>
 declarations in the same <code>.fi</code> file are mutually visible and may reference
 each other by name.</p>
-<p><code>proc</code> definitions must appear <strong>after</strong> all <code>evt</code> declarations in the
-same file; the compiler rejects a <code>proc</code> that is followed by an <code>evt</code>.</p>
+<p><code>proc</code> definitions and <code>evt</code> declarations may appear in any order in the
+file.</p>
 <p>Following CoreFi paper §4.2, a process expression is one of:</p>
 <div class="table-wrapper">
 <table>
@@ -253,11 +253,18 @@ and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
 boot body) and the <code>microkit.notified</code>-bound process becomes the
 <code>notified()</code> event loop.</li>
+<li>The process bound to <code>microkit.notified</code> must be <em>receive-headed</em>: every
+path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
+begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
+and no <code>default</code> at the top. The kernel invokes it for a message, which
+the head consumes; a handler that could run without one would never
+return to the kernel.</li>
 <li>Both a <code>@bind(microkit.init)</code> <strong>and</strong> a <code>@bind(microkit.notified)</code>
 process are <strong>mandatory</strong> for every PD with a program when targeting
-Microkit (<code>--emit=c</code> or image generation) — Microkit invokes both on
-every PD. See <a href="init-process.html">Boot Initialisation</a>. <code>--emit=xta</code>
-(verification only) does not require them. Other platform entry points
+Microkit — Microkit invokes both on every PD, and the front end
+reports a PD that lacks one whatever the output (<code>--check</code>, <code>--emit=xta</code>,
+<code>--emit=c</code>, an image). See <a href="init-process.html">Boot Initialisation</a> and
+<a href="../semantics/entry-points.html">Entry Points</a>. Other platform entry points
 are optional.</li>
 <li><strong>Each entry point binds at most one process.</strong> Two processes both
 <code>@bind(microkit.notified)</code> is an error — resolution rejects the second
@@ -307,7 +314,17 @@ only for <code>ProcessRef</code> (the validator follows the name).</p>
 [b] P()                 // guard
 c?x -&gt; ...              // channel-event prefix
 </code></pre>
-<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds.</p>
+<p>A branch that is bare <code>Skip</code>, <code>Div</code> or a variable declaration is a parse
+error: it is always enabled, so it discriminates nothing. A branch that is
+a sequence is judged by its first item.</p>
+<p>The optional <code>default</code> arm is taken when no branch’s guard succeeds. It
+needs no discriminator of its own, but when a choice has a <code>default</code>, no
+branch may begin with a receive (<code>c?x</code>, <code>irq?N</code>), through guards and
+nested plain choices: a guard cannot see that a buffer is empty, so the
+default could fire while a message waits.</p>
+<pre><code class="language-text">// Rejected: the second branch begins with a receive, and a default follows.
+[ready] c! -&gt; Skip [] c? -&gt; Skip default Skip;
+</code></pre>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-text">// Two branches, no default.
 proc Dispatch() {
@@ -322,21 +339,27 @@ proc Reply(pkt: int) {
 }
 </code></pre>
 <h2 id="guards"><a class="header" href="#guards">Guards</a></h2>
-<pre><code class="language-text">Guard ::= ident | '!' ident
+<pre><code class="language-text">Guard ::= Expr   -- boolean-shaped: comparison, &amp;&amp;, ||, !, a boolean
+                 -- variable, call or field access; not arithmetic
 </code></pre>
-<p>A <em>guard</em> gates the next process expression on a boolean variable. Today
-the parser accepts only <code>[var]</code> (variable read) and <code>[!var]</code> (negation);
-the variable must be a <a href="variable-declarations.html">global</a> declared in the
-same <code>.fi</code> file. The guard binds tighter than <code>[]</code>:</p>
+<p>A <em>guard</em> gates the next process expression on a boolean
+<a href="../expressions.html">expression</a>: <code>[rounds &lt; 3]</code>, <code>[!ready]</code>,
+<code>[io.keep_playing(rounds) != 0]</code>. A guard whose top node is arithmetic (<code>[a + b]</code>),
+an integer literal or <code>sizeof</code> is rejected; arithmetic inside a comparison
+(<code>[a + b == c]</code>) is fine. The guard binds tighter than <code>[]</code>:</p>
 <pre><code class="language-text">[b] e -&gt; P [] e2 -&gt; Q   ≡   ([b] (e -&gt; P)) [] (e2 -&gt; Q)
 </code></pre>
 <p>The guard applies only to the first branch.</p>
-<blockquote>
-<p>🚧 <em>Full boolean / relational guard expressions (<code>[x == 3]</code>, <code>[x &amp;&amp; y]</code>,
-etc.) land with the <a href="../expressions.html">expression grammar</a> — see
-<a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. Until then, decompose with intermediate globals if a guard
-needs richer logic.</em></p>
-</blockquote>
+<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
+<p>A process refers to itself, or to another process, only in <em>tail
+position</em>: as the last thing it does, so the reference is a jump back to
+that process’s head and the control graph stays finite. A reference
+followed by more work is rejected:</p>
+<pre><code class="language-text">proc Notified() { ball? -&gt; Notified(); tally -&gt; Skip; }   // error: non-tail
+proc Notified() { ball? -&gt; tally -&gt; Notified(); }         // ok
+</code></pre>
+<p>Inside a non-final operand of <code>;</code>, no enclosing process may be referenced:
+its continuation would need a return stack.</p>
 <h2 id="sequential-composition"><a class="header" href="#sequential-composition">Sequential composition</a></h2>
 <p>Inside a <code>{}</code> body, <code>;</code> separates items. The last item may carry a
 trailing <code>;</code> before <code>}</code>:</p>
@@ -370,13 +393,13 @@ proc Stuck() { Div; }
 <li>Argument lists for <code>ProcessRef</code> and computation-event references are
 restricted to identifiers. Channel-receive RHS accepts identifiers <em>or</em>
 integer literals (so <code>irq?159</code> parses).</li>
-<li>Guards accept <code>[var]</code> / <code>[!var]</code> only.</li>
 <li>Currently only variable declarations (<code>x: int;</code>) are permitted as inline
 body items alongside process expressions. Assignment statements and external
 calls must live in <code>evt</code> declarations. This restriction is planned to be
 lifted: future versions will allow statements directly in <code>proc</code> bodies,
 with flexible interleaving of statements and process expressions.</li>
-<li>Recursion is modeled as a sub-process call by name.</li>
+<li>Recursion is modeled as a sub-process call by name, in tail position
+only (see <a href="#recursion">Recursion</a>).</li>
 <li>A receive binder does not reach a referenced process: pass it as an
 argument, <code>c?x -&gt; Drain(x)</code> with <code>proc Drain(x: T)</code> (see
 <a href="variable-declarations.html#scopes">Scopes</a>). An entry point (<code>@bind</code>)
@@ -387,7 +410,7 @@ takes no parameters.</li>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../items/event-blocks.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../items/debug-output.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -401,7 +424,7 @@ takes no parameters.</li>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../items/event-blocks.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../items/debug-output.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

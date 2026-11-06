@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,21 +182,30 @@
                     <main>
                         <h1 id="imports-and-mappings"><a class="header" href="#imports-and-mappings">Imports and Mappings</a></h1>
 <p>Two declarations sit at the top of every <code>.fi</code> file: <code>import</code> brings an
-external C or Rust source file into scope under a chosen alias, and
+external C or Pancake source file into scope under a chosen alias, and
 <code>Mapping</code> puts a <a href="../system/memory-regions.html">memory region</a> declared in
 the <code>.fis</code> into the protection domain’s address space.</p>
 <h2 id="imports"><a class="header" href="#imports">Imports</a></h2>
 <pre><code class="language-text">ImportDecl ::= 'import' '"' FilePath '"' 'as' ident ';'
-FilePath   ::= ident '.' ('c' | 'rs')
+FilePath   ::= any text up to the closing quote   -- one line, relative to the project
 </code></pre>
 <p>An <em>import declaration</em> names the external implementation that backs the
-PD’s <a href="event-blocks.html">computation events</a>. The path is a single bare file
-name (no directories) ending in <code>.c</code> or <code>.rs</code>; the parser dispatches on
-the extension to record it as a C or Rust source. The alias becomes the
-prefix on every external call inside the PD.</p>
+PD’s <a href="event-blocks.html">computation events</a>. The parser takes the path as written,
+up to the closing quote, and decides nothing about it; the front end reads
+it relative to the project directory (<code>import "include/eth.h" as eth;</code> is
+valid) and picks the reader from the extension: <code>.c</code> and <code>.h</code> are C, <code>.pnk</code>
+is Pancake. Any other extension is rejected when the project loads. Every
+<code>alias.f(..)</code> call then resolves to a function the file exports, or the
+build fails. The alias becomes the prefix on every external call inside
+the PD.</p>
+<p>What counts as exported depends on the language. For C, fic reads the file
+with libclang: every function that is neither <code>static</code> nor <code>inline</code>.
+For Pancake it scans the source for <code>export fun</code> declarations, which take
+at most four word arguments and return one word; their <code>/@ ... @/</code>
+contract blocks are read alongside.</p>
 <pre><code class="language-text">import "eth.c" as eth;             // call: eth.send_frame(...)
 import "dd.c" as dd;               // call: dd.forward_packet(...)
-import "driver.rs" as driver;      // Rust source — same call shape
+import "uart.pnk" as uart;         // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —
 order does not matter for parsing. Each alias must be unique within the
@@ -204,10 +213,10 @@ file.</p>
 <h2 id="mappings"><a class="header" href="#mappings">Mappings</a></h2>
 <pre><code class="language-text">MappingDecl ::= SecurityLabel? 'Mapping' ident '(' region (',' vaddr)? ',' perms (',' cached)? ')' ';'
 
-region      ::= ident                      // a MemoryRegion declared in .fis
-vaddr       ::= hex                        // explicit virtual address (optional)
-perms       ::= string_literal             // 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
-cached      ::= bool_literal               // default: true
+region      ::= ident                      -- a MemoryRegion declared in .fis
+vaddr       ::= hex                        -- explicit virtual address (optional)
+perms       ::= string_literal             -- 'r', 'rw', 'rx', 'rwx', 'x', 'wx'
+cached      ::= bool_literal               -- default: true
 </code></pre>
 <p>A <em>mapping declaration</em> installs a <code>MemoryRegion</code> into the PD’s address
 space. The mapping’s name derives the auto-emitted setvar symbols
@@ -215,10 +224,10 @@ space. The mapping’s name derives the auto-emitted setvar symbols
 <a href="init-process.html">Boot Initialisation</a>.</p>
 <h3 id="fields"><a class="header" href="#fields">Fields</a></h3>
 <ul>
-<li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. The mapping
-inherits the region’s confidentiality; the type-checker rejects a <code>Low</code>
-mapping over a <code>High</code> region. See
-<a href="#information-flow-labels">Information-flow labels</a> below.</li>
+<li><strong>Security label</strong> — <code>High</code> or <code>Low</code> prefix, default <code>Low</code>. A mapping’s
+label must be at least its region’s: a <code>Low</code> mapping of a <code>High</code> region
+is rejected. See <a href="#information-flow-labels">Information-flow labels</a>
+below.</li>
 <li><strong>Name</strong> — the mapping’s own identifier. Distinct from the region’s name;
 one region can have multiple mappings under different names.</li>
 <li><strong>Region</strong> — the <code>MemoryRegion</code> declared in the <code>.fis</code> file.</li>
@@ -242,8 +251,8 @@ Mapping packet_buffer(packet_buffer_outer, "rw");
 // shared layout that pre-allocates virtual addresses.
 Low Mapping eth0(eth0, 0x2_000_000, "rw");
 
-// High-side mapping. Backed by a High MemoryRegion; rejected if the PD
-// or the region's label disagrees.
+// High-side mapping of a High MemoryRegion. A Low mapping of that region
+// would be rejected.
 High Mapping eth_clk(eth_clk, 0x2_200_000, "rw");
 
 // Read-only mapping (data-diode input).
@@ -260,9 +269,26 @@ flows_to(High, High) = true
 <p>In source: <code>Low</code> is the default — omitting the prefix is equivalent to
 writing <code>Low</code>. Place the prefix <strong>before</strong> the <code>MemoryRegion</code> / <code>Mapping</code>
 keyword; placing it elsewhere is a parse error.</p>
-<p>The validator runs after parsing and rejects any mapping that violates
-<code>flows_to(region.label, mapping.label)</code>. The data-diode demo uses this to
-enforce one-way information flow at the type-checker.</p>
+<p>This is the one information-flow rule: the information-flow check, run
+after typing, rejects any mapping that violates
+<code>flows_to(region.label, mapping.label)</code>, so a <code>High</code> region is never read
+through a <code>Low</code> mapping. Protection domains carry no labels of their own.
+The data-diode demo uses this to enforce one-way information flow. A
+dedicated information-flow chapter will own the detail; the
+<a href="../system/memory-regions.html">Memory Region Declarations</a> chapter states
+the same rule from the region’s side.</p>
+<h2 id="a-mappings-addresses"><a class="header" href="#a-mappings-addresses">A mapping’s addresses</a></h2>
+<p>A mapping is a value only through its addresses:</p>
+<ul>
+<li><code>m.vaddr</code> is its virtual address, which fic chose (or you pinned). It
+compiles to that constant.</li>
+<li><code>m.paddr</code> is the physical address of its region. It may be known only
+when the system boots, so it compiles to the symbol <code>m_paddr</code>, which the
+loader patches. fic declares and patches <code>m_paddr</code> only in a PD that reads
+it. On Microkit, a region whose <code>paddr</code> is read must be physically
+contiguous; Microkit picks its address when the region declares none, and
+on x86-64 the region must declare one.</li>
+</ul>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
 <li>Each <code>Mapping</code>’s <code>region</code> must reference a declared <code>MemoryRegion</code>.</li>

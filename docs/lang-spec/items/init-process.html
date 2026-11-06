@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-3186da07.js";
+            window.path_to_searchindex_js = "../searchindex-1749926e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd6ef858.js"></script>
+        <script src="../toc-c80c5641.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
 <p>Boot-time behaviour of a protection domain is expressed in two ways:</p>
 <ol>
 <li><strong>Address binding</strong> is automatic: every <a href="imports-and-mappings.html"><code>Mapping</code></a>
-exports its addresses to the imported C / Rust implementation through
+exports its addresses to the imported C / Pancake implementation through
 a <em>naming convention</em> (the <code>setvar</code> mechanism below). No syntax is
 required.</li>
 <li><strong>Boot-time logic</strong> is modelled by an ordinary
@@ -192,11 +192,6 @@ required.</li>
 with <code>@bind(microkit.init)</code> — the model-level counterpart of Microkit’s
 <code>void init(void)</code> entrypoint, which the imported source file implements.</li>
 </ol>
-<blockquote>
-<p>ℹ️ Earlier versions of Fiducia used a special <code>(): { ... }</code>
-<em>constructor block</em> for both purposes. It was removed in <a href="https://github.com/fiducia-lang/fic/issues/168">#168</a>;
-<code>(): {</code> is now a parse error.</p>
-</blockquote>
 <h2 id="the-boot-process"><a class="header" href="#the-boot-process">The boot process</a></h2>
 <p>The boot process is the one annotated <code>@bind(microkit.init)</code>. Its <em>name</em>
 carries no meaning — <code>Init</code> is a common choice, but the binding, not the
@@ -220,6 +215,8 @@ optional). A PD with no boot work still declares a no-op:</p>
 <pre><code class="language-text">@bind(microkit.init)
 proc Init() { Skip; }
 </code></pre>
+<p>The <code>@bind(microkit.notified)</code> process, in turn, must be receive-headed;
+see <a href="process-blocks.html#annotations-bind">Annotations</a>.</p>
 <blockquote>
 <p>The requirement is enforced on the C / image path only. Pure
 verification models (<code>--emit=xta</code>) do not require kernel entry points.</p>
@@ -260,8 +257,7 @@ implementation uses.</p>
 <p><code>setvar</code> only supports literal-substitution patching: it cannot
 evaluate arithmetic. Values derived from a mapping address (for
 example, an offset into a ring buffer) are computed at runtime inside
-the implementation’s <code>init</code> function — or, in future, in <code>proc Init</code>
-once compile-time expression evaluation (<a href="https://github.com/fiducia-lang/fic/issues/111">#111</a>) lands.</p>
+the implementation’s <code>init</code> function.</p>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
 <li>Mapping names must be unique within a PD (checked by name
