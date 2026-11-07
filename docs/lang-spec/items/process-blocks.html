@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-182fd078.js";
+            window.path_to_searchindex_js = "../searchindex-f16a7e35.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -271,14 +271,6 @@ are optional.</li>
 <code>@bind(microkit.notified)</code> is an error — resolution rejects the second
 rather than silently keeping the first.</li>
 </ul>
-<p>The target platform is chosen with <code>--platform</code> (e.g. <code>--platform=microkit</code>);
-omit it to compile whatever the annotations bind. A platform <code>fic</code> does not
-support is rejected.</p>
-<blockquote>
-<p>Resolving bindings to a platform’s concrete kernel symbols — and
-rejecting unknown or conflicting targets across platforms — remains the
-project layer’s job (<code>fire</code>, configured in <code>fire.toml</code>); see <a href="https://github.com/fiducia-lang/fic/issues/190">#190</a>.</p>
-</blockquote>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From loosest to tightest:</p>
 <div class="table-wrapper">

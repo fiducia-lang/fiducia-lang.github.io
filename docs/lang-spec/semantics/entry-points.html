@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-182fd078.js";
+            window.path_to_searchindex_js = "../searchindex-f16a7e35.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -224,12 +224,10 @@ resume point that <code>notified()</code> dispatches to, and <code>init()</code>
 process.</p>
 <p>A <code>microkit.</code> name other than <code>init</code> and <code>notified</code> is accepted by the
 grammar and ignored.</p>
-<h2 id="choosing-the-platform"><a class="header" href="#choosing-the-platform">Choosing the platform</a></h2>
-<p><code>--platform=&lt;name&gt;</code> asks <code>fic</code> to compile for one platform, and rejects a
-name <code>fic</code> has no backend for; today that is <code>microkit</code>. Without it, <code>fic</code>
-compiles whatever the annotations bind. A process may name several
-platforms on one line, <code>@bind(microkit.notified, cheri.interrupt_handler)</code>:
-the pairs for a platform <code>fic</code> does not target are kept and not used.</p>
+<h2 id="other-platforms"><a class="header" href="#other-platforms">Other platforms</a></h2>
+<p>A process may name several platforms on one line,
+<code>@bind(microkit.notified, cheri.interrupt_handler)</code>. <code>fic</code> compiles the
+<code>microkit</code> pairs; the others are kept and not used.</p>
 
                     </main>
 
