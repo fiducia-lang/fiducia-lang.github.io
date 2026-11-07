@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-6fe3a3ed.js";
+            window.path_to_searchindex_js = "searchindex-b2e5bed6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -236,7 +236,10 @@ and <code>sdf</code> run it.</p>
 <p>The Lean model’s flattening theorem assumes the checks below. All but
 the first are <strong>warnings</strong>: <code>fic</code> prints them and goes on, so a finding
 is a program the theorem does not cover (and, for some, one that can
-block for ever), not a rejected one.</p>
+block for ever), not a rejected one. The <code>default</code> heads and the choice
+partition are checked on the <em>notified body</em>, as the model states them:
+the process bound to <code>microkit.notified</code> and every process it reaches.
+<code>Init</code>, and a process nothing references, are not checked.</p>
 <div class="table-wrapper">
 <table>
 <thead>
