@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-15444553.js";
+            window.path_to_searchindex_js = "searchindex-6fe3a3ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -214,7 +214,7 @@ args = [
 board   = "qemu_virt_aarch64"   # Microkit board identifier
 profile = "debug"               # debug | release
 # sdk / gcc / ld — optional, fall back to $MICROKIT_SDK / $GCC / $LD
-# allow_wf2_cycles = true       # skip WF2 when `fire verify` covers deadlock-freedom
+# allow_wf2_cycles = true       # skip WF2 (else a cycle is a warning) when `fire verify` covers deadlock-freedom
 
 [verify.model_checker]
 mode = "verifyta"               # verification engine
@@ -260,7 +260,7 @@ mode = "verifyta"               # verification engine
 <tr><td><code>sdk</code></td><td>no</td><td>Path to the Microkit SDK root. Falls back to <code>$MICROKIT_SDK</code>.</td></tr>
 <tr><td><code>gcc</code></td><td>no</td><td>AArch64 cross-compiler binary. Falls back to <code>$GCC</code>.</td></tr>
 <tr><td><code>ld</code></td><td>no</td><td>AArch64 cross-linker binary. Falls back to <code>$LD</code>.</td></tr>
-<tr><td><code>allow_wf2_cycles</code></td><td>no</td><td>Pass <code>--allow-wf2-cycles</code> to <code>fic</code>: skip the structural WF2 acyclicity check. Use when deadlock-freedom is established by <a href="fire-verify.html"><code>fire verify</code></a> instead — WF2 rejects cyclic topologies even when they are deadlock-free under a fair scheduler. Default <code>false</code>.</td></tr>
+<tr><td><code>allow_wf2_cycles</code></td><td>no</td><td>Pass <code>--allow-wf2-cycles</code> to <code>fic</code>: skip the structural WF2 acyclicity check (without the flag a cycle is a warning, and the build goes on). Use when deadlock-freedom is established by <a href="fire-verify.html"><code>fire verify</code></a> instead — WF2 rejects cyclic topologies even when they are deadlock-free under a fair scheduler. Default <code>false</code>.</td></tr>
 </tbody>
 </table>
 </div>

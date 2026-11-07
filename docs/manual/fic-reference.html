@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-15444553.js";
+            window.path_to_searchindex_js = "searchindex-6fe3a3ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -200,7 +200,7 @@ setvars, and packs the loader, seL4 kernel, and PD ELFs into
 <code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment.</p>
 <p>With <code>--check</code>, <code>fic</code> stops after the front-end — parse, data-layer
 resolution, name resolution, vaddr materialization, information-flow
-typecheck, WF2 acyclicity — and reports diagnostics without writing
+typecheck, well-formedness (below) — and reports diagnostics without writing
 any output (the <code>cargo check</code> of Fiducia):</p>
 <pre><code class="language-console">$ fic demo/datadiode/ --check
   ✓ Parsed 1 system + 3 program files
@@ -231,7 +231,33 @@ representation:</p>
 <p>The inspection formats (<code>rawast</code>, <code>ast</code>, <code>c</code>, <code>dot</code>) skip the WF2 check —
 they have no deployment target. <code>xta</code> exists precisely to analyse
 cyclic systems, so it also skips WF2; image generation (the default)
-and <code>sdf</code> enforce it.</p>
+and <code>sdf</code> run it.</p>
+<h3 id="well-formedness"><a class="header" href="#well-formedness">Well-formedness</a></h3>
+<p>The Lean model’s flattening theorem assumes the checks below. All but
+the first are <strong>warnings</strong>: <code>fic</code> prints them and goes on, so a finding
+is a program the theorem does not cover (and, for some, one that can
+block for ever), not a rejected one.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Check</th><th>Finding</th></tr>
+</thead>
+<tbody>
+<tr><td>Tail references (<code>tailRec</code>)</td><td><strong>Error.</strong> A process references one being lowered in non-tail position.</td></tr>
+<tr><td><code>default</code> heads (<code>defaultRecvFree</code>)</td><td>A branch under a <code>default</code> begins with a receive.</td></tr>
+<tr><td>Receive-headed <code>notified</code> (<code>recvHeaded</code>)</td><td>The <code>notified</code> handler can run without a message.</td></tr>
+<tr><td>Channel dependency (WF2)</td><td>The channels form a cycle; <code>--allow-wf2-cycles</code> skips the check.</td></tr>
+<tr><td>Choice partition (Wf3)</td><td>At a choice: two branches with the same head can both be enabled; a choice with no <code>default</code> has a state where no branch is enabled; a guard stands outside a choice.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The partition check treats a guard as a formula over bool variables,
+foreign calls (opaque booleans, equal calls being equal) and comparisons
+against constants, at the variables’ integer widths. It reports a choice it
+cannot prove a partition, so a warning can be spurious, and a clean result is
+a proof. Branches with different heads (event, send channel, receive
+channel) need no proof. It does not check that each branch starts with an
+event: <code>[g] Skip</code> is accepted.</p>
 <h2 id="options"><a class="header" href="#options">Options</a></h2>
 <h3 id="--check"><a class="header" href="#--check"><code>--check</code></a></h3>
 <p>Run the front-end only; produce no artifact. Conflicts with <code>--emit</code>.</p>

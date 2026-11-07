@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-15444553.js";
+            window.path_to_searchindex_js = "searchindex-6fe3a3ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -259,7 +259,7 @@ setvar patches applied to each PD.</p>
 <tr><td><code>board path '...' does not exist</code></td><td><code>[run.target] board</code>/<code>profile</code> doesn’t match a directory under <code>&lt;sdk&gt;/board/</code>.</td></tr>
 <tr><td><code>fic: command not found</code></td><td>Install <code>fic</code> on <code>PATH</code> or set <code>$FIRE_FIC</code> to the binary.</td></tr>
 <tr><td><code>could not patch symbol '...' ... no symbol named '...'</code></td><td>A channel declared in the <code>.fis</code> has no matching <code>uint64_t &lt;chan&gt;;</code> symbol in the PD’s C file. Mapping symbols (<code>&lt;mapping&gt;_vaddr</code> …) are emitted only when declared, but channel-ID symbols are required.</td></tr>
-<tr><td><code>WF2 violation: channel dependency graph contains a cycle</code></td><td>The topology is cyclic. Either restructure the channels, or establish deadlock-freedom with <a href="fire-verify.html"><code>fire verify</code></a> and set <code>allow_wf2_cycles = true</code> in <code>[run.target]</code>.</td></tr>
+<tr><td><code>warning: WF2 violation: channel dependency graph contains a cycle</code></td><td>The topology is cyclic; the build goes on, and the cycle can deadlock. Either restructure the channels, or establish deadlock-freedom with <a href="fire-verify.html"><code>fire verify</code></a> and set <code>allow_wf2_cycles = true</code> in <code>[run.target]</code>.</td></tr>
 <tr><td>C compile errors</td><td><code>fic</code> compiles each <code>&lt;pd&gt;.c</code> with <code>-Wall -Werror</code>; fix the warning or build the file out-of-band.</td></tr>
 <tr><td>QEMU exits immediately</td><td>Check the <code>[run] args</code> device/loader address against the board; the demo uses <code>addr=0x70000000</code> for <code>qemu_virt_aarch64</code>.</td></tr>
 </tbody>
