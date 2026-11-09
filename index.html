@@ -141,7 +141,8 @@
 
               <rect x="600" y="200" width="200" height="96" rx="10" fill="#111827" stroke="#334155"/>
               <text x="700" y="242" fill="#e2e8f0" font-weight="700">4 · System verification</text>
-              <text x="700" y="264" class="mono" font-size="12" fill="#94a3b8">info-flow types · UPPAAL</text>
+              <text x="700" y="263" class="mono" font-size="12" fill="#94a3b8">info-flow types</text>
+              <text x="700" y="280" class="mono" font-size="12" fill="#94a3b8">UPPAAL model checker</text>
 
               <rect x="312" y="200" width="200" height="96" rx="10" fill="rgba(251,113,133,0.12)" stroke="#fb7185"/>
               <text x="412" y="242" fill="#e2e8f0" font-weight="700">5 · Counterexample</text>
@@ -170,7 +171,7 @@
           <div><b>Code + contract.</b> <span>The system in <code>.fis</code>, each protection domain in <code>.fi</code>, computation in C or Pancake under ACSL or Viper contracts.</span></div>
           <div><b>Autoformalisation.</b> <span>fic derives a UPPAAL model of the whole system from the program itself, so the model and the image come from the same source.</span></div>
           <div><b>Code verification.</b> <span>Each call into foreign code carries a contract on its implementation, proved with Frama-C or Viper.</span></div>
-          <div><b>System verification.</b> <span><code>fic</code> checks information flow and channels; UPPAAL checks the generated model.</span></div>
+          <div><b>System verification.</b> <span><code>fic</code> checks information flow and channels; the UPPAAL model checker checks the generated model.</span></div>
           <div><b>Counterexample, repair &amp; synthesis.</b> <span>A failed check yields a concrete trace, used to fix the code or contract, or synthesise the missing piece.</span></div>
           <div><b>Executable image.</b> <span>What holds is compiled to a bootable seL4 Microkit image.</span></div>
         </div>
