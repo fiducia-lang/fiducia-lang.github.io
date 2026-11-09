@@ -71,7 +71,7 @@
   <nav>
     <div class="container">
       <a href="../index.html" class="logo"><span>F</span>iducia</a>
-      <a href="../index.html#use-cases" class="back-link">Back to Use Cases</a>
+      <a href="../docs/examples/" class="back-link">Back to Examples</a>
     </div>
   </nav>
 
@@ -214,89 +214,62 @@
     <div class="container">
       <div class="fiducia-section">
         <div class="fiducia-badge">Fiducia Specification</div>
-        <h2>Asymmetric security enforced by the type system.</h2>
+        <h2>Downgrade only, by the shape of the system.</h2>
         <p>
-          In Fiducia, the MLS email guard is the most compelling example of how
-          the information flow type system catches errors that C cannot. The
-          bidirectional channels carry notifications, but the <code>High</code>/<code>Low</code>
-          labels on memory regions ensure that the compiler rejects any attempt
-          to flow data upward from OFFICIAL to SECRET.
+          SECRET mail reaches OFFICIAL only through the guard, which sanitises every message. The C version reads mail from OFFICIAL and throws it away. In Fiducia there is nothing to throw away: no channel leads from OFFICIAL to the guard or to SECRET, so the upward path does not exist. Adding one back, with the guard also sending to OFFICIAL, is a cycle that fic rejects (WF2).
         </p>
 
         <div class="code-block">
           <div class="code-header"><span>System Declaration</span><span class="file-ext">mls_email.fis</span></div>
-<pre><span class="cmt">// Memory regions with security labels</span>
+<pre><span class="cmt">// MLS email guard: SECRET mail reaches OFFICIAL only through the guard.</span>
+
+<span class="kw">struct</span> Mail {
+    length: <span class="kw">uint32</span>;
+    offset: <span class="kw">uint32</span>;
+}
+
 <span class="label">High</span> <span class="kw">MemoryRegion</span> secret_to_guard(<span class="num">0x1000</span>);
-<span class="label">High</span> <span class="kw">MemoryRegion</span> guard_to_secret(<span class="num">0x1000</span>);
-<span class="label">Low</span>  <span class="kw">MemoryRegion</span> official_to_guard(<span class="num">0x1000</span>);
 <span class="label">Low</span>  <span class="kw">MemoryRegion</span> guard_to_official(<span class="num">0x1000</span>);
 
-<span class="cmt">// Protection domains</span>
-<span class="kw">ProtectionDomain</span> domain_secret(<span class="num">100</span>);
+<span class="kw">ProtectionDomain</span> domain_secret(<span class="num">100</span>, <span class="num">33</span>);
 <span class="kw">ProtectionDomain</span> mail_guard(<span class="num">200</span>);
 <span class="kw">ProtectionDomain</span> domain_official(<span class="num">100</span>);
 
-<span class="cmt">// Channels: both domains communicate with guard</span>
-<span class="kw">Chan</span> sec <span class="op">=</span> domain_secret <span class="op">&lt;-></span> mail_guard;
-<span class="kw">Chan</span> off <span class="op">=</span> domain_official <span class="op">&lt;-></span> mail_guard;
+<span class="cmt">// Downgrade path only. No channel leads from OFFICIAL to the guard</span>
+<span class="cmt">// or to SECRET, so there is no upward path to block.</span>
+<span class="kw">Chan</span> s2g = domain_secret <span class="op">--&gt;</span> mail_guard <span class="kw">via</span> secret_to_guard&lt;Mail&gt;;
+<span class="kw">Chan</span> g2o = mail_guard <span class="op">--&gt;</span> domain_official <span class="kw">via</span> guard_to_official&lt;Mail&gt;;
 
-<span class="kw">System</span> <span class="op">=</span> domain_secret <span class="op">|||</span> mail_guard <span class="op">|||</span> domain_official;</pre>
+<span class="kw">System</span> = domain_secret <span class="op">|||</span> mail_guard <span class="op">|||</span> domain_official;</pre>
         </div>
 
         <div class="code-block">
           <div class="code-header"><span>Mail Guard Process</span><span class="file-ext">mail_guard.fi</span></div>
-<pre><span class="kw">import</span> <span class="str">"mail_guard.c"</span> <span class="kw">as</span> guard;
-() : guard.<span class="fn">init</span>();
+<pre><span class="cmt">// Downgrades SECRET mail to OFFICIAL, sanitising each one first.</span>
+<span class="kw">import</span> <span class="str">"include/guard.h"</span> <span class="kw">as</span> guard;
 
-<span class="cmt">// Mappings: the guard reads HIGH and writes LOW</span>
-<span class="label">High</span> <span class="kw">Mapping</span> secret_in(secret_to_guard, <span class="str">"r"</span>);
-<span class="label">Low</span>  <span class="kw">Mapping</span> official_out(guard_to_official, <span class="str">"rw"</span>);
+clean: Mail;   <span class="cmt">// the sanitised copy, written into g2o's ring</span>
 
-<span class="cmt">// This would be a compile-time ERROR:</span>
-<span class="cmt">// High Mapping upgrade(guard_to_secret, "rw");</span>
-<span class="cmt">//   with Low Mapping official_in(official_to_guard, "r");</span>
-<span class="cmt">//   -&gt; the type system blocks Low data flowing to High mapping</span>
+<span class="attr">@bind(microkit.init)</span>
+<span class="kw">proc</span> <span class="fn">Init</span>() { <span class="kw">Skip</span>; }
 
-<span class="kw">Events</span>:
-  <span class="kw">Event</span> sanitise: guard.<span class="fn">sanitise_for_downgrade</span>(email)
+<span class="attr">@bind(microkit.notified)</span>
+<span class="kw">proc</span> <span class="fn">Notified</span>() {
+    s2g?mail <span class="op">-&gt;</span> sanitise.mail <span class="op">-&gt;</span> g2o!clean <span class="op">-&gt;</span> <span class="fn">Notified</span>();
+}
 
-<span class="kw">Process</span>:
-  <span class="fn">Notified</span>():
-    <span class="cmt">// Downgrade: SECRET -> OFFICIAL (allowed)</span>
-    sec<span class="op">?</span>email <span class="op">-></span> sanitise(email) <span class="op">-></span> off<span class="op">!</span>email <span class="op">-></span> <span class="fn">Notified</span>()
-    <span class="cmt">// Upgrade attempts: consumed and discarded</span>
-    [ ] off<span class="op">?</span>email <span class="op">-></span> <span class="kw">Skip</span> <span class="op">-></span> <span class="fn">Notified</span>();</pre>
-        </div>
-
-        <div class="code-block">
-          <div class="code-header"><span>Type System Catches Upward Flow</span><span class="file-ext">compile-time error</span></div>
-<pre><span class="cmt">// If someone tried to write OFFICIAL data to SECRET's inbox:</span>
-<span class="label">Low</span>  <span class="kw">Mapping</span> official_in(official_to_guard, <span class="str">"r"</span>);
-<span class="label">High</span> <span class="kw">Mapping</span> secret_out(guard_to_secret, <span class="str">"rw"</span>);
-
-<span class="cmt">// The Fiducia compiler would reject this:</span>
-<span class="cmt">//   ERROR: Information flow violation</span>
-<span class="cmt">//   Low data from 'official_to_guard' cannot flow to</span>
-<span class="cmt">//   High mapping 'secret_out' without explicit declassification.</span>
-<span class="cmt">//</span>
-<span class="cmt">// In the C version, this protection relies entirely on the</span>
-<span class="cmt">// developer never writing such code. In Fiducia, the compiler</span>
-<span class="cmt">// catches it automatically.</span></pre>
+<span class="cmt">// Strips the "CLASSIFIED:" prefix and marks the mail [DOWNGRADED].</span>
+<span class="kw">evt</span> sanitise.|mail: Mail|: clean = guard.sanitise_for_downgrade(mail);</pre>
         </div>
 
         <p style="margin-top:8px;">
-          <strong style="color:var(--text);">What the compiler verifies:</strong>
-          <code>High</code>/<code>Low</code> labels enforce that SECRET data only flows
-          downward (to OFFICIAL) after explicit sanitisation. The bidirectional
-          channels (<code>&lt;-></code>) carry notifications, but the memory region labels
-          ensure data can only move in the permitted direction. External choice in
-          the process handles both incoming directions with the correct policy for each.
+          <strong style="color:var(--text);">What fic checks:</strong>
+          each channel's ring is mapped into its two endpoints and nowhere else; a <code>High</code> region is never mapped at <code>Low</code>, so data cannot flow from High to Low through a mapping; every channel is one-way (<code>--&gt;</code>) and the channel graph has no cycle (WF2), so no path leads back from <code>domain_official</code> to <code>domain_secret</code>; and each <code>Notified</code> handler starts with a receive. Labels are checked on mappings, not on values: fic decides where data can go, while what the imported C does to it is the C code's job (here, the sanitiser).
         </p>
       </div>
 
       <div class="contact-note">
-        Fiducia compiler and specification available on request.
-        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+        Both files pass <code>fic --check</code>. <a href="../docs/manual/installation.html">Install fic</a> or read the <a href="../docs/lang-spec/">language reference</a>.
       </div>
     </div>
   </div>

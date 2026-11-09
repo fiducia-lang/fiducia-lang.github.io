@@ -163,7 +163,7 @@
   <nav>
     <div class="container">
       <a href="../index.html" class="logo"><span>F</span>iducia</a>
-      <a href="../index.html" class="back-link">Back to Fiducia</a>
+      <a href="../docs/examples/" class="back-link">Back to Examples</a>
     </div>
   </nav>
 
@@ -318,14 +318,13 @@
         <div class="coming-soon-badge">Coming Soon</div>
         <h2>Fiducia Specification</h2>
         <p>
-          The Fiducia version of this system will express the domain switch and
-          workspace flush as verified events in a CSP-style process specification.
-          The state machine transitions become provably correct process algebra terms.
+          The Fiducia version will write the domain switch as a process. The flush becomes a named
+          computation event that runs before every switch, and the SECRET/OFFICIAL state becomes a guard.
         </p>
         <ul>
-          <li><strong>Workspace flush as verified process event</strong> &mdash; The flush operation becomes a first-class event in the process specification, not just a C function call</li>
-          <li><strong>State machine as process algebra</strong> &mdash; The SECRET/OFFICIAL state transitions are expressed as guarded choice, proven deadlock-free by the type system</li>
-          <li><strong>Verified clean invariant</strong> &mdash; The workspace cleanliness property becomes a compile-time guarantee rather than a runtime assertion</li>
+          <li><strong>Flush as a computation event</strong> &mdash; The process runs <code>flush</code> before every switch, so the order is in the program and in the UPPAAL model, not buried in C</li>
+          <li><strong>Switch as guarded choice</strong> &mdash; The current domain picks the branch; <code>fire verify</code> can check that no path switches without flushing</li>
+          <li><strong>Contract on the flush</strong> &mdash; An ACSL contract on the C flush (the workspace is all zeroes afterwards), proved with Frama-C</li>
         </ul>
       </div>
     </div>

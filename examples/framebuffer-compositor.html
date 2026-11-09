@@ -163,7 +163,7 @@
   <nav>
     <div class="container">
       <a href="../index.html" class="logo"><span>F</span>iducia</a>
-      <a href="../index.html" class="back-link">Back to Fiducia</a>
+      <a href="../docs/examples/" class="back-link">Back to Examples</a>
     </div>
   </nav>
 
@@ -301,14 +301,13 @@
         <div class="coming-soon-badge">Coming Soon</div>
         <h2>Fiducia Specification</h2>
         <p>
-          The Fiducia version of this system will express the fan-in compositor
-          topology as a choreographic specification with compile-time guarantees
-          on memory isolation and information flow.
+          The Fiducia version will declare each domain's link to the compositor as a one-way channel,
+          with each framebuffer a labelled region.
         </p>
         <ul>
-          <li><strong>Multiple one-way channels</strong> &mdash; Each domain-to-compositor link expressed as a unidirectional channel in the system declaration</li>
-          <li><strong>Read-only mappings with security labels</strong> &mdash; Fiducia's type system will enforce that domains can only write to their own framebuffer</li>
-          <li><strong>Fan-in composition</strong> &mdash; The compositor process composes inputs from all domains using parallel composition operators</li>
+          <li><strong>One-way channels</strong> &mdash; One <code>--&gt;</code> channel from each domain into the compositor, and none back</li>
+          <li><strong>Isolated framebuffers</strong> &mdash; Each framebuffer is a channel ring mapped only into its domain and the compositor; fic rejects any other mapping of it</li>
+          <li><strong>Fan-in</strong> &mdash; The compositor's <code>Notified</code> handler is an external choice over the domains' channels (<code>a?f -&gt; &hellip; [] b?f -&gt; &hellip;</code>)</li>
         </ul>
       </div>
     </div>

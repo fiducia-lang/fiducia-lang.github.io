@@ -179,7 +179,7 @@
   <nav>
     <div class="container">
       <a href="../index.html" class="logo"><span>F</span>iducia</a>
-      <a href="../index.html" class="back-link">Back to Fiducia</a>
+      <a href="../docs/examples/" class="back-link">Back to Examples</a>
     </div>
   </nav>
 
@@ -344,15 +344,13 @@
         <div class="coming-soon-badge">Coming Soon</div>
         <h2>Fiducia Specification</h2>
         <p>
-          The Fiducia version of this system will express the keyboard switch as a
-          choreographic specification with compile-time guarantees. The Fiducia compiler
-          will verify the routing topology, buffer isolation, and domain exclusivity
-          structurally &mdash; eliminating entire classes of implementation bugs.
+          The Fiducia version will write the keyboard switch as a process in the switch's
+          protection domain, with routing and flushing as steps of that process.
         </p>
         <ul>
-          <li><strong>External choice routing</strong> &mdash; Domain switch expressed as guarded external choice in CSP-style process algebra</li>
-          <li><strong>Buffer flush as process event</strong> &mdash; The flush operation becomes a verified event in the process specification, not just a C function call</li>
-          <li><strong>ProtectionDomain composition with |||</strong> &mdash; Interleaved composition proves domain_a and domain_b can never interfere</li>
+          <li><strong>Routing as guarded choice</strong> &mdash; The active domain is a guard that picks which channel a key goes to</li>
+          <li><strong>Flush as a computation event</strong> &mdash; Runs on every switch, before the next key is routed</li>
+          <li><strong>Checked topology</strong> &mdash; One one-way channel to each domain and none between them, so <code>domain_a</code> and <code>domain_b</code> have no channel to each other; fic checks that the channel graph has no cycle</li>
         </ul>
       </div>
     </div>
