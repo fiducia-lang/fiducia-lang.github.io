@@ -1,38 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fiducia Documentation</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-           max-width: 42rem; margin: 4rem auto; padding: 0 1.5rem; line-height: 1.6; color: #222; }
-    h1 { font-weight: 600; }
-    a.card { display: block; border: 1px solid #ddd; border-radius: 8px;
-             padding: 1rem 1.25rem; margin: 1rem 0; text-decoration: none; color: inherit; }
-    a.card:hover { border-color: #888; }
-    a.card h2 { margin: 0 0 .25rem; font-size: 1.1rem; color: #0969da; }
-    a.card p { margin: 0; color: #555; }
-    footer { margin-top: 3rem; color: #777; font-size: .9rem; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — Fiducia</title>
+  <meta name="description" content="Install the Fiducia toolchain, read the user manual and language reference, follow worked examples, and read the research.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/site.css">
 </head>
 <body>
-  <h1>Fiducia Documentation</h1>
-  <a class="card" href="manual/">
-    <h2>User Manual</h2>
-    <p>Install the toolchain, configure <code>project.toml</code>, build and run
-       with <code>fire</code>, verify with UPPAAL.</p>
-  </a>
-  <a class="card" href="lang-spec/">
-    <h2>Language Reference</h2>
-    <p>Syntax and semantics of <code>.fis</code> system descriptions and
-       <code>.fi</code> protection-domain programs.</p>
-  </a>
-  <a class="card" href="/releases/">
-    <h2>Releases</h2>
-    <p>Pre-built <code>fic</code> + <code>fire</code> binaries for Linux x86-64
-       and macOS arm64.</p>
-  </a>
-  <footer>Fiducia — a language for verified seL4 Microkit systems.</footer>
+  <header class="site-header">
+    <div class="container">
+      <a href="../" class="logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="6" fill="#1e293b"/><path d="M7 14h9" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/><path d="M14 9l6 5-6 5" fill="none" stroke="#fb7185" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Fiducia</span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="../blog/">Blog</a>
+        <a href="./" aria-current="page">Docs</a>
+        <a href="../about/">About</a>
+        <a href="manual/installation.html" class="btn btn-primary btn-sm">Install</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section style="padding: 64px 0 24px">
+      <h1 style="margin: 0 0 8px; font-size: 44px">Documentation</h1>
+      <p style="margin: 0; color: var(--text-2); max-width: 680px">Install the toolchain, learn the language, follow worked examples, and read the research behind it.</p>
+    </section>
+
+    <nav class="tabs" aria-label="Docs sections">
+      <a href="./" aria-current="page">Overview</a>
+      <a href="manual/installation.html">Installation</a>
+      <a href="manual/">User manual</a>
+      <a href="lang-spec/">Language reference</a>
+      <a href="examples/">Examples</a>
+      <a href="publications/">Publications</a>
+      <a href="../releases/">Releases</a>
+    </nav>
+
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))">
+      <a class="card" href="manual/installation.html" style="color: inherit">
+        <p class="eyebrow">Start here</p>
+        <h3>Installation</h3>
+        <p>Download fic and fire for Linux x86-64 or macOS arm64 and put them on your PATH.</p>
+      </a>
+      <a class="card" href="manual/" style="color: inherit">
+        <p class="eyebrow">Guide</p>
+        <h3>User manual</h3>
+        <p>Configure a project with <code>fire.toml</code>, build and run it with <code>fire</code>, and verify it with UPPAAL.</p>
+      </a>
+      <a class="card" href="lang-spec/" style="color: inherit">
+        <p class="eyebrow">Reference</p>
+        <h3>Language reference</h3>
+        <p>Syntax and semantics of <code>.fis</code> system descriptions and <code>.fi</code> protection-domain programs.</p>
+      </a>
+      <a class="card" href="examples/" style="color: inherit">
+        <p class="eyebrow">Patterns</p>
+        <h3>Examples</h3>
+        <p>Nine security design patterns on seL4, from data diodes to the NRL pump.</p>
+      </a>
+      <a class="card" href="publications/" style="color: inherit">
+        <p class="eyebrow">Research</p>
+        <h3>Publications</h3>
+        <p>Papers, reports and talks from the Fiducia project.</p>
+      </a>
+      <a class="card" href="../releases/" style="color: inherit">
+        <p class="eyebrow">Downloads</p>
+        <h3>Releases</h3>
+        <p>Every published version of the toolchain, one tarball per platform.</p>
+      </a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="brand">
+        <b>Fiducia</b>
+        <p>School of Computing, The Australian National University. Supported by Trustworthy Systems and Skykraft.</p>
+      </div>
+      <div class="col">
+        <b>Site</b>
+        <a href="../blog/">Blog</a>
+        <a href="./">Docs</a>
+        <a href="../about/">About</a>
+      </div>
+      <div class="col">
+        <b>Get started</b>
+        <a href="manual/installation.html">Installation</a>
+        <a href="../releases/">Releases</a>
+      </div>
+      <div class="col">
+        <b>Contact</b>
+        <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+        <a href="mailto:yan.liu@anu.edu.au">yan.liu@anu.edu.au</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
