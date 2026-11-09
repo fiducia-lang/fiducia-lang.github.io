@@ -67,7 +67,7 @@
   <nav>
     <div class="container">
       <a href="../index.html" class="logo"><span>F</span>iducia</a>
-      <a href="../index.html#use-cases" class="back-link">Back to Use Cases</a>
+      <a href="../docs/examples/" class="back-link">Back to Examples</a>
     </div>
   </nav>
 
@@ -79,7 +79,7 @@
         Enforces strict one-way information flow between HIGH and LOW security
         domains through a trusted intermediary. The diode applies policy checks
         and audit logging&mdash;no data ever flows backwards. This is the
-        canonical Fiducia example from the ChorFi paper.
+        canonical Fiducia example.
       </p>
     </div>
   </header>
@@ -200,70 +200,100 @@
     <div class="container">
       <div class="fiducia-section">
         <div class="fiducia-badge">Fiducia Specification</div>
-        <h2>The same system, verified at compile time.</h2>
+        <h2>The same diode, checked by fic.</h2>
         <p>
-          In Fiducia, the entire data diode architecture is expressed in two concise files.
-          The compiler verifies information flow security, channel directionality, and
-          deadlock freedom&mdash;properties that in the C version are enforced only by
-          careful manual discipline.
+          In Fiducia the diode is a system description plus one program per protection domain. Below are the system and the forwarder <code>dd</code>, as they stand in the fic repository's <code>demo/datadiode</code>; the two NIC drivers are on the <a href="../#example">homepage</a>. <code>fire build</code> also emits a UPPAAL model of the system for <code>fire verify</code>.
         </p>
 
         <div class="code-block">
           <div class="code-header"><span>System Declaration</span><span class="file-ext">datadiode.fis</span></div>
-<pre><span class="cmt">// Memory regions used as channel buffers</span>
-<span class="kw">MemoryRegion</span> eth_outer_output(<span class="num">0x200_000</span>);
-<span class="kw">MemoryRegion</span> eth_inner_input(<span class="num">0x200_000</span>);
+<pre><span class="cmt">// Data diode: eth_outer → dd → eth_inner, one-way Low → High.</span>
 
-<span class="cmt">// Protection domains: (priority, irq, budget, period)</span>
-<span class="kw">ProtectionDomain</span> eth_outer(<span class="num">99</span>, <span class="num">159</span>, <span class="num">1000</span>, <span class="num">100_000</span>);
-<span class="kw">ProtectionDomain</span> eth_inner(<span class="num">199</span>, <span class="num">155</span>);
-<span class="kw">ProtectionDomain</span> dd(<span class="num">100</span>);
+<span class="cmt">// Field order keeps the packed fic layout equal to the natural C layout</span>
+<span class="cmt">// (checked by the generated _Static_asserts).</span>
+<span class="kw">struct</span> Message {
+    length: <span class="kw">uint16</span>;
+    kind: <span class="kw">uint16</span>;
+    offset: <span class="kw">uint32</span>;
+}
 
-<span class="cmt">// One-way SPSC channels</span>
-<span class="kw">Chan</span> o2d <span class="op">=</span> eth_outer <span class="op">--></span> dd;
-    o2d.<span class="fn">set_buffer</span>(eth_outer_output);
-<span class="kw">Chan</span> d2i <span class="op">=</span> dd <span class="op">--></span> eth_inner;
-    d2i.<span class="fn">set_buffer</span>(eth_inner_input);
+<span class="kw">struct</span> Slot {
+    flags: <span class="kw">uint16</span>;
+    seq: <span class="kw">uint16</span>;
+    msg: Message;
+}
 
-<span class="cmt">// System composition</span>
-<span class="kw">System</span> <span class="op">=</span> eth_outer <span class="op">|||</span> eth_inner <span class="op">|||</span> dd;</pre>
+<span class="kw">const</span> SLOT_SIZE: <span class="kw">uint</span> = <span class="num">2</span> * <span class="num">1024</span>;
+
+<span class="cmt">// Slot rings, mapped into both endpoints of their channel.</span>
+<span class="label">Low</span> <span class="kw">MemoryRegion</span> eth_outer_output(<span class="num">0x200000</span>, <span class="num">0x200000</span>);
+<span class="label">High</span> <span class="kw">MemoryRegion</span> eth_inner_input(<span class="num">0x200000</span>, <span class="num">0x200000</span>);
+
+<span class="cmt">// One 4 KiB page of QEMU virt's virtio-mmio slots 24..31, where both NICs</span>
+<span class="cmt">// sit; each eth PD binds a different device in it.</span>
+<span class="kw">MemoryRegion</span> virtio_window(<span class="num">0x1000</span>, <span class="num">0x1000</span>, <span class="num">0xa003000</span>);
+
+<span class="cmt">// Virtio rings + buffers; physically contiguous, paddr patched by the tool.</span>
+<span class="label">Low</span> <span class="kw">MemoryRegion</span> outer_dma(<span class="num">0x200000</span>, <span class="num">0x200000</span>);
+<span class="label">High</span> <span class="kw">MemoryRegion</span> inner_dma(<span class="num">0x200000</span>, <span class="num">0x200000</span>);
+
+<span class="cmt">// IRQ = 48 + mmio slot. QEMU puts the first -device in slot 31 (IRQ 79),</span>
+<span class="cmt">// the second in slot 30 (IRQ 78).</span>
+<span class="kw">ProtectionDomain</span> eth_outer(<span class="num">99</span>, <span class="num">79</span>);
+<span class="kw">ProtectionDomain</span> dd(<span class="num">150</span>);
+<span class="kw">ProtectionDomain</span> eth_inner(<span class="num">199</span>, <span class="num">78</span>);
+
+<span class="kw">Chan</span> o2d = eth_outer <span class="op">--&gt;</span> dd <span class="kw">via</span> eth_outer_output&lt;Slot&gt;;
+<span class="kw">Chan</span> d2i = dd <span class="op">--&gt;</span> eth_inner <span class="kw">via</span> eth_inner_input&lt;Slot&gt;;
+
+<span class="kw">System</span> = eth_outer <span class="op">|||</span> dd <span class="op">|||</span> eth_inner;</pre>
         </div>
 
         <div class="code-block">
           <div class="code-header"><span>Data Diode Process</span><span class="file-ext">dd.fi</span></div>
-<pre><span class="kw">import</span> <span class="str">"ddiode.c"</span> <span class="kw">as</span> dd;
-() : dd.<span class="fn">init</span>();
+<pre><span class="cmt">// Forwards slots one way, o2d → d2i.</span>
+<span class="kw">import</span> <span class="str">"include/channel.h"</span> <span class="kw">as</span> chan;
+<span class="kw">import</span> <span class="str">"include/util.h"</span> <span class="kw">as</span> util;
 
-<span class="kw">Process</span>:
-  <span class="fn">Notified</span>():
-    o2d<span class="op">?</span>pkt <span class="op">-></span> d2i<span class="op">!</span>pkt <span class="op">-></span> <span class="fn">Notified</span>();</pre>
-        </div>
+<span class="attr">@bind(microkit.init)</span>
+<span class="kw">proc</span> <span class="fn">Init</span>() {
+    ready <span class="op">-&gt;</span> <span class="kw">Skip</span>;
+}
 
-        <div class="code-block">
-          <div class="code-header"><span>Information Flow Labels</span><span class="file-ext">with security types</span></div>
-<pre><span class="cmt">// Add security labels &mdash; the compiler catches leaks</span>
-<span class="label">Low</span>  <span class="kw">MemoryRegion</span> eth_outer_output(<span class="num">0x200_000</span>);
-<span class="label">High</span> <span class="kw">MemoryRegion</span> eth_inner_input(<span class="num">0x200_000</span>);
+<span class="cmt">// One o2d notification may cover several slots: drain the ring.</span>
+<span class="attr">@bind(microkit.notified)</span>
+<span class="kw">proc</span> <span class="fn">Notified</span>() {
+    o2d?pkt <span class="op">-&gt;</span> <span class="fn">Drain</span>(pkt);
+    <span class="fn">Notified</span>();
+}
 
-<span class="label">Low</span>  <span class="kw">Mapping</span> input_buf(eth_outer_output, <span class="str">"r"</span>);   <span class="cmt">// OK: read Low</span>
-<span class="label">High</span> <span class="kw">Mapping</span> output_buf(eth_inner_input, <span class="str">"rw"</span>);  <span class="cmt">// OK: write High</span>
+<span class="kw">proc</span> <span class="fn">Drain</span>(pkt: Slot) {
+        [chan.o2d_has_msg() &amp;&amp; !chan.d2i_has_msg()] forward.pkt <span class="op">-&gt;</span> d2i!pkt <span class="op">-&gt;</span> next_msg <span class="op">-&gt;</span> <span class="fn">Drain</span>(pkt)
+     <span class="cmt">// d2i full: drop, never back-pressure the Low side.</span>
+     <span class="op">[]</span> [chan.o2d_has_msg() &amp;&amp; chan.d2i_has_msg()] drop_full <span class="op">-&gt;</span> <span class="kw">Skip</span>
+     <span class="kw">default</span> <span class="kw">Skip</span>;
+}
 
-<span class="cmt">// This would be a compile-time ERROR:</span>
-<span class="cmt">// Low Mapping leak(eth_inner_input, "r");  // High -> Low!</span></pre>
+<span class="kw">evt</span> ready: dbg(<span class="str">"diode transport ready"</span>);
+
+<span class="kw">evt</span> forward.|pkt: Slot|: {
+    chan.dd_forward(pkt);
+    dbg(<span class="str">"pass o2d -&gt; d2i"</span>);
+}
+
+<span class="kw">evt</span> next_msg: chan.o2d_read_next();
+
+<span class="kw">evt</span> drop_full: dbg(<span class="str">"can't pass buffer (no space for inner)"</span>);</pre>
         </div>
 
         <p style="margin-top:8px;">
-          <strong style="color:var(--text);">What the compiler verifies:</strong>
-          unidirectional channel flow (<code>--></code> not <code>&lt;-></code>),
-          information flow labels prevent High&rarr;Low leaks,
-          well-typed choreography guarantees deadlock freedom,
-          and the <code>|||</code> composition ensures all PDs are accounted for.
+          <strong style="color:var(--text);">What fic checks:</strong>
+          each channel's ring is mapped into its two endpoints and nowhere else; a <code>High</code> region is never mapped at <code>Low</code>, so data cannot flow from High to Low through a mapping; every channel is one-way (<code>--&gt;</code>) and the channel graph has no cycle (WF2), so no path leads back from <code>eth_inner</code> to <code>eth_outer</code>; and each <code>Notified</code> handler starts with a receive. Labels are checked on mappings, not on values: fic decides where data can go, while what the imported C does to it is the C code's job.
         </p>
       </div>
 
       <div class="contact-note">
-        Fiducia compiler and specification available on request.
-        Contact <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+        Both files pass <code>fic --check</code>. <a href="../docs/manual/installation.html">Install fic</a> or read the <a href="../docs/lang-spec/">language reference</a>.
       </div>
     </div>
   </div>

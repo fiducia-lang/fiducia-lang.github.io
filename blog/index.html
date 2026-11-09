@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog — Fiducia</title>
+  <meta name="description" content="Publications and posts from the Fiducia project.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/site.css?v=202611091705">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../" class="logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="6" fill="#1e293b"/><path d="M7 14h9" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/><path d="M14 9l6 5-6 5" fill="none" stroke="#fb7185" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="logo-name">Fiducia<small>Secure and deadlock-free by construction</small></span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="./" aria-current="page">Blog</a>
+        <a href="../about/">About</a>
+        <a href="../docs/">Docs</a>
+        <a href="https://github.com/fiducia-lang" class="nav-icon" aria-label="Fiducia on GitHub" title="Fiducia on GitHub"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+        <a href="../docs/manual/installation.html" class="btn btn-primary btn-sm">Install</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 880px">
+    <section style="padding: 64px 0 28px">
+      <h1 style="margin: 0 0 8px; font-size: 44px">Blog</h1>
+      <p style="margin: 0 0 24px; color: var(--text-2)">Publications and notes from building verified systems on real hardware. Releases are on the <a href="../releases/">releases page</a>.</p>
+      <div class="chips" role="group" aria-label="Filter by category" data-filter="#feed" data-empty="#feed-empty">
+        <button type="button" class="chip" data-cat="all" aria-pressed="true">All</button>
+        <button type="button" class="chip" data-cat="publication" aria-pressed="false">Publications</button>
+        <button type="button" class="chip" data-cat="post" aria-pressed="false">Posts</button>
+      </div>
+    </section>
+
+    <ol id="feed" class="feed feed-lg">
+      <li data-cat="post">
+        <span class="meta"><span class="tag tag-post">Post</span>2 Sep 2026 · Robotics</span>
+        <a class="title" href="sel4-robot-arm.html">Making a Robot Arm Impossible to Misuse from Its Own Computer</a>
+        <span class="summary">We booted seL4 on a Unitree D1 arm and ran its unmodified Ubuntu as a guest. The motors now belong to a tiny geometry-aware filter outside Linux; root inside the vendor's Ubuntu cannot reach them. With video of the live demo: the arm refuses to touch the desk.</span>
+      </li>
+      <li data-cat="post">
+        <span class="meta"><span class="tag tag-post">Post</span>26 Apr 2026 · Hardware</span>
+        <a class="title" href="sel4-jetson-agx-orin.html">seL4, Microkit, and Alpine Linux on the Jetson AGX Orin Devkit</a>
+        <span class="summary">Picking up from the Orin Nano port: sel4test (141/141), the Microkit tutorial parts 1–4 including a tiny libvmm guest, and a full Alpine Linux 3.19 distro under libvmm with on-board 10 GbE and keyless SSH.</span>
+      </li>
+      <li data-cat="post">
+        <span class="meta"><span class="tag tag-post">Post</span>13 Apr 2026 · Verification</span>
+        <a class="title" href="claude-vs-student-rocq-proof.html">I Spent $3,000 on Claude Trying to Prove a Theorem. My Student Did It Better in Two Days.</a>
+        <span class="summary">A case study on using Claude for mechanised Rocq proof development: four attempts, about $3,000 in API costs, 3,000+ compilation cycles, and a student who closed every remaining case in two days.</span>
+      </li>
+      <li data-cat="post">
+        <span class="meta"><span class="tag tag-post">Post</span>7 Mar 2026 · Hardware</span>
+        <a class="title" href="sel4-jetson-orin-nano.html">How to Get sel4test Running on NVIDIA Jetson Orin Nano 8GB</a>
+        <span class="summary">A step-by-step guide to porting seL4 to the Jetson Orin Nano developer kit: hardware setup, serial console, custom BL31 firmware to fix T234 RAS errors, building sel4test, and booting via UEFI. 141/141 tests pass.</span>
+      </li>
+    </ol>
+    <p id="feed-empty" class="feed-empty" hidden>Under construction.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="brand">
+        <b>Fiducia</b>
+        <p>School of Computing, The Australian National University. Supported by Trustworthy Systems and Skykraft.</p>
+      </div>
+      <div class="col">
+        <b>Site</b>
+        <a href="./">Blog</a>
+        <a href="../about/">About</a>
+        <a href="../docs/">Docs</a>
+      </div>
+      <div class="col">
+        <b>Get started</b>
+        <a href="../docs/manual/installation.html">Installation</a>
+        <a href="../releases/">Releases</a>
+      </div>
+      <div class="col">
+        <b>Contact</b>
+        <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+        <a href="mailto:yan.liu@anu.edu.au">yan.liu@anu.edu.au</a>
+      </div>
+    </div>
+  </footer>
+  <script src="../assets/site.js?v=202611091705"></script>
+</body>
+</html>

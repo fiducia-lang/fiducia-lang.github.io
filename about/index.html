@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — Fiducia</title>
+  <meta name="description" content="Fiducia is built at the Australian National University. The people, supporters and hardware behind it.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/site.css?v=202611091705">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../" class="logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="6" fill="#1e293b"/><path d="M7 14h9" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/><path d="M14 9l6 5-6 5" fill="none" stroke="#fb7185" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="logo-name">Fiducia<small>Secure and deadlock-free by construction</small></span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="../blog/">Blog</a>
+        <a href="./" aria-current="page">About</a>
+        <a href="../docs/">Docs</a>
+        <a href="https://github.com/fiducia-lang" class="nav-icon" aria-label="Fiducia on GitHub" title="Fiducia on GitHub"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+        <a href="../docs/manual/installation.html" class="btn btn-primary btn-sm">Install</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section style="padding: 80px 0 56px; max-width: 820px">
+      <p class="eyebrow">About</p>
+      <h1 style="margin: 0 0 20px; font-size: clamp(36px, 4.5vw, 52px); line-height: 1.1">Fiducia is built at the Australian National University.</h1>
+      <p class="lead" style="margin: 0">A research group in the <a href="https://comp.anu.edu.au/">School of Computing</a> working on programming languages, formal methods and systems security, with the goal of making verified systems on seL4 something ordinary engineers can build. Our papers are listed under <a href="../docs/publications/">Docs › Publications</a>.</p>
+    </section>
+
+    <section class="section">
+      <h2 style="font-size: 30px; margin-bottom: 28px">People</h2>
+      <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
+        <div class="card person">
+          <img class="avatar" src="../images/team/alex-potanin.png" alt="Alex Potanin">
+          <div><div class="name">A/Prof Alex Potanin</div><div class="role">Lead · Associate Professor, ANU School of Computing</div></div>
+          <p>Designs programming languages, verification techniques and tools for safe, secure, trustworthy software. Creator of Wyvern; Adjunct Professor in S3D at Carnegie Mellon University; Senior Visiting Fellow with the Trustworthy Systems group at UNSW Sydney.</p>
+          <a href="https://potanin.github.io/" style="font-size: 14px; font-weight: 600">potanin.github.io</a>
+        </div>
+        <div class="card person">
+          <img class="avatar" src="../images/team/yan-liu.jpg" alt="Yan Liu">
+          <div><div class="name">Dr Yan Liu</div><div class="role">Research Fellow (Postdoc) · 2025–2027</div></div>
+          <p>Formal methods and model checking. PhD from the National University of Singapore; industry verification work at Runtime Verification and Pi Squared.</p>
+          <a href="https://emmayanliu.bitbucket.io/" style="font-size: 14px; font-weight: 600">emmayanliu.bitbucket.io</a>
+        </div>
+        <div class="card person">
+          <div class="avatar" aria-hidden="true">CF</div>
+          <div><div class="name">Charlotte Fulham</div><div class="role">Honours student · 2026–2027</div></div>
+          <p>Building a verified parser in Rust for Fiducia. Earlier built the Fiducia Microkit backend and the Fiducia-to-Microkit bridge.</p>
+        </div>
+      </div>
+
+      <h3 style="margin: 40px 0 6px; font-size: 20px">Joining in 2027</h3>
+      <p class="muted" style="margin: 0 0 16px; font-size: 15px">Incoming PhD students, 2027–2030. Candidatures to be confirmed.</p>
+      <div class="card-grid">
+        <div class="card person person-sm"><div class="avatar" aria-hidden="true">MW</div><div><div class="name">Mio Wu</div><div class="role">PhD · to be confirmed</div></div></div>
+        <div class="card person person-sm"><div class="avatar" aria-hidden="true">JH</div><div><div class="name">Jack Hackshaw</div><div class="role">PhD · to be confirmed</div></div></div>
+        <div class="card person person-sm"><div class="avatar" aria-hidden="true">MR</div><div><div class="name">Matthew Richards</div><div class="role">PhD · to be confirmed</div></div></div>
+      </div>
+      <p style="margin: 20px 0 0; font-size: 15px; color: var(--text-2)">Interested in a PhD or project on Fiducia? <a href="#contact">Get in touch</a>.</p>
+    </section>
+
+    <section class="section">
+      <h2 style="font-size: 30px; margin-bottom: 20px">Supporters &amp; hardware</h2>
+      <div class="card-grid">
+        <a class="card" href="https://trustworthy.systems/" style="color: inherit">
+          <img src="../images/logos/trustworthy-systems.svg" alt="" style="height: 36px; margin-bottom: 12px">
+          <h3>Trustworthy Systems</h3>
+          <p>Creators of seL4, the formally verified microkernel Fiducia builds on.</p>
+        </a>
+        <a class="card" href="https://skykraft.com.au/" style="color: inherit">
+          <img src="../images/logos/skykraft.png" alt="" style="height: 36px; margin-bottom: 12px">
+          <h3>Skykraft</h3>
+          <p>Australian space services company deploying small-satellite constellations.</p>
+        </a>
+        <a class="card" href="https://www.amd.com/en/products/system-on-modules/kria/k26/k26i-industrial.html" style="color: inherit">
+          <h3>AMD Kria K26I</h3>
+          <p>Industrial Zynq UltraScale+ module with on-board TPM. A development target.</p>
+        </a>
+        <a class="card" href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/" style="color: inherit">
+          <h3>NVIDIA Jetson Orin</h3>
+          <p>Nano and AGX devkits, running sel4test and Microkit; see the blog for the ports.</p>
+        </a>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <div class="card" style="padding: 36px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+        <div style="max-width: 640px">
+          <h2 style="margin: 0 0 8px; font-size: 26px">Work with us</h2>
+          <p style="font-size: 16px">Industry partners, new hardware targets, students and researchers: we would like to hear from you.</p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px">
+          <a class="btn btn-secondary" href="mailto:alex.potanin@anu.edu.au" style="flex-direction: column; align-items: flex-start; min-height: 56px"><span class="muted" style="font-size: 12px; font-weight: 400">Alex Potanin</span>alex.potanin@anu.edu.au</a>
+          <a class="btn btn-secondary" href="mailto:yan.liu@anu.edu.au" style="flex-direction: column; align-items: flex-start; min-height: 56px"><span class="muted" style="font-size: 12px; font-weight: 400">Yan Liu</span>yan.liu@anu.edu.au</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="brand">
+        <b>Fiducia</b>
+        <p>School of Computing, The Australian National University. Supported by Trustworthy Systems and Skykraft.</p>
+      </div>
+      <div class="col">
+        <b>Site</b>
+        <a href="../blog/">Blog</a>
+        <a href="./">About</a>
+        <a href="../docs/">Docs</a>
+      </div>
+      <div class="col">
+        <b>Get started</b>
+        <a href="../docs/manual/installation.html">Installation</a>
+        <a href="../releases/">Releases</a>
+      </div>
+      <div class="col">
+        <b>Contact</b>
+        <a href="mailto:alex.potanin@anu.edu.au">alex.potanin@anu.edu.au</a>
+        <a href="mailto:yan.liu@anu.edu.au">yan.liu@anu.edu.au</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

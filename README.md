@@ -1,6 +1,24 @@
 # fiducia-lang.github.io
 Fiducia Information Flow Security for Embedded Devices Using seL4 and Trustworthy Systems
 
+## Site structure
+
+Static HTML served by GitHub Pages. Hand-written pages share
+`assets/site.css` and `assets/site.js`, and each repeats the same header and
+footer (update them together):
+
+| Path | Page |
+|------|------|
+| `index.html` | Homepage: vision, Why Fiducia, How it works, data diode example, blog column |
+| `blog/` | Blog index (Publication / Post) and posts |
+| `docs/` | Docs landing page; `docs/examples/`, `docs/publications/` |
+| `about/` | People, supporters, contact |
+| `examples/*.html` | The nine security-pattern pages, listed under Docs › Examples |
+
+Written by fic CI, do not edit by hand: `docs/manual/`, `docs/lang-spec/`,
+`releases/`. When a release is published, update the release card and add a
+Release entry to the News feed on `index.html` (releases are not on the blog).
+
 ## Local source clones (optional, gitignored)
 
 For diffing / browsing the source repos that the blog posts link to,
