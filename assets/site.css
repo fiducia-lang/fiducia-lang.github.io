@@ -256,3 +256,12 @@ pre.code-body {
   .lead { font-size: 18px; }
   .files-nav { border-right: 0; border-bottom: 1px solid var(--border); }
 }
+
+/* ── Justified body text ── */
+/* Paragraphs, card text, list items and step text are aligned on both sides.
+   Hyphenation keeps the gaps between words even in narrow cards. */
+main p, main li, aside p, .steps span, .feed .summary {
+  text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+}
+/* Centred or single-line items keep their own alignment. */
+.more-examples, .chips, .tabs, .keywords li, .feed-empty { text-align: initial; hyphens: manual; -webkit-hyphens: manual; }
