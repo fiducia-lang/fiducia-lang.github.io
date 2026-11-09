@@ -55,6 +55,8 @@ img { max-width: 100%; }
 }
 .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; font-size: 20px; }
 .logo:hover { color: var(--text); text-decoration: none; }
+.logo-name { display: flex; flex-direction: column; line-height: 1.15; }
+.logo-name small { font-size: 12px; font-weight: 500; color: var(--text-dim); letter-spacing: 0.01em; }
 .site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 32px; font-size: 15px; font-weight: 500; }
 .site-nav a { color: var(--text-2); }
 .site-nav a:hover { color: var(--text); text-decoration: none; }
@@ -157,6 +159,18 @@ pre.code-body {
 .files-nav button[aria-selected="true"] { border-left-color: var(--accent); background: rgba(96,165,250,0.12); color: var(--text); font-weight: 600; }
 .files-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-view { flex: 999 1 480px; min-width: 0; }
+
+/* ── Keyword cluster (homepage hero) ── */
+.keywords { list-style: none; margin: 0 0 36px; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; max-width: 860px; }
+.keywords li { border-radius: 999px; padding: 5px 13px; border: 1px solid var(--border-strong); color: var(--text-dim); font-size: 13px; line-height: 1.4; }
+.keywords .w1 { font-size: 17px; font-weight: 600; padding: 7px 16px; color: var(--text); }
+.keywords .w2 { font-size: 15px; font-weight: 500; color: var(--text-2); }
+.keywords .w3 { font-family: var(--mono); }
+.keywords .c-blue   { border-color: rgba(96,165,250,0.45);  background: rgba(96,165,250,0.08); }
+.keywords .c-cyan   { border-color: rgba(34,211,238,0.45);  background: rgba(34,211,238,0.07); }
+.keywords .c-purple { border-color: rgba(167,139,250,0.45); background: rgba(167,139,250,0.08); }
+.keywords .c-green  { border-color: rgba(52,211,153,0.45);  background: rgba(52,211,153,0.07); }
+.keywords .c-rose   { border-color: rgba(251,113,133,0.45); background: rgba(251,113,133,0.07); }
 .more-examples { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; font-size: 14px; }
 .more-examples a { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--text); font-weight: 500; }
 .more-examples a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
@@ -230,6 +244,7 @@ pre.code-body {
 .site-footer a:hover { color: var(--text); }
 
 @media (max-width: 640px) {
+  .logo-name small { display: none; }
   body { font-size: 16px; }
   .section h2 { font-size: 30px; }
   .lead { font-size: 18px; }
