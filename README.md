@@ -10,14 +10,14 @@ footer (update them together):
 | Path | Page |
 |------|------|
 | `index.html` | Homepage: vision, Why Fiducia, How it works, data diode example, blog column |
-| `blog/` | Blog index (Release / Publication / Post) and posts |
+| `blog/` | Blog index (Publication / Post) and posts |
 | `docs/` | Docs landing page; `docs/examples/`, `docs/publications/` |
 | `about/` | People, supporters, contact |
 | `examples/*.html` | The nine security-pattern pages, listed under Docs › Examples |
 
 Written by fic CI, do not edit by hand: `docs/manual/`, `docs/lang-spec/`,
-`releases/`. When a release is published, add a Release entry to
-`blog/index.html` and update the release card and feed on `index.html`.
+`releases/`. When a release is published, update the release card and add a
+Release entry to the News feed on `index.html` (releases are not on the blog).
 
 ## Local source clones (optional, gitignored)
 

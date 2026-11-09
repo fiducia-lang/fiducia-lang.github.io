@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blog — Fiducia</title>
-  <meta name="description" content="Releases, publications and posts from the Fiducia project.">
+  <meta name="description" content="Publications and posts from the Fiducia project.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -29,50 +29,19 @@
   <main class="container" style="max-width: 880px">
     <section style="padding: 64px 0 28px">
       <h1 style="margin: 0 0 8px; font-size: 44px">Blog</h1>
-      <p style="margin: 0 0 24px; color: var(--text-2)">Releases, publications and notes from building verified systems on real hardware.</p>
+      <p style="margin: 0 0 24px; color: var(--text-2)">Publications and notes from building verified systems on real hardware. Releases are on the <a href="../releases/">releases page</a>.</p>
       <div class="chips" role="group" aria-label="Filter by category" data-filter="#feed" data-empty="#feed-empty">
         <button type="button" class="chip" data-cat="all" aria-pressed="true">All</button>
-        <button type="button" class="chip" data-cat="release" aria-pressed="false">Releases</button>
         <button type="button" class="chip" data-cat="publication" aria-pressed="false">Publications</button>
         <button type="button" class="chip" data-cat="post" aria-pressed="false">Posts</button>
       </div>
     </section>
 
     <ol id="feed" class="feed feed-lg">
-      <li data-cat="release">
-        <span class="meta"><span class="tag tag-release">Release</span>9 Nov 2026</span>
-        <a class="title" href="../releases/">fic 2.60.0</a>
-        <span class="summary">fic and fire for Linux x86-64 and macOS arm64.</span>
-      </li>
       <li data-cat="post">
         <span class="meta"><span class="tag tag-post">Post</span>2 Sep 2026 · Robotics</span>
         <a class="title" href="sel4-robot-arm.html">Making a Robot Arm Impossible to Misuse from Its Own Computer</a>
         <span class="summary">We booted seL4 on a Unitree D1 arm and ran its unmodified Ubuntu as a guest. The motors now belong to a tiny geometry-aware filter outside Linux; root inside the vendor's Ubuntu cannot reach them. With video of the live demo: the arm refuses to touch the desk.</span>
-      </li>
-      <li data-cat="release">
-        <span class="meta"><span class="tag tag-release">Release</span>1 Sep 2026</span>
-        <a class="title" href="../releases/">fic 2.15.15</a>
-        <span class="summary">fic and fire for Linux x86-64 and macOS arm64.</span>
-      </li>
-      <li data-cat="release">
-        <span class="meta"><span class="tag tag-release">Release</span>1 Aug 2026</span>
-        <a class="title" href="../releases/">fic 2.15.11</a>
-        <span class="summary">fic and fire for Linux x86-64 and macOS arm64.</span>
-      </li>
-      <li data-cat="release">
-        <span class="meta"><span class="tag tag-release">Release</span>9 Jul 2026</span>
-        <a class="title" href="../releases/">fic 2.15.9</a>
-        <span class="summary">fic and fire for Linux x86-64 and macOS arm64.</span>
-      </li>
-      <li data-cat="release">
-        <span class="meta"><span class="tag tag-release">Release</span>1 Jul 2026</span>
-        <a class="title" href="../releases/">fic 2.3.0</a>
-        <span class="summary">fic and fire for Linux x86-64 and macOS arm64.</span>
-      </li>
-      <li data-cat="release">
-        <span class="meta"><span class="tag tag-release">Release</span>11 Jun 2026</span>
-        <a class="title" href="../releases/">fic 1.12.3</a>
-        <span class="summary">fic and fire for Linux x86-64 and macOS arm64.</span>
       </li>
       <li data-cat="post">
         <span class="meta"><span class="tag tag-post">Post</span>26 Apr 2026 · Hardware</span>
