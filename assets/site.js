@@ -1,83 +1,58 @@
 // Fiducia site behaviour: the keyword cloud, the example file browser and the blog filter.
 (function () {
-  // Keyword cloud: the keywords, repeated, fill a cloud silhouette row by
-  // row in a condensed face, in shades of the site's blue-grey. The <ul>
-  // stays for screen readers; the drawn cloud is aria-hidden. Deterministic.
-  document.querySelectorAll('[data-cloud]').forEach(function (list) {
-    var words = Array.prototype.map.call(list.children, function (li) { return li.textContent; });
-    var art = document.createElement('div');
-    art.className = 'cloud-art';
-    art.setAttribute('aria-hidden', 'true');
-    list.parentNode.insertBefore(art, list.nextSibling);
-    var shades = ['#e2e8f0', '#93c5fd', '#94a3b8', '#60a5fa', '#cbd5e1', '#64748b', '#bfdbfe'];
-    var ctx = document.createElement('canvas').getContext('2d');
-
-    // Cloud outline, in units of the width: a big middle bump, two
-    // shoulders, two small end bumps, and a flat base.
-    var lobes = [[0.50, 0.22, 0.16], [0.25, 0.36, 0.14], [0.75, 0.34, 0.15], [0.11, 0.47, 0.08], [0.89, 0.46, 0.08]];
-    function inside(x, y) {
-      for (var i = 0; i < lobes.length; i++) {
-        var dx = x - lobes[i][0], dy = y - lobes[i][1];
-        if (dx * dx + dy * dy <= lobes[i][2] * lobes[i][2]) return true;
-      }
-      return (y >= 0.40 && y <= 0.55 && x >= 0.11 && x <= 0.89) || (y >= 0.30 && y <= 0.55 && x >= 0.25 && x <= 0.75);
-    }
+  // Keyword cloud: place words, largest first, on an elliptical spiral out
+  // from the centre; every few smaller words stand vertical. Deterministic,
+  // so the cloud looks the same on every load.
+  document.querySelectorAll('[data-cloud]').forEach(function (root) {
+    var items = Array.prototype.slice.call(root.children).sort(function (a, b) {
+      return b.dataset.w - a.dataset.w;
+    });
 
     function layout() {
-      list.classList.add('is-drawn');
-      art.textContent = '';
-      var W = art.clientWidth, H = Math.round(W * 0.58);
-      var rh = Math.max(11, Math.round(W / 46)), fs = rh * 0.95, gap = fs * 0.26;
-      var font = '600 ' + fs + 'px Oswald, "IBM Plex Sans", sans-serif';
-      ctx.font = font;
-      // A queue of keywords: each row takes the first that still fits and
-      // sends it to the back, so every keyword keeps recurring.
-      var queue = words.map(function (w) { return { w: w, width: ctx.measureText(w).width }; });
-      var first = -1, last = 0, k = 0;
-      for (var top = 0; top + rh <= H; top += rh) {
-        // The runs inside the cloud along both the row's top and bottom edge;
-        // a row can have several where bumps meet.
-        var y1 = (top + rh * 0.15) / W, y2 = (top + rh * 0.85) / W, runs = [], start = -1;
-        for (var px = 0; px <= W + 2; px += 2) {
-          var ok = px <= W && inside(px / W, y1) && inside(px / W, y2);
-          if (ok && start < 0) start = px;
-          if (!ok && start >= 0) { runs.push([start, px - 2]); start = -1; }
-        }
-        runs.forEach(function (run) {
-          var x0 = run[0], span = run[1] - run[0], row = [], used = 0;
-          for (;;) {
-            var hit = -1;
-            for (var q = 0; q < queue.length; q++) {
-              if (used + queue[q].width + (row.length ? gap : 0) <= span) { hit = q; break; }
-            }
-            if (hit < 0) break;
-            var item = queue.splice(hit, 1)[0];
-            queue.push(item);
-            used += item.width + (row.length ? gap : 0);
-            row.push(item);
-          }
-          if (!row.length) return;
-          if (first < 0) first = top;
-          last = top + rh;
-          var extra = row.length > 1 ? Math.min(gap * 4, (span - used) / (row.length - 1)) : 0;
-          var x = x0 + (span - used - extra * (row.length - 1)) / 2;
-          row.forEach(function (item) {
-            var el = document.createElement('span');
-            el.textContent = item.w;
-            el.dataset.top = top;
-            el.style.cssText = 'left:' + x + 'px;font:' + font + ';line-height:' + rh + 'px;color:' + shades[(k * 5 + 3) % shades.length];
-            art.appendChild(el);
-            x += item.width + gap + extra;
-            k++;
+      root.classList.add('is-cloud');
+      root.style.height = '';
+      var W = root.clientWidth;
+      var scale = Math.min(1, Math.max(0.6, W / 820));
+      var cx = W / 2, cy = 0, placed = [], pad = 6 * scale;
+      var minY = 0, maxY = 0;
+
+      items.forEach(function (li, i) {
+        li.style.fontSize = '';
+        var fs = Math.max(10, parseFloat(getComputedStyle(li).fontSize) * scale);
+        li.style.fontSize = fs + 'px';
+        var w = li.offsetWidth, h = li.offsetHeight;
+        var vertical = li.dataset.w <= 2 && i % 3 === 0 && W > 480;
+        var bw = vertical ? h : w, bh = vertical ? w : h;
+        for (var t = 0; t < 4000; t += 1) {
+          var a = t * 0.18, r = 2.2 * a;
+          var x = cx + r * Math.cos(a) * 1.9 - bw / 2;
+          var y = cy + r * Math.sin(a) - bh / 2;
+          if (x < 0 || x + bw > W) continue;
+          var box = { x: x - pad, y: y - pad / 2, w: bw + 2 * pad, h: bh + pad };
+          var hit = placed.some(function (p) {
+            return box.x < p.x + p.w && p.x < box.x + box.w && box.y < p.y + p.h && p.y < box.y + box.h;
           });
-        });
-      }
-      Array.prototype.forEach.call(art.children, function (el) { el.style.top = (el.dataset.top - first) + 'px'; });
-      art.style.height = (last - first) + 'px';
+          if (hit) continue;
+          placed.push(box);
+          li.dataset.x = x; li.dataset.y = y; li.dataset.v = vertical ? 1 : 0; li.dataset.bh = bh;
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y + bh);
+          return;
+        }
+        li.dataset.x = -9999; // no room: hide
+      });
+
+      items.forEach(function (li) {
+        var x = +li.dataset.x, y = +li.dataset.y - minY;
+        li.hidden = x === -9999;
+        li.style.transform = li.dataset.v === '1'
+          ? 'translate(' + x + 'px,' + (y + +li.dataset.bh) + 'px) rotate(-90deg)'
+          : 'translate(' + x + 'px,' + y + 'px)';
+      });
+      root.style.height = Math.ceil(maxY - minY) + 'px';
     }
 
-    var ready = document.fonts && document.fonts.load ? document.fonts.load('600 20px Oswald') : Promise.resolve();
-    ready.then(layout, layout);
+    var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    ready.then(layout);
     var timer;
     window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(layout, 120); });
   });
