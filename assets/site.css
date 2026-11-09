@@ -60,6 +60,8 @@ img { max-width: 100%; }
 .site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 32px; font-size: 15px; font-weight: 500; }
 .site-nav a { color: var(--text-2); }
 .site-nav a:hover { color: var(--text); text-decoration: none; }
+.nav-icon { display: inline-flex; align-items: center; color: var(--text-2); }
+.nav-icon:hover { color: var(--text); }
 .site-nav a[aria-current="page"] { color: var(--text); font-weight: 600; text-decoration: underline; text-underline-offset: 6px; }
 
 /* ── Buttons ── */
