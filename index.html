@@ -192,13 +192,13 @@
 
         <div class="code files" data-files>
           <div class="files-nav" role="tablist" aria-label="Data diode source files" aria-orientation="vertical">
-            <div class="files-group" aria-hidden="true">System</div>
+            <div class="files-group" aria-hidden="true">System description</div>
             <button role="tab" id="t-fis" aria-controls="p-fis" aria-selected="true" data-path="demo/datadiode/datadiode.fis" data-note="system declaration">datadiode.fis</button>
-            <div class="files-group" aria-hidden="true">Protection domains</div>
+            <div class="files-group" aria-hidden="true">Protection domain processes</div>
             <button role="tab" id="t-outer" aria-controls="p-outer" aria-selected="false" data-path="demo/datadiode/eth_outer.fi" data-note="Low NIC · excerpt">eth_outer.fi</button>
             <button role="tab" id="t-dd" aria-controls="p-dd" aria-selected="false" data-path="demo/datadiode/dd.fi" data-note="the diode">dd.fi</button>
             <button role="tab" id="t-inner" aria-controls="p-inner" aria-selected="false" data-path="demo/datadiode/eth_inner.fi" data-note="High NIC · excerpt">eth_inner.fi</button>
-            <div class="files-group" aria-hidden="true">C code</div>
+            <div class="files-group" aria-hidden="true">Foreign implementation</div>
             <button role="tab" id="t-eth" aria-controls="p-eth" aria-selected="false" data-path="demo/datadiode/src/eth.c" data-note="NIC helpers · excerpt">eth.c</button>
           </div>
           <div class="files-view">
@@ -382,7 +382,13 @@
 // when d2i is full (drop)</span></pre>
           </div>
         </div>
-        <p style="margin: 16px 0 0; font-size: 14px" class="muted">Run it yourself with <code>fire run demo/datadiode/</code> (<a href="docs/manual/fire-run.html">fire run</a> in the manual) · <a href="docs/examples/">More examples</a></p>
+        <p style="margin: 16px 0 0; font-size: 14px" class="muted">Run it yourself with <code>fire run demo/datadiode/</code> (<a href="docs/manual/fire-run.html">fire run</a> in the manual).</p>
+        <p class="more-examples">
+          <a href="examples/nrl-pump.html">NRL Pump</a>
+          <a href="examples/mls-email.html">MLS Email Guard</a>
+          <a href="examples/clipboard-guard.html">Clipboard Guard</a>
+          <a href="docs/examples/" class="more">More examples &rarr;</a>
+        </p>
       </section>
     </main>
 
