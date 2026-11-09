@@ -160,17 +160,20 @@ pre.code-body {
 .files-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-view { flex: 999 1 480px; min-width: 0; }
 
-/* ── Keyword cluster (homepage hero) ── */
-.keywords { list-style: none; margin: 0 0 36px; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; max-width: 860px; }
-.keywords li { border-radius: 999px; padding: 5px 13px; border: 1px solid var(--border-strong); color: var(--text-dim); font-size: 13px; line-height: 1.4; }
-.keywords .w1 { font-size: 17px; font-weight: 600; padding: 7px 16px; color: var(--text); }
-.keywords .w2 { font-size: 15px; font-weight: 500; color: var(--text-2); }
-.keywords .w3 { font-family: var(--mono); }
-.keywords .c-blue   { border-color: rgba(96,165,250,0.45);  background: rgba(96,165,250,0.08); }
-.keywords .c-cyan   { border-color: rgba(34,211,238,0.45);  background: rgba(34,211,238,0.07); }
-.keywords .c-purple { border-color: rgba(167,139,250,0.45); background: rgba(167,139,250,0.08); }
-.keywords .c-green  { border-color: rgba(52,211,153,0.45);  background: rgba(52,211,153,0.07); }
-.keywords .c-rose   { border-color: rgba(251,113,133,0.45); background: rgba(251,113,133,0.07); }
+/* ── Keyword cloud (homepage hero) ── */
+.keywords, .keywords ul { list-style: none; margin: 0; padding: 0; }
+.keywords { margin: 4px 0 40px; max-width: 860px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.keywords ul { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 4px 22px; }
+.keywords li li { line-height: 1.25; white-space: nowrap; color: var(--text-dim); }
+.keywords .w-xl { font-size: clamp(24px, 2.8vw, 34px); font-weight: 700; letter-spacing: -0.01em; }
+.keywords .w-l  { font-size: clamp(19px, 2vw, 24px); font-weight: 600; }
+.keywords .w-m  { font-size: 17px; font-weight: 500; }
+.keywords .w-s  { font-size: 13px; font-family: var(--mono); }
+.keywords .c-blue   { color: var(--accent); }
+.keywords .c-cyan   { color: var(--cyan); }
+.keywords .c-purple { color: var(--purple); }
+.keywords .c-green  { color: var(--green); }
+.keywords .c-rose   { color: var(--rose); }
 .more-examples { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; font-size: 14px; }
 .more-examples a { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--text); font-weight: 500; }
 .more-examples a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
