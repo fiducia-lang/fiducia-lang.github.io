@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-f16a7e35.js";
+            window.path_to_searchindex_js = "../searchindex-1a939cec.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -228,7 +228,7 @@ channel’s payload buffer and its slot type, which every buffer names:
 <code>via packet_buffer_outer&lt;int&gt;</code> or a declared
 <a href="data-layer.html">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>); a
 raw byte buffer is <code>via ring&lt;byte&gt;</code>. The slot type is a struct or a
-scalar, never an array; it is the value the
+scalar, never an array, and has at least one byte; it is the value the
 channel carries, <code>Σ(c)</code>. Without <code>via</code>, the channel is a Microkit
 notification: a pure synchronisation point that carries no value. A
 buffered channel is one-way and async: <code>via</code> requires <code>Chan … --&gt;</code>; <code>&lt;-&gt;</code>
@@ -243,6 +243,12 @@ explicit <code>Mapping</code>, and it may back only one channel. Each endpoint�
 generated unit declares the loader-patched symbols
 <code>&lt;region&gt;_vaddr</code> / <code>&lt;region&gt;_size</code> (and driver code may declare
 <code>&lt;region&gt;_paddr</code> on demand), named after the <em>region</em>, not a mapping.</p>
+<p>The region holds the channel’s <strong>ring</strong>, Lamport’s single-producer
+single-consumer queue: an 8-byte header of the two indices, then
+⌊(size − 8) / sizeof(T)⌋ slots of the slot type, packed. A send to a
+full ring is lost and the sender goes on; a receive waits while the ring
+is empty. A region too small for one slot after the header is an error
+at the channel.</p>
 </li>
 </ul>
 <p>The optional trailing semicolon is accepted but not required.</p>
