@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-18a36fc7.js";
+            window.path_to_searchindex_js = "../searchindex-561db681.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -200,7 +200,7 @@ platform has, and what each means, belong to that platform. A process
 with no <code>@bind</code> is internal: it runs only when a bound process references
 it.</p>
 <h2 id="microkit"><a class="header" href="#microkit">Microkit</a></h2>
-<p>Microkit is the platform fic targets, and it has two entry points:</p>
+<p>Microkit is the platform fic targets, and it has three entry points:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -209,21 +209,32 @@ it.</p>
 <tbody>
 <tr><td><code>microkit.init</code></td><td><code>init()</code></td><td>once, when the PD boots. See <a href="../items/init-process.html">Boot Initialisation</a>.</td></tr>
 <tr><td><code>microkit.notified</code></td><td><code>notified(channel)</code></td><td>each time the kernel notifies the PD, for a channel message or an interrupt.</td></tr>
+<tr><td><code>microkit.protected</code></td><td><code>protected(channel, msginfo)</code></td><td>each time a lower-priority PD calls it on a <code>Sync</code> channel; the caller waits until it returns.</td></tr>
 </tbody>
 </table>
 </div>
-<p>Both are <strong>mandatory</strong>. Every protection domain binds both, and the front
+<p><code>init</code> and <code>notified</code> are <strong>mandatory</strong>. Every protection domain binds both, and the front
 end reports one that does not, naming the PD and the missing entry, before
 any backend runs: <code>fic --check</code>, <code>--emit=xta</code> and <code>--emit=c</code> all stop.
-Each entry point binds at most one process.</p>
+<code>protected</code> is optional. A PD that receives a <code>Sync</code> channel without it
+leaves the call to libmicrokit’s default <code>protected()</code>; a PD that binds it
+with no <code>Sync</code> channel in is reported, since nothing calls it. Each entry
+point binds at most one process.</p>
 <p>A <code>notified</code> process that receives must be <em>receive-headed</em>: it starts by consuming
 the message or interrupt that woke it (see
 <a href="../items/process-blocks.html#annotations-bind">Process Definitions</a>). The
 generated C makes each receive or interrupt await in the process a
 resume point that <code>notified()</code> dispatches to, and <code>init()</code> runs the boot
-process.</p>
-<p>A <code>microkit.</code> name other than <code>init</code> and <code>notified</code> is accepted by the
-grammar and ignored.</p>
+process. Reaching the end of <code>init</code> or <code>notified</code> returns to the kernel;
+the next notification invokes <code>notified</code> again.</p>
+<p>The <code>protected</code> process is receive-headed on the PD’s <code>Sync</code> channels and
+runs to completion: it starts with a choice of <code>c?</code> over them, and nothing
+after the head receives or awaits an interrupt, since its caller waits
+while it runs. <code>protected()</code> dispatches on the calling channel, runs to the
+process’s end and returns an empty reply. See
+<a href="../checks/well-formedness.html#a-sync-channel-is-received-in-protected">Well-Formedness</a>.</p>
+<p>A <code>microkit.</code> name other than <code>init</code>, <code>notified</code> and <code>protected</code> is
+accepted by the grammar and ignored.</p>
 <h2 id="other-platforms"><a class="header" href="#other-platforms">Other platforms</a></h2>
 <p>A process may name several platforms on one line,
 <code>@bind(microkit.notified, cheri.interrupt_handler)</code>. <code>fic</code> compiles the

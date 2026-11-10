@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-18a36fc7.js";
+            window.path_to_searchindex_js = "../searchindex-561db681.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -251,8 +251,9 @@ kernel.</li>
 <li><strong><code>@bind</code> is authoritative for entry-point selection.</strong> The C backend
 and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
-boot body) and the <code>microkit.notified</code>-bound process becomes the
-<code>notified()</code> event loop.</li>
+boot body), the <code>microkit.notified</code>-bound process becomes the
+<code>notified()</code> event loop, and a <code>microkit.protected</code>-bound process
+becomes <code>protected()</code>, which answers a <code>Sync</code> channel’s call.</li>
 <li>The process bound to <code>microkit.notified</code>, if it receives at all, must be
 <em>receive-headed</em>: every path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
@@ -266,8 +267,11 @@ process are <strong>mandatory</strong> for every PD with a program when targetin
 Microkit — Microkit invokes both on every PD, and the front end
 reports a PD that lacks one whatever the output (<code>--check</code>, <code>--emit=xta</code>,
 <code>--emit=c</code>, an image). See <a href="init-process.html">Boot Initialisation</a> and
-<a href="../semantics/entry-points.html">Entry Points</a>. Other platform entry points
-are optional.</li>
+<a href="../semantics/entry-points.html">Entry Points</a>. <code>microkit.protected</code> is
+optional, and bound only where a <code>Sync</code> channel ends at the PD; its
+process is receive-headed on those channels and runs to completion (see
+<a href="../checks/well-formedness.html#a-sync-channel-is-received-in-protected">Well-Formedness</a>).
+Other platform entry points are optional.</li>
 <li><strong>Each entry point binds at most one process.</strong> Two processes both
 <code>@bind(microkit.notified)</code> is an error — resolution rejects the second
 rather than silently keeping the first.</li>

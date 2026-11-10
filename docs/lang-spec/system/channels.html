@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-18a36fc7.js";
+            window.path_to_searchindex_js = "../searchindex-561db681.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -244,11 +244,16 @@ parse error.</li>
 point. <code>c!</code> notifies the other end; <code>c?</code> is enabled when the PD was
 notified on <code>c</code>. Notifications do not queue: several sends before the
 receiver runs wake it once.</p>
-<p>A <code>Sync</code> channel is declared synchronous: the sender calls the receiver,
-as a protected procedure call from the lower-priority PD to the higher,
-and the receiver’s end is marked <code>pp</code> in the SDF. The C backend sends it
-as a notification today; the call, and carrying a value with it, are
-<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>.</p>
+<p>A <code>Sync</code> channel is a protected procedure call from the lower-priority
+PD to the higher: <code>c!</code> is <code>microkit_ppcall</code>, and the sender waits while
+the receiver’s <code>@bind(microkit.protected)</code> process handles <code>c?</code> and runs
+to its end (see <a href="../semantics/entry-points.html">Entry Points</a>). The
+sender’s end is marked <code>pp</code> in the SDF. It carries no value yet, and the
+reply is empty: carrying a value is
+<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>, a reply
+<a href="https://github.com/fiducia-lang/fic/issues/625">#625</a>. The UPPAAL model
+does not cover it yet: <code>--emit=xta</code> refuses a PD that binds <code>protected</code>
+(<a href="https://github.com/fiducia-lang/fic/issues/355">#355</a>).</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <pre><code class="language-text">// Signalling, one way.
 Chan tick = timer --&gt; worker;

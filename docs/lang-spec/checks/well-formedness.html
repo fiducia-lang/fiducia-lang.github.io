@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-18a36fc7.js";
+            window.path_to_searchindex_js = "../searchindex-561db681.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -181,12 +181,14 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="well-formedness"><a class="header" href="#well-formedness">Well-Formedness</a></h1>
-<p>After typing, <code>fic</code> checks four structural conditions that no typing rule
+<p>After typing, <code>fic</code> checks five structural conditions that no typing rule
 expresses. Each one is a property the later stages rely on, and each is
 reported with the declaration it concerns. They are the checks of the
 CoreFi paper’s well-formedness, restricted to what a program text can
 violate: <strong>WF2</strong> over the whole system, and three conditions on process
-bodies. (WF1 and the rest of WF3 are not checked here.)</p>
+bodies. The fifth, where a <code>Sync</code> channel is received, is the platform’s:
+Microkit’s protected procedure call. (WF1 and the rest of WF3 are not
+checked here.)</p>
 <blockquote>
 <p><strong>A placeholder.</strong> Well-formedness checking is still under research. The
 checks below are what <code>fic</code> enforces today; which conditions the language
@@ -267,10 +269,32 @@ notification meanwhile is dropped. A receive on a buffered channel may sit
 anywhere: it tests its ring, which the generated <code>notified</code> does on every
 pass, whichever channel notified. The echo server’s copier takes a frame at
 the head and then waits for a free client buffer this way.</p>
+<h2 id="a-sync-channel-is-received-in-protected"><a class="header" href="#a-sync-channel-is-received-in-protected">A <code>Sync</code> channel is received in <code>protected</code></a></h2>
+<p>A send on a <code>Sync</code> channel is a protected procedure call, which the kernel
+answers by invoking the receiver’s <code>protected</code> and makes the caller wait on
+until it returns. So these are errors, not warnings: the C has no lowering
+for any of them.</p>
+<ul>
+<li>The process bound to <code>microkit.protected</code> begins, on every path, with an
+unguarded receive on a <code>Sync</code> channel (<code>c?</code>), one branch per channel.</li>
+<li>Nothing after its head receives or awaits an interrupt: it runs to its
+end without waiting.</li>
+<li><code>init</code> and <code>notified</code> never receive a <code>Sync</code> channel, since its call
+does not notify.</li>
+</ul>
+<pre><code class="language-text">@bind(microkit.protected)
+proc Serve() { req? -&gt; serve -&gt; Serve(); }    // accepted
+@bind(microkit.protected)
+proc Serve() { req? -&gt; done? -&gt; Skip; }       // rejected: waits after the head
+@bind(microkit.notified)
+proc Notified() { req? -&gt; Notified(); }       // rejected: `req` is Sync
+</code></pre>
 <h2 id="where-the-checks-run"><a class="header" href="#where-the-checks-run">Where the checks run</a></h2>
-<p><code>fic --check</code> runs all four after typing, and every backend assumes them.
+<p><code>fic --check</code> runs all five after typing, and every backend assumes them.
 The process-body checks run first, then the entry-point binding, the
-contract read and <a href="information-flow.html">information flow</a>; WF2 runs last.</p>
+contract read and <a href="information-flow.html">information flow</a>; WF2 runs last
+among them. The <code>Sync</code> receive check reads the graphs, so it runs once they
+are built, beside the receive and choice checks.</p>
 
                     </main>
 

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-18a36fc7.js";
+            window.path_to_searchindex_js = "searchindex-561db681.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -910,11 +910,16 @@ parse error.</li>
 point. <code>c!</code> notifies the other end; <code>c?</code> is enabled when the PD was
 notified on <code>c</code>. Notifications do not queue: several sends before the
 receiver runs wake it once.</p>
-<p>A <code>Sync</code> channel is declared synchronous: the sender calls the receiver,
-as a protected procedure call from the lower-priority PD to the higher,
-and the receiver’s end is marked <code>pp</code> in the SDF. The C backend sends it
-as a notification today; the call, and carrying a value with it, are
-<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>.</p>
+<p>A <code>Sync</code> channel is a protected procedure call from the lower-priority
+PD to the higher: <code>c!</code> is <code>microkit_ppcall</code>, and the sender waits while
+the receiver’s <code>@bind(microkit.protected)</code> process handles <code>c?</code> and runs
+to its end (see <a href="#entry-points">Entry Points</a>). The
+sender’s end is marked <code>pp</code> in the SDF. It carries no value yet, and the
+reply is empty: carrying a value is
+<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>, a reply
+<a href="https://github.com/fiducia-lang/fic/issues/625">#625</a>. The UPPAAL model
+does not cover it yet: <code>--emit=xta</code> refuses a PD that binds <code>protected</code>
+(<a href="https://github.com/fiducia-lang/fic/issues/355">#355</a>).</p>
 <h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
 <pre><code class="language-text">// Signalling, one way.
 Chan tick = timer --&gt; worker;
@@ -1575,8 +1580,9 @@ kernel.</li>
 <li><strong><code>@bind</code> is authoritative for entry-point selection.</strong> The C backend
 and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
-boot body) and the <code>microkit.notified</code>-bound process becomes the
-<code>notified()</code> event loop.</li>
+boot body), the <code>microkit.notified</code>-bound process becomes the
+<code>notified()</code> event loop, and a <code>microkit.protected</code>-bound process
+becomes <code>protected()</code>, which answers a <code>Sync</code> channel’s call.</li>
 <li>The process bound to <code>microkit.notified</code>, if it receives at all, must be
 <em>receive-headed</em>: every path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
@@ -1590,8 +1596,11 @@ process are <strong>mandatory</strong> for every PD with a program when targetin
 Microkit — Microkit invokes both on every PD, and the front end
 reports a PD that lacks one whatever the output (<code>--check</code>, <code>--emit=xta</code>,
 <code>--emit=c</code>, an image). See <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a> and
-<a href="#entry-points">Entry Points</a>. Other platform entry points
-are optional.</li>
+<a href="#entry-points">Entry Points</a>. <code>microkit.protected</code> is
+optional, and bound only where a <code>Sync</code> channel ends at the PD; its
+process is receive-headed on those channels and runs to completion (see
+<a href="#a-sync-channel-is-received-in-protected">Well-Formedness</a>).
+Other platform entry points are optional.</li>
 <li><strong>Each entry point binds at most one process.</strong> Two processes both
 <code>@bind(microkit.notified)</code> is an error — resolution rejects the second
 rather than silently keeping the first.</li>
@@ -1856,7 +1865,7 @@ platform has, and what each means, belong to that platform. A process
 with no <code>@bind</code> is internal: it runs only when a bound process references
 it.</p>
 <h2 id="microkit"><a class="header" href="#microkit">Microkit</a></h2>
-<p>Microkit is the platform fic targets, and it has two entry points:</p>
+<p>Microkit is the platform fic targets, and it has three entry points:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1865,21 +1874,32 @@ it.</p>
 <tbody>
 <tr><td><code>microkit.init</code></td><td><code>init()</code></td><td>once, when the PD boots. See <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>.</td></tr>
 <tr><td><code>microkit.notified</code></td><td><code>notified(channel)</code></td><td>each time the kernel notifies the PD, for a channel message or an interrupt.</td></tr>
+<tr><td><code>microkit.protected</code></td><td><code>protected(channel, msginfo)</code></td><td>each time a lower-priority PD calls it on a <code>Sync</code> channel; the caller waits until it returns.</td></tr>
 </tbody>
 </table>
 </div>
-<p>Both are <strong>mandatory</strong>. Every protection domain binds both, and the front
+<p><code>init</code> and <code>notified</code> are <strong>mandatory</strong>. Every protection domain binds both, and the front
 end reports one that does not, naming the PD and the missing entry, before
 any backend runs: <code>fic --check</code>, <code>--emit=xta</code> and <code>--emit=c</code> all stop.
-Each entry point binds at most one process.</p>
+<code>protected</code> is optional. A PD that receives a <code>Sync</code> channel without it
+leaves the call to libmicrokit’s default <code>protected()</code>; a PD that binds it
+with no <code>Sync</code> channel in is reported, since nothing calls it. Each entry
+point binds at most one process.</p>
 <p>A <code>notified</code> process that receives must be <em>receive-headed</em>: it starts by consuming
 the message or interrupt that woke it (see
 <a href="#annotations-bind">Process Definitions</a>). The
 generated C makes each receive or interrupt await in the process a
 resume point that <code>notified()</code> dispatches to, and <code>init()</code> runs the boot
-process.</p>
-<p>A <code>microkit.</code> name other than <code>init</code> and <code>notified</code> is accepted by the
-grammar and ignored.</p>
+process. Reaching the end of <code>init</code> or <code>notified</code> returns to the kernel;
+the next notification invokes <code>notified</code> again.</p>
+<p>The <code>protected</code> process is receive-headed on the PD’s <code>Sync</code> channels and
+runs to completion: it starts with a choice of <code>c?</code> over them, and nothing
+after the head receives or awaits an interrupt, since its caller waits
+while it runs. <code>protected()</code> dispatches on the calling channel, runs to the
+process’s end and returns an empty reply. See
+<a href="#a-sync-channel-is-received-in-protected">Well-Formedness</a>.</p>
+<p>A <code>microkit.</code> name other than <code>init</code>, <code>notified</code> and <code>protected</code> is
+accepted by the grammar and ignored.</p>
 <h2 id="other-platforms"><a class="header" href="#other-platforms">Other platforms</a></h2>
 <p>A process may name several platforms on one line,
 <code>@bind(microkit.notified, cheri.interrupt_handler)</code>. <code>fic</code> compiles the
@@ -2120,12 +2140,14 @@ the <code>.fis</code> named one (<code>uint8_t buf[SLOT_SIZE]</code>), else the 
 <p>Structs are not translated.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="well-formedness"><a class="header" href="#well-formedness">Well-Formedness</a></h1>
-<p>After typing, <code>fic</code> checks four structural conditions that no typing rule
+<p>After typing, <code>fic</code> checks five structural conditions that no typing rule
 expresses. Each one is a property the later stages rely on, and each is
 reported with the declaration it concerns. They are the checks of the
 CoreFi paper’s well-formedness, restricted to what a program text can
 violate: <strong>WF2</strong> over the whole system, and three conditions on process
-bodies. (WF1 and the rest of WF3 are not checked here.)</p>
+bodies. The fifth, where a <code>Sync</code> channel is received, is the platform’s:
+Microkit’s protected procedure call. (WF1 and the rest of WF3 are not
+checked here.)</p>
 <blockquote>
 <p><strong>A placeholder.</strong> Well-formedness checking is still under research. The
 checks below are what <code>fic</code> enforces today; which conditions the language
@@ -2206,10 +2228,32 @@ notification meanwhile is dropped. A receive on a buffered channel may sit
 anywhere: it tests its ring, which the generated <code>notified</code> does on every
 pass, whichever channel notified. The echo server’s copier takes a frame at
 the head and then waits for a free client buffer this way.</p>
+<h2 id="a-sync-channel-is-received-in-protected"><a class="header" href="#a-sync-channel-is-received-in-protected">A <code>Sync</code> channel is received in <code>protected</code></a></h2>
+<p>A send on a <code>Sync</code> channel is a protected procedure call, which the kernel
+answers by invoking the receiver’s <code>protected</code> and makes the caller wait on
+until it returns. So these are errors, not warnings: the C has no lowering
+for any of them.</p>
+<ul>
+<li>The process bound to <code>microkit.protected</code> begins, on every path, with an
+unguarded receive on a <code>Sync</code> channel (<code>c?</code>), one branch per channel.</li>
+<li>Nothing after its head receives or awaits an interrupt: it runs to its
+end without waiting.</li>
+<li><code>init</code> and <code>notified</code> never receive a <code>Sync</code> channel, since its call
+does not notify.</li>
+</ul>
+<pre><code class="language-text">@bind(microkit.protected)
+proc Serve() { req? -&gt; serve -&gt; Serve(); }    // accepted
+@bind(microkit.protected)
+proc Serve() { req? -&gt; done? -&gt; Skip; }       // rejected: waits after the head
+@bind(microkit.notified)
+proc Notified() { req? -&gt; Notified(); }       // rejected: `req` is Sync
+</code></pre>
 <h2 id="where-the-checks-run"><a class="header" href="#where-the-checks-run">Where the checks run</a></h2>
-<p><code>fic --check</code> runs all four after typing, and every backend assumes them.
+<p><code>fic --check</code> runs all five after typing, and every backend assumes them.
 The process-body checks run first, then the entry-point binding, the
-contract read and <a href="#information-flow">information flow</a>; WF2 runs last.</p>
+contract read and <a href="#information-flow">information flow</a>; WF2 runs last
+among them. The <code>Sync</code> receive check reads the graphs, so it runs once they
+are built, beside the receive and choice checks.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="information-flow"><a class="header" href="#information-flow">Information Flow</a></h1>
 <p>Memory regions and the mappings that expose them carry a security label,
