@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
+            window.path_to_searchindex_js = "../searchindex-aa75ace7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -187,6 +187,11 @@ reported with the declaration it concerns. They are the checks of the
 CoreFi paper’s well-formedness, restricted to what a program text can
 violate: <strong>WF2</strong> over the whole system, and three conditions on process
 bodies. (WF1 and the rest of WF3 are not checked here.)</p>
+<blockquote>
+<p><strong>A placeholder.</strong> Well-formedness checking is still under research. The
+checks below are what <code>fic</code> enforces today; which conditions the language
+needs, and how they are checked, may change.</p>
+</blockquote>
 <h2 id="wf2-the-channel-dependency-graph-is-acyclic"><a class="header" href="#wf2-the-channel-dependency-graph-is-acyclic">WF2: the channel dependency graph is acyclic</a></h2>
 <p>A protection domain that receives from another waits for it. Draw an edge
 from each receiver to the sender it waits for: a cycle is a circular wait,
@@ -203,11 +208,11 @@ ping → pong → ping (via channels: ball, ball)
 cycle and passes.</p>
 <p>WF2 is a structural over-approximation: it also rejects programs that are
 deadlock-free under a fair scheduler. When deadlock-freedom is established
-another way, typically by model-checking the emitted UPPAAL model with
-<code>fire verify</code>, skip the check with <code>--allow-wf2-cycles</code> (or
+another way, typically by model-checking the UPPAAL model <code>fire build</code>
+writes with <code>fire verify</code>, skip the check with <code>--allow-wf2-cycles</code> (or
 <code>allow_wf2_cycles = true</code> under <code>[run.target]</code> in <code>fire.toml</code>). The
-<code>pingpong</code> and <code>pingpongpan</code> demos do exactly this, and their <code>.q</code> files
-state the deadlock property instead.</p>
+<code>pingpong</code> and <code>pingpongpan</code> demos do exactly this, and their
+<code>spec/*.q</code> files state the deadlock property instead.</p>
 <h2 id="tail-recursion"><a class="header" href="#tail-recursion">Tail recursion</a></h2>
 <p>A process may refer to itself or to another process only as the last thing
 it does. The reference then compiles to a jump back to a process’s head

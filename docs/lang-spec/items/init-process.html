@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
+            window.path_to_searchindex_js = "../searchindex-aa75ace7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -217,11 +217,9 @@ proc Init() { Skip; }
 </code></pre>
 <p>The <code>@bind(microkit.notified)</code> process, in turn, must be receive-headed if it
 receives at all;
-see <a href="process-blocks.html#annotations-bind">Annotations</a>.</p>
-<blockquote>
-<p>The requirement is enforced on the C / image path only. Pure
-verification models (<code>--emit=xta</code>) do not require kernel entry points.</p>
-</blockquote>
+see <a href="process-blocks.html#annotations-bind">Annotations</a>. Both are checked
+in every mode, <code>--emit=xta</code> included; see
+<a href="../semantics/entry-points.html">Entry Points</a>.</p>
 <h2 id="auto-emitted-setvars"><a class="header" href="#auto-emitted-setvars">Auto-emitted setvars</a></h2>
 <p>For every mapping named <code>m</code>, the compiler emits <code>setvar</code> candidates for
 three ELF symbols:</p>

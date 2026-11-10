@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
+            window.path_to_searchindex_js = "../searchindex-aa75ace7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -222,7 +222,7 @@ unless <code>-o</code> says so:</p>
 <tbody>
 <tr><td><code>include/gen/types.h</code></td><td><code>fic</code>, <code>--check</code> included</td><td>the data layer as C: structs with <code>_Static_assert</code> layout checks, constants</td></tr>
 <tr><td><code>include/gen/types.pnk</code></td><td>the same, when a program imports Pancake</td><td>the same constants and structs for Pancake</td></tr>
-<tr><td><code>build/</code></td><td><code>--emit=c</code>, <code>fire build</code>, <code>fire verify</code></td><td>the generated C (<code>build/gen/</code>), the image and the UPPAAL model</td></tr>
+<tr><td><code>build/</code></td><td><code>--emit=c</code>, <code>fire build</code></td><td>the generated C (<code>build/gen/</code>), the image and the UPPAAL model</td></tr>
 <tr><td><code>&lt;dir&gt;.xta</code>, <code>&lt;dir&gt;.dot</code></td><td><code>fic --emit=xta</code>, <code>--emit=dot</code></td><td>the UPPAAL model and the topology graph, named after the project directory <code>&lt;dir&gt;</code></td></tr>
 </tbody>
 </table>
@@ -230,8 +230,8 @@ unless <code>-o</code> says so:</p>
 <p>Both are generated on every run and are not to be edited or committed.
 <code>fire clean</code> removes <code>build/</code> and <code>include/gen/</code>, and <code>include/</code> if that
 leaves it empty; sources are never touched.</p>
-<p><code>fire</code> adds <code>fire.toml</code> beside the sources and a hand-written query file
-<code>&lt;name&gt;.q</code> for verification. Their contents, and the commands, are in the
+<p><code>fire</code> adds <code>fire.toml</code> beside the sources and hand-written query files
+<code>spec/*.q</code> for verification. Their contents, and the commands, are in the
 <a href="https://fiducia-lang.github.io/docs/manual">user manual</a>.</p>
 
                     </main>

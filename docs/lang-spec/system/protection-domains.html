@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
+            window.path_to_searchindex_js = "../searchindex-aa75ace7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -181,7 +181,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="protection-domain-declarations"><a class="header" href="#protection-domain-declarations">Protection Domain Declarations</a></h1>
-<pre><code class="language-text">ProtectionDomainDecl ::= 'ProtectionDomain' ident '(' priority (',' irq)? (',' budget)? (',' period)? ')' ';'
+<pre><code class="language-text">ProtectionDomainDecl ::= 'ProtectionDomain' ident '(' priority (',' irq?)? (',' budget?)? (',' period?)? ')' ';'
 priority             ::= integer_literal       // 0 ≤ p ≤ 254, enforced
 irq                  ::= integer_literal       // fits u16; range not enforced
 budget               ::= integer_literal       // microseconds, default 1000
@@ -212,8 +212,9 @@ schedules the PD for at most <code>budget</code> microseconds out of every
 <li><strong>Period</strong> — optional, microseconds; defaults to whatever <code>budget</code> was
 set to. Setting <code>period &gt; budget</code> produces a sub-rate scheduling policy.</li>
 </ul>
-<p>The trailing fields are positional: to pin only the period, both <code>irq</code>
-<em>and</em> <code>budget</code> must precede it.</p>
+<p>The trailing fields are positional, and any of them may be left empty to
+set a later one: <code>ProtectionDomain pd(100, , 500);</code> sets the budget with no
+IRQ, and <code>ProtectionDomain pd(100, , , 2000);</code> the period alone.</p>
 <h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
 <ul>
 <li><code>priority</code> must be in <code>0..=254</code>.</li>

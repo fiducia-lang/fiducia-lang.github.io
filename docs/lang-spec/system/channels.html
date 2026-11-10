@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
+            window.path_to_searchindex_js = "../searchindex-aa75ace7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -185,91 +185,120 @@
 
 SyncChannelDecl   ::= 'Sync' 'Chan' ident '=' ident '--&gt;' ident ';'?
 
-AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident ('&lt;-&gt;' | '--&gt;') ident ViaClause? ';'?
+AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident '--&gt;' ident ViaClause? ';'?
+                    | 'Async'? 'Chan' ident '=' ident '&lt;-&gt;' ident ';'?
 
 ViaClause         ::= 'via' ident '&lt;' Type '&gt;'
 </code></pre>
 <p>A <em>channel declaration</em> introduces one named communication endpoint between
-two protection domains. Channels carry the events that show up inside a
-process expression — <code>c?x</code> (receive) and <code>c!e</code> (send) on a buffered
-channel, <code>c?</code> and <code>c!</code> on an unbuffered one. They live in <code>.fis</code> system
-files; the <code>.fi</code> files reference channels by name only.</p>
-<h2 id="channel-kinds"><a class="header" href="#channel-kinds">Channel kinds</a></h2>
+two protection domains. Channels live in <code>.fis</code> system files; the <code>.fi</code>
+files reference them by name only, in the channel events of a process.</p>
+<p>A channel is one of two kinds:</p>
+<ul>
+<li>a <strong>signalling channel</strong> carries no value: a send <code>c!</code> wakes the other
+side, and a receive <code>c?</code> waits for it;</li>
+<li>a <strong>message-passing channel</strong> carries values of a type: a send <code>c!e</code>
+passes the value of <code>e</code>, and a receive <code>c?x</code> binds it to <code>x</code>. Today the
+one message-passing channel is the <a href="#buffered-channels">buffered channel</a>;
+a <a href="#synchronised-channels">synchronised channel</a> that passes a message
+is planned.</li>
+</ul>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Kind</th><th>Direction</th><th>Notation</th><th>Notes</th></tr>
+<tr><th>Declaration</th><th>Kind</th><th>Direction</th></tr>
 </thead>
 <tbody>
-<tr><td><code>SyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Synchronous call/reply; only the unidirectional shape is allowed, from the lower-priority PD to the higher.</td></tr>
-<tr><td><code>AsyncUni</code></td><td>Unidirectional</td><td><code>pd_a --&gt; pd_b</code></td><td>Notification-only; no payload acknowledgement.</td></tr>
-<tr><td><code>AsyncBi</code></td><td>Bidirectional</td><td><code>pd_a &lt;-&gt; pd_b</code></td><td>Each side can send and receive on the same channel. Parses, but see <a href="#wf2-and-bidirectional-channels">WF2</a>.</td></tr>
+<tr><td><code>Chan c = a --&gt; b;</code></td><td>signalling</td><td><code>a</code> to <code>b</code></td></tr>
+<tr><td><code>Chan c = a &lt;-&gt; b;</code></td><td>signalling</td><td>both ways; see <a href="#wf2-and-bidirectional-channels">WF2</a></td></tr>
+<tr><td><code>Sync Chan c = a --&gt; b;</code></td><td>signalling</td><td><code>a</code> to <code>b</code>, <code>a</code> of lower priority</td></tr>
+<tr><td><code>Chan c = a --&gt; b via region&lt;T&gt;;</code></td><td>message passing</td><td><code>a</code> to <code>b</code>, values of <code>T</code></td></tr>
 </tbody>
 </table>
 </div>
 <p>The <code>Async</code> keyword may be omitted — a <code>Chan</code> without a leading <code>Sync</code> is
-asynchronous by default. The default arrow is <code>&lt;-&gt;</code>. Only <code>Sync</code> channels
-require the unidirectional <code>--&gt;</code> form.</p>
+asynchronous. The arrow is always written: <code>Sync</code> channels and buffered
+channels take <code>--&gt;</code> only. The trailing semicolon is optional.</p>
 <h2 id="fields"><a class="header" href="#fields">Fields</a></h2>
 <ul>
-<li>
-<p><strong>Name</strong> — <code>snake_case</code> identifier. The same name appears in process
-expressions on the LHS of <code>?</code> / <code>!</code>.</p>
-</li>
-<li>
-<p><strong>Endpoints</strong> — two <em>distinct</em> protection-domain names. Both must be
+<li><strong>Name</strong> — <code>snake_case</code> identifier. The same name appears in process
+expressions on the LHS of <code>?</code> / <code>!</code>.</li>
+<li><strong>Endpoints</strong> — two <em>distinct</em> protection-domain names. Both must be
 declared in the same <code>.fis</code> file. A <code>Sync</code> channel’s sender must have a
 strictly lower priority than its receiver (seL4 protected procedure
-calls run low to high); a <code>Sync</code> channel takes no <code>via</code> clause.</p>
-</li>
-<li>
-<p><strong>Buffer</strong> (optional, after <code>via</code>) — the <code>MemoryRegion</code> that backs the
-channel’s payload buffer and its slot type, which every buffer names:
-<code>via packet_buffer_outer&lt;int&gt;</code> or a declared
-<a href="data-layer.html">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>); a
-raw byte buffer is <code>via ring&lt;byte&gt;</code>. The slot type is a struct or a
-scalar, never an array, and has at least one byte; it is the value the
-channel carries, <code>Σ(c)</code>. Without <code>via</code>, the channel is a Microkit
-notification: a pure synchronisation point that carries no value. A
-buffered channel is one-way and async: <code>via</code> requires <code>Chan … --&gt;</code>; <code>&lt;-&gt;</code>
-and <code>Sync</code> channels have no buffer, and <code>via</code> on them is a parse error. A
-struct payload is the channel’s
-<strong>communication type</strong>, a <a href="data-layer.html">data-layer struct</a>, and the C
+calls run low to high).</li>
+<li><strong>Buffer</strong> (optional, after <code>via</code>; <code>--&gt;</code> channels only) — the
+<code>MemoryRegion</code> that holds the channel’s values and the type of a value:
+<code>via packet_buffer_outer&lt;int&gt;</code>, a declared
+<a href="data-layer.html">data-layer struct</a> (<code>via eth_outer_output&lt;Slot&gt;</code>), or raw
+bytes, <code>via ring&lt;byte&gt;</code>. The type is a struct or a scalar, never an
+array, and has at least one byte; it is the value the channel carries,
+<code>Σ(c)</code>. A struct is the channel’s <strong>communication type</strong>, and the C
 backend types receive binders from it (<code>o2d?pkt</code> declares
-<code>static struct Slot pkt;</code>).</p>
-<p>A buffer region is <strong>implicitly mapped into both endpoint PDs</strong> (<code>rw</code>,
-cached) at compiler-allocated vaddrs — it must not also appear in an
-explicit <code>Mapping</code>, and it may back only one channel. Each endpoint’s
-generated unit declares the loader-patched symbols
-<code>&lt;region&gt;_vaddr</code> / <code>&lt;region&gt;_size</code> (and driver code may declare
-<code>&lt;region&gt;_paddr</code> on demand), named after the <em>region</em>, not a mapping.</p>
-<p>The region holds the channel’s <strong>ring</strong>, Lamport’s single-producer
-single-consumer queue: an 8-byte header of the two indices, then
-⌊(size − 8) / sizeof(T)⌋ slots of the slot type, packed. A send to a
-full ring is lost and the sender goes on; a receive waits while the ring
-is empty. A region too small for one slot after the header is an error
-at the channel.</p>
-</li>
+<code>static struct Slot pkt;</code>). <code>via</code> on a <code>&lt;-&gt;</code> or <code>Sync</code> channel is a
+parse error.</li>
 </ul>
-<p>The optional trailing semicolon is accepted but not required.</p>
+<h2 id="signalling-channels"><a class="header" href="#signalling-channels">Signalling channels</a></h2>
+<p>A signalling channel is a Microkit notification: a pure synchronisation
+point. <code>c!</code> notifies the other end; <code>c?</code> is enabled when the PD was
+notified on <code>c</code>. Notifications do not queue: several sends before the
+receiver runs wake it once.</p>
+<p>A <code>Sync</code> channel is declared synchronous: the sender calls the receiver,
+as a protected procedure call from the lower-priority PD to the higher,
+and the receiver’s end is marked <code>pp</code> in the SDF. The C backend sends it
+as a notification today; the call, and carrying a value with it, are
+<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<pre><code class="language-text">// Synchronous unidirectional — outer PD calls into the diode.
-Sync Chan o2d = eth_outer --&gt; dd;
+<pre><code class="language-text">// Signalling, one way.
+Chan tick = timer --&gt; worker;
 
-// Asynchronous bidirectional — `Async` is the default, can be omitted.
+// Signalling, both ways — `Async` is the default, can be omitted.
 Chan d2i = dd &lt;-&gt; eth_inner;
 Async Chan s2o = simulate &lt;-&gt; eth_outer;
 
-// Buffer-backed channel, typed slot.
-Chan packet = eth_outer --&gt; eth_inner via packet_buffer_outer&lt;int&gt;;
+// Signalling, synchronous: the lower-priority eth_outer calls dd.
+Sync Chan call = eth_outer --&gt; dd;
 
-// Buffer-backed, raw bytes.
+// Message passing: buffered, a value of a declared struct.
+Chan o2d = eth_outer --&gt; dd via eth_outer_output&lt;Slot&gt;;
+
+// Message passing: buffered, raw bytes.
 Chan ring = eth_outer --&gt; eth_inner via ring_buffer_outer&lt;byte&gt;;
 </code></pre>
+<h2 id="buffered-channels"><a class="header" href="#buffered-channels">Buffered channels</a></h2>
+<p>A channel declared <code>Chan c = a --&gt; b via region&lt;T&gt;;</code> is a FIFO queue of
+<code>T</code> values from <code>a</code> to <code>b</code>, held in <code>region</code> as a <em>ring</em>: Lamport’s
+single-producer single-consumer queue, which needs no lock because each
+index has one writer (the sender moves the tail, the receiver the head).</p>
+<ul>
+<li><strong>Layout.</strong> An 8-byte header holding the two indices, then
+N = ⌊(size − 8) / sizeof(T)⌋ slots of <code>T</code>, packed. N is the channel’s
+capacity. A region too small for one slot after the header is an error
+at the channel.</li>
+<li><strong>Order.</strong> Values are received in the order they were sent, each once.</li>
+<li><strong>Send, <code>c!e</code>.</strong> Copies the value of <code>e</code> into the next slot and notifies
+the receiver. A send to a full ring is lost: the sender goes on and no
+notification is sent.</li>
+<li><strong>Receive, <code>c?x</code>.</strong> Copies the oldest value into <code>x</code>. A receive waits
+while the ring is empty, and is enabled whenever the ring holds a value,
+whatever notification woke the PD, so a receiver drains everything that
+is queued.</li>
+<li><strong>By copy.</strong> Values cross by copy, in both directions; neither PD holds a
+reference into the region.</li>
+<li><strong>The region.</strong> It is <strong>mapped into both endpoint PDs</strong> by <code>fic</code> (<code>rw</code>,
+cached, at addresses <code>fic</code> chooses): it must not also appear in a
+<code>Mapping</code>, and it backs one channel only. Each endpoint’s generated unit
+declares the loader-patched symbols <code>&lt;region&gt;_vaddr</code> / <code>&lt;region&gt;_size</code>
+(driver code may declare <code>&lt;region&gt;_paddr</code>), named after the region.</li>
+</ul>
+<h2 id="synchronised-channels"><a class="header" href="#synchronised-channels">Synchronised channels</a></h2>
+<p>Planned, not yet in the language: a <code>Sync</code> channel that passes a message,
+the value carried in the protected procedure call itself, by copy
+(<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>).</p>
 <h2 id="channel-events-in-process-bodies"><a class="header" href="#channel-events-in-process-bodies">Channel events in process bodies</a></h2>
 <p>Inside a process, channel events are written <code>chan_name '?' ident</code> (receive)
-and <code>chan_name '!' expr</code> (send) on a buffered channel, and <code>chan_name '?'</code>
-and <code>chan_name '!'</code> on an unbuffered one, which carries no value. The
+and <code>chan_name '!' expr</code> (send) on a message-passing channel, and
+<code>chan_name '?'</code> and <code>chan_name '!'</code> on a signalling one. The
 names must match exactly; typing resolves each event back to the declared
 <code>ChannelDecl</code> and checks that the PD is one of its endpoints, that it may
 send or receive there (either end may do both on a <code>&lt;-&gt;</code> channel), and

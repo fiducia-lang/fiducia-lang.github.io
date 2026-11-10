@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
+            window.path_to_searchindex_js = "../searchindex-aa75ace7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -184,6 +184,13 @@
 <p>Memory regions and the mappings that expose them carry a security label,
 <code>Low</code> or <code>High</code>, on the two-point lattice <code>Low ≤ High</code>. <code>fic</code> checks one
 rule over them.</p>
+<blockquote>
+<p><strong>A placeholder.</strong> Information-flow checking is at an initial stage,
+still under research.
+The rule below is what <code>fic</code> checks today, not a guarantee that <code>High</code>
+data cannot reach <code>Low</code>: flows through expressions, channels and foreign
+code are not checked.</p>
+</blockquote>
 <blockquote>
 <p>A mapping’s label must be at least its memory region’s.</p>
 </blockquote>
