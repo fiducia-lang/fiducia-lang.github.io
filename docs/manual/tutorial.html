@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-63eaf610.js";
+            window.path_to_searchindex_js = "searchindex-9ce03f98.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -270,17 +270,18 @@ mapped into both of its PDs. A channel without <code>via</code> carries no value
 is a bare Microkit notification.</p>
 <p>The queue is a ring, Lamport’s single-producer single-consumer FIFO:</p>
 <ul>
-<li><strong>Capacity from the region.</strong> An 8-byte header holds the two indices,
-then the slots, packed. <code>o2d</code>’s 2 MiB region of 2050-byte <code>Frame</code>s holds
-⌊(0x200000 − 8) / 2050⌋ = 1022 frames.</li>
+<li><strong>Capacity from the region.</strong> A 16-byte header holds the two indices
+and a signal word, then the slots, packed. <code>o2d</code>’s 2 MiB region of
+2050-byte <code>Frame</code>s holds ⌊(0x200000 − 16) / 2050⌋ = 1022 frames.</li>
 <li><strong>First in, first out.</strong> The receiver takes frames in the order they
 were sent.</li>
 <li><strong>A send never waits.</strong> A send copies the value into the next slot and
-notifies the receiver. If the ring is full, the value is lost and the
-sender goes on.</li>
+notifies the receiver if the receiver asked. If the ring is full, the
+value is lost and the sender goes on.</li>
 <li><strong>A receive waits while the ring is empty.</strong> When the receiver is
 notified, it receives until the ring is empty, so several sends behind
-one notification are all received.</li>
+one notification are all received. Finding the ring empty, it asks to be
+notified of the next send; until then, sends notify no one.</li>
 </ul>
 <p>A diode wants exactly this. The <code>Low</code> side must never wait on the <code>High</code>
 side, and with a lossy ring it cannot: when <code>eth_inner</code> falls behind, <code>d2i</code>
