@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-0d540d57.js";
+            window.path_to_searchindex_js = "searchindex-a06aa16a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -2008,7 +2008,8 @@ deterministic <code>ensures</code> is the value the call returns. An <code>ensur
 only bounds the return value to an interval, comparing it with constants
 under <code>&amp;&amp;</code> and <code>||</code> (<code>\result == 0 || \result == 1</code>, <code>0 &lt;= \result &lt;= 3</code>), makes the value a choice: in an event, the edge that fires it selects
 any value the clause allows. That is how a driver’s input enters the
-model.</li>
+model. A call returning a struct takes the fields its <code>ensures</code> fix
+(<code>\result.origin == origin</code>), and keeps the rest.</li>
 <li>A <strong>verifier</strong> proves it against the code: Frama-C with <code>-wp</code> for C,
 <code>pancake2viper</code> for Pancake. <code>fire verify</code> runs them; see the
 <a href="https://fiducia-lang.github.io/docs/manual/fire-verify.html"><code>fire verify</code> chapter of the manual</a>
@@ -2019,7 +2020,8 @@ clause itself: it translates what the annotation states.</p>
 <h2 id="the-subset-fic-reads"><a class="header" href="#the-subset-fic-reads">The subset fic reads</a></h2>
 <p>Both notations are lifted to one neutral form, so one subset applies:
 integer and boolean literals, parameters, <code>.fis</code> constants, the return
-value, the parameter’s value on entry, <code>+ - * / %</code>, the comparisons,
+value and a field of it (<code>\result.f</code>), the parameter’s value on entry,
+<code>+ - * / %</code>, the comparisons,
 <code>==</code> and <code>!=</code>, <code>! &amp;&amp; ||</code>, and <code>c ? a : b</code>.</p>
 <div class="table-wrapper">
 <table>
