@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-e2bde41b.js";
+            window.path_to_searchindex_js = "searchindex-18a36fc7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -1677,6 +1677,12 @@ followed by more work is rejected:</p>
 <pre><code class="language-text">proc Notified() { ball? -&gt; Notified(); tally -&gt; Skip; }   // error: non-tail
 proc Notified() { ball? -&gt; tally -&gt; Notified(); }         // ok
 </code></pre>
+<p>This holds for the entry process too: <code>Notified()</code> at the end of
+<code>Notified</code> loops back to its head within the invocation. Only reaching the
+end (<code>Skip</code>) returns to the kernel, and the next notification invokes
+<code>notified</code> again. A loop whose head receives waits there for the next
+message; one that never receives never returns (<code>Skip; Notified()</code> on a
+PD’s own CPU budget).</p>
 <p>Inside a non-final operand of <code>;</code>, no enclosing process may be referenced:
 its continuation would need a return stack. See
 <a href="#tail-recursion">Well-Formedness</a>.</p>
