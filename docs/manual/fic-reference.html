@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-9ce03f98.js";
+            window.path_to_searchindex_js = "searchindex-6c1db11a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -265,6 +265,12 @@ pair of branches is compared, and a branch need not start with an event:
 <p>Run the checks only. Conflicts with <code>--emit</code>.</p>
 <h3 id="-o---output-path"><a class="header" href="#-o---output-path"><code>-o, --output &lt;PATH&gt;</code></a></h3>
 <p>The output path, instead of the default for the image or the emit format.</p>
+<h3 id="-i---include-dir"><a class="header" href="#-i---include-dir"><code>-I, --include &lt;DIR&gt;</code></a></h3>
+<p>A directory searched for the headers that imported C files <code>#include</code>,
+after the project directory and its <code>include/</code> (repeatable, in order).
+The C reader, Frama-C and the image build’s compiler all search it.
+<code>fire</code> passes each <a href="fire-toml.html#project--identity-and-sources"><code>project.include</code></a>
+entry this way.</p>
 <h3 id="--board-board---build-profile-profile"><a class="header" href="#--board-board---build-profile-profile"><code>--board &lt;BOARD&gt;</code>, <code>--build-profile &lt;PROFILE&gt;</code></a></h3>
 <p>Required for the image: the Microkit board (e.g. <code>qemu_virt_aarch64</code>)
 and build profile (<code>debug</code> or <code>release</code>), a directory under

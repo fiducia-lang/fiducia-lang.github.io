@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-9ce03f98.js";
+            window.path_to_searchindex_js = "searchindex-6c1db11a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -225,6 +225,7 @@ args = ["-wp-rte", "-wp-prover", "qed"]
 <tbody>
 <tr><td><code>name</code></td><td>yes</td><td>The output filename stem: <code>build/&lt;name&gt;.img</code> and <code>build/&lt;name&gt;.xta</code>.</td></tr>
 <tr><td><code>src</code></td><td>yes</td><td>The directory holding the <code>.fis</code> / <code>.fi</code> files, relative to <code>fire.toml</code>. Generated files go to <code>&lt;src&gt;/build/</code> and <code>&lt;src&gt;/include/gen/</code>; queries live in <code>&lt;src&gt;/spec/</code>.</td></tr>
+<tr><td><code>include</code></td><td>no</td><td>Directories searched for the headers the imported C includes, after the project’s own; each is passed to <code>fic</code> as <a href="fic-reference.html#-i---include-dir"><code>-I</code></a>. <code>$NAME</code> and <code>${NAME}</code> read the environment (an unset one is an error); a relative path is relative to <code>fire.toml</code>. E.g. <code>["$SDDF/include", "$SDDF/include/microkit"]</code>.</td></tr>
 </tbody>
 </table>
 </div>
