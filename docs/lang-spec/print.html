@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-fea40062.js";
+            window.path_to_searchindex_js = "searchindex-8e860e4b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -1017,7 +1017,6 @@ For Pancake it scans the source for <code>export fun</code> declarations, which 
 at most four word arguments and return one word; their <code>/@ ... @/</code>
 contract blocks are read alongside.</p>
 <pre><code class="language-text">import "include/eth.h" as eth;     // C header; src/eth.c is linked
-import "include/virtio_net.h" as vio; // call: vio.virtio_net_ack()
 import "pingpong.pnk" as io;       // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —
@@ -1902,7 +1901,13 @@ project loads (<code>import "x.rs": not a C or Pancake file</code>), and so is a
 that cannot be read. A <code>.c</code> import is compiled into the protection
 domain’s unit; a <code>.h</code> import is a driver whose <code>.c</code> is found beside it, or in
 <code>src/</code> for a header under <code>include/</code> (<code>include/eth.h</code> is backed by
-<code>src/eth.c</code>), and is linked; a <code>.pnk</code> import is compiled by CakeML into the image.</p>
+<code>src/eth.c</code>), and is linked; a <code>.pnk</code> import is compiled by CakeML into the image.
+Every other <code>.c</code> in the project, outside <code>build/</code>, is compiled into one
+archive, <code>build/libproject.a</code>, linked after each PD’s objects: the linker
+takes only the files that define something still missing, so a driver
+reaches the C it calls (<code>eth.c</code> calls <code>util.c</code>) without the <code>.fi</code> importing
+it, and a file nothing calls is left out. If two files define the same
+function, the linker takes the first it needs, without an error.</p>
 <p>A protection domain has no C library. Its C may call <code>memcpy</code>, <code>memmove</code>,
 <code>memset</code>, <code>memcmp</code> and <code>bcmp</code>, which fic’s runtime supplies; anything else
 it calls, it brings.</p>
