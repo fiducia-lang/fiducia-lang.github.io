@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-99570e0a.js";
+            window.path_to_searchindex_js = "../searchindex-fea40062.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -181,7 +181,8 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="data-layer-structs-and-constants"><a class="header" href="#data-layer-structs-and-constants">Data Layer: Structs and Constants</a></h1>
-<pre><code class="language-text">StructDecl ::= 'struct' ident '{' Field* '}'
+<pre><code class="language-text">StructDecl ::= Attr? 'struct' ident '{' Field* '}'
+Attr       ::= '@attr' '(' 'packed' (',' 'packed')* ')'
 Field      ::= ident ':' Type ';'
 Type       ::= BaseType ('[' ArrayLen ']')?
 BaseType   ::= ScalarType | ident            // ident names a declared struct
@@ -220,10 +221,18 @@ recursive field traversal.</li>
 struct (<code>uint32</code>, not <code>uint</code>), as is a struct nesting one that has none.
 An array has one length: <code>T[N]</code>, not <code>T[N][M]</code>.</li>
 <li>Field names within a struct are distinct.</li>
-<li>Layout is <strong>packed</strong>, fields in declaration order with no padding.
-The generated headers assert it (a <code>_Static_assert</code> on each struct’s
-size in <code>types.h</code>), so a C compiler that would pad the struct differently
-fails the build; order fields so the natural C layout is the packed one.</li>
+<li>Layout is <strong>C’s</strong> on the target, fields in declaration order: each
+field at the next offset that is a multiple of its alignment (a scalar’s
+is its size, an array’s its element’s, a struct’s its largest field’s),
+and the size rounded up to the struct’s alignment, so <code>{ a: uint64; b: uint16; }</code> is 16 bytes with <code>b</code> at 8. The generated headers assert it
+(a <code>_Static_assert</code> on each struct’s size in <code>types.h</code>), so a C compiler
+that would lay the struct out differently fails the build.</li>
+<li><code>@attr(packed)</code> before <code>struct</code> packs it, as C’s
+<code>__attribute__((packed))</code>: no padding, each field right after the one
+before, alignment 1, so <code>@attr(packed) struct W { a: uint8; b: uint32; }</code>
+is 5 bytes with <code>b</code> at 1. A struct nested in it keeps its own padding.
+Packing is for wire formats: a misaligned field is slower to read, and
+on device memory or under an atomic, an aarch64 fault.</li>
 <li>Struct names are usable wherever a type is expected — variable
 declarations, <a href="channels.html">typed channel buffers</a> (<code>via buf&lt;Packet&gt;</code>),
 and <code>sizeof</code>.</li>

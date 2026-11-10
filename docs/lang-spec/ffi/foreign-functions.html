@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-99570e0a.js";
+            window.path_to_searchindex_js = "../searchindex-fea40062.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -208,6 +208,9 @@ that cannot be read. A <code>.c</code> import is compiled into the protection
 domain’s unit; a <code>.h</code> import is a driver whose <code>.c</code> is found beside it, or in
 <code>src/</code> for a header under <code>include/</code> (<code>include/eth.h</code> is backed by
 <code>src/eth.c</code>), and is linked; a <code>.pnk</code> import is compiled by CakeML into the image.</p>
+<p>A protection domain has no C library. Its C may call <code>memcpy</code>, <code>memmove</code>,
+<code>memset</code>, <code>memcmp</code> and <code>bcmp</code>, which fic’s runtime supplies; anything else
+it calls, it brings.</p>
 <h2 id="from-a-foreign-signature-to-a-fiducia-one"><a class="header" href="#from-a-foreign-signature-to-a-fiducia-one">From a foreign signature to a Fiducia one</a></h2>
 <p>Each called function’s parameter and return types are lowered to
 Fiducia types, on <code>AArch64</code> LP64 widths:</p>

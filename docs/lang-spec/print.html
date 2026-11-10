@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-99570e0a.js";
+            window.path_to_searchindex_js = "searchindex-fea40062.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -442,7 +442,8 @@ expression, <code>sizeof(</code> followed by a type is the size operator (see
 <a href="#expressions">Expressions</a>).</p>
 <p><code>microkit</code>, <code>init</code> and <code>notified</code> are ordinary identifiers; they have
 meaning only inside an <code>@bind</code> annotation (see
-<a href="#entry-points">Entry Points</a>).</p>
+<a href="#entry-points">Entry Points</a>). Likewise <code>packed</code>, inside an
+<code>@attr</code> annotation (see <a href="#data-layer-structs-and-constants">Data Layer</a>).</p>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
 <div class="table-wrapper">
 <table>
@@ -529,8 +530,9 @@ frame: Frame;
 codes: uint16[LEN];
 </code></pre>
 <p><code>sizeof(T)</code> is the size of any type in bytes, a constant: <code>sizeof(Frame)</code>,
-<code>sizeof(uint16[LEN])</code>. A struct’s fields are laid out packed, in
-declaration order (see <a href="#data-layer-structs-and-constants">Data Layer</a>).</p>
+<code>sizeof(uint16[LEN])</code>. A struct’s fields are laid out as C lays
+them out, in declaration order and padded, unless the struct is
+<code>@attr(packed)</code> (see <a href="#data-layer-structs-and-constants">Data Layer</a>).</p>
 <p>A struct or array variable is assigned whole. A field of a
 struct value is read with <code>x.f</code> (<code>frame.head.kind</code>); a field cannot be
 assigned to, and there is no indexing of an array element in a <code>.fi</code>.
@@ -614,7 +616,8 @@ leaves it empty; sources are never touched.</p>
 <a href="https://fiducia-lang.github.io/docs/manual">user manual</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="data-layer-structs-and-constants"><a class="header" href="#data-layer-structs-and-constants">Data Layer: Structs and Constants</a></h1>
-<pre><code class="language-text">StructDecl ::= 'struct' ident '{' Field* '}'
+<pre><code class="language-text">StructDecl ::= Attr? 'struct' ident '{' Field* '}'
+Attr       ::= '@attr' '(' 'packed' (',' 'packed')* ')'
 Field      ::= ident ':' Type ';'
 Type       ::= BaseType ('[' ArrayLen ']')?
 BaseType   ::= ScalarType | ident            // ident names a declared struct
@@ -653,10 +656,18 @@ recursive field traversal.</li>
 struct (<code>uint32</code>, not <code>uint</code>), as is a struct nesting one that has none.
 An array has one length: <code>T[N]</code>, not <code>T[N][M]</code>.</li>
 <li>Field names within a struct are distinct.</li>
-<li>Layout is <strong>packed</strong>, fields in declaration order with no padding.
-The generated headers assert it (a <code>_Static_assert</code> on each struct’s
-size in <code>types.h</code>), so a C compiler that would pad the struct differently
-fails the build; order fields so the natural C layout is the packed one.</li>
+<li>Layout is <strong>C’s</strong> on the target, fields in declaration order: each
+field at the next offset that is a multiple of its alignment (a scalar’s
+is its size, an array’s its element’s, a struct’s its largest field’s),
+and the size rounded up to the struct’s alignment, so <code>{ a: uint64; b: uint16; }</code> is 16 bytes with <code>b</code> at 8. The generated headers assert it
+(a <code>_Static_assert</code> on each struct’s size in <code>types.h</code>), so a C compiler
+that would lay the struct out differently fails the build.</li>
+<li><code>@attr(packed)</code> before <code>struct</code> packs it, as C’s
+<code>__attribute__((packed))</code>: no padding, each field right after the one
+before, alignment 1, so <code>@attr(packed) struct W { a: uint8; b: uint32; }</code>
+is 5 bytes with <code>b</code> at 1. A struct nested in it keeps its own padding.
+Packing is for wire formats: a misaligned field is slower to read, and
+on device memory or under an atomic, an aarch64 fault.</li>
 <li>Struct names are usable wherever a type is expected — variable
 declarations, <a href="#channel-declarations">typed channel buffers</a> (<code>via buf&lt;Packet&gt;</code>),
 and <code>sizeof</code>.</li>
@@ -1892,6 +1903,9 @@ that cannot be read. A <code>.c</code> import is compiled into the protection
 domain’s unit; a <code>.h</code> import is a driver whose <code>.c</code> is found beside it, or in
 <code>src/</code> for a header under <code>include/</code> (<code>include/eth.h</code> is backed by
 <code>src/eth.c</code>), and is linked; a <code>.pnk</code> import is compiled by CakeML into the image.</p>
+<p>A protection domain has no C library. Its C may call <code>memcpy</code>, <code>memmove</code>,
+<code>memset</code>, <code>memcmp</code> and <code>bcmp</code>, which fic’s runtime supplies; anything else
+it calls, it brings.</p>
 <h2 id="from-a-foreign-signature-to-a-fiducia-one"><a class="header" href="#from-a-foreign-signature-to-a-fiducia-one">From a foreign signature to a Fiducia one</a></h2>
 <p>Each called function’s parameter and return types are lowered to
 Fiducia types, on <code>AArch64</code> LP64 widths:</p>
@@ -2065,10 +2079,11 @@ struct Slot {
 };
 _Static_assert(sizeof(struct Slot) == 12, "fic: struct Slot layout");
 </code></pre>
-<p>A Fiducia struct is <strong>packed</strong>: no padding between fields. The assertion
-makes a C compiler that would pad the struct differently fail the build,
-rather than disagree silently with the model. Order fields so the natural
-C layout is the packed one, as the data-diode demo does.</p>
+<p>A Fiducia struct has C’s layout on the target: each field at its natural
+alignment, padding included; an <code>@attr(packed)</code> struct is declared
+<code>struct __attribute__((packed)) Name</code>, with no padding. The assertion makes a C compiler that would
+lay the struct out differently fail the build, rather than disagree
+silently with the model.</p>
 <p>A constant is a <code>#define</code>, except under Frama-C, where it is a <code>static const</code> object so that a contract keeps the constant’s name instead of its
 value:</p>
 <pre><code class="language-c">#ifdef __FRAMAC__
@@ -2163,6 +2178,13 @@ proc Notified() { ball? -&gt; ball! -&gt; Notified(); }   // accepted
 each path at its head must begin with a receive (`c?x`) or an IRQ await
 (`irq?N`) — the kernel invokes it for a message
 </code></pre>
+<p>A signal receive (<code>c?</code> on an unbuffered channel) or an IRQ await anywhere
+but the head is a warning: no notification arrives inside the invocation,
+so the handler would wait there for the next one, and any other
+notification meanwhile is dropped. A receive on a buffered channel may sit
+anywhere: it tests its ring, which the generated <code>notified</code> does on every
+pass, whichever channel notified. The echo server’s copier takes a frame at
+the head and then waits for a free client buffer this way.</p>
 <h2 id="where-the-checks-run"><a class="header" href="#where-the-checks-run">Where the checks run</a></h2>
 <p><code>fic --check</code> runs all four after typing, and every backend assumes them.
 The process-body checks run first, then the entry-point binding, the

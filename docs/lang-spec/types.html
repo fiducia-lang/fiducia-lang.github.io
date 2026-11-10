@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-99570e0a.js";
+            window.path_to_searchindex_js = "searchindex-fea40062.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -239,8 +239,9 @@ frame: Frame;
 codes: uint16[LEN];
 </code></pre>
 <p><code>sizeof(T)</code> is the size of any type in bytes, a constant: <code>sizeof(Frame)</code>,
-<code>sizeof(uint16[LEN])</code>. A struct’s fields are laid out packed, in
-declaration order (see <a href="system/data-layer.html">Data Layer</a>).</p>
+<code>sizeof(uint16[LEN])</code>. A struct’s fields are laid out as C lays
+them out, in declaration order and padded, unless the struct is
+<code>@attr(packed)</code> (see <a href="system/data-layer.html">Data Layer</a>).</p>
 <p>A struct or array variable is assigned whole. A field of a
 struct value is read with <code>x.f</code> (<code>frame.head.kind</code>); a field cannot be
 assigned to, and there is no indexing of an array element in a <code>.fi</code>.

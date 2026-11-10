@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-99570e0a.js";
+            window.path_to_searchindex_js = "../searchindex-fea40062.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -255,6 +255,13 @@ proc Notified() { ball? -&gt; ball! -&gt; Notified(); }   // accepted
 each path at its head must begin with a receive (`c?x`) or an IRQ await
 (`irq?N`) — the kernel invokes it for a message
 </code></pre>
+<p>A signal receive (<code>c?</code> on an unbuffered channel) or an IRQ await anywhere
+but the head is a warning: no notification arrives inside the invocation,
+so the handler would wait there for the next one, and any other
+notification meanwhile is dropped. A receive on a buffered channel may sit
+anywhere: it tests its ring, which the generated <code>notified</code> does on every
+pass, whichever channel notified. The echo server’s copier takes a frame at
+the head and then waits for a free client buffer this way.</p>
 <h2 id="where-the-checks-run"><a class="header" href="#where-the-checks-run">Where the checks run</a></h2>
 <p><code>fic --check</code> runs all four after typing, and every backend assumes them.
 The process-body checks run first, then the entry-point binding, the

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-99570e0a.js";
+            window.path_to_searchindex_js = "../searchindex-fea40062.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -219,10 +219,11 @@ struct Slot {
 };
 _Static_assert(sizeof(struct Slot) == 12, "fic: struct Slot layout");
 </code></pre>
-<p>A Fiducia struct is <strong>packed</strong>: no padding between fields. The assertion
-makes a C compiler that would pad the struct differently fail the build,
-rather than disagree silently with the model. Order fields so the natural
-C layout is the packed one, as the data-diode demo does.</p>
+<p>A Fiducia struct has C’s layout on the target: each field at its natural
+alignment, padding included; an <code>@attr(packed)</code> struct is declared
+<code>struct __attribute__((packed)) Name</code>, with no padding. The assertion makes a C compiler that would
+lay the struct out differently fail the build, rather than disagree
+silently with the model.</p>
 <p>A constant is a <code>#define</code>, except under Frama-C, where it is a <code>static const</code> object so that a contract keeps the constant’s name instead of its
 value:</p>
 <pre><code class="language-c">#ifdef __FRAMAC__
