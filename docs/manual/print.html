@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-2074a5cc.js";
+            window.path_to_searchindex_js = "searchindex-a3984160.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -896,7 +896,10 @@ changes.</p>
 <li>Proves the imported code’s contracts with the
 <a href="#verifycode_verifier--code-verifiers">code verifier</a>
 for each language that has any: Frama-C for annotated C, <code>pancake2viper</code>
-for Pancake. Files without contracts have nothing to prove.</li>
+for Pancake. Files without contracts have nothing to prove. A header’s
+contracts are proved on the project’s <code>.c</code> file of the same name, which
+includes it (<code>include/eth.h</code> on <code>src/eth.c</code>); an annotated header with no
+such source is an error.</li>
 <li>Reads <code>build/&lt;name&gt;.xta</code>. The <code>--pretty</code> XML is for the GUI only.</li>
 <li>Runs <code>verifyta</code> (<code>[verify.model_checker] path</code>, then <code>$VERIFYTA</code>, then
 <code>PATH</code>) on the model and each query file, asking for a trace.</li>
@@ -913,6 +916,35 @@ in <code>&lt;src&gt;/spec/</code>, part of the project’s sources.</p>
 their locations; a PD’s variables keep their names, and a struct’s field
 is <code>pd.var.field</code>. Read <code>build/&lt;name&gt;.xta</code>, or open the <code>--pretty</code> XML in
 the UPPAAL GUI, to find them.</p>
+<h3 id="buffered-channels-in-the-model"><a class="header" href="#buffered-channels-in-the-model">Buffered channels in the model</a></h3>
+<p>A buffered channel <code>c</code> is a <code>queue q_c</code> holding its <code>length</code> (in place of
+the ring’s two indices), <code>signalled</code> (as filib’s signal word: <code>false</code> while
+the receiver asks to be notified) and <code>capacity</code>, plus <code>pend_c</code>, Microkit’s
+pending notification. No values are kept. A PD that receives on one has a
+local <code>awake</code>:</p>
+<ul>
+<li>a send that fits adds one and, if the receiver asked, sets <code>pend_c</code>; on
+a full queue it is lost;</li>
+<li>a receive needs <code>awake &amp;&amp; q_c.length &gt; 0</code>;</li>
+<li>at a resume point the PD parks (<code>awake = false</code>, asking on each buffered
+arm) when no arm is enabled, and wakes on a pending notification.</li>
+</ul>
+<p>So <code>A[] not (!rx.awake &amp;&amp; q_c.length &gt; 0 &amp;&amp; !pend_c)</code> states that no
+wake-up is lost.</p>
+<p>An IRQ is raised by the <code>Environment</code> template for ever, as a test harness
+keeps feeding a device, and handled as seL4 handles it: a raise sets
+<code>irq_N_pend</code>, which the PD’s <code>irq?N</code> takes, and masks the IRQ
+(<code>irq_N_masked</code>) until the driver acks it with <code>irq!N</code>, so the device
+raises again only after the ack. What the device delivers comes from the
+driver’s contracts (see
+<a href="https://fiducia-lang.github.io/docs/book/ffi/contracts.html">Contracts</a>).
+The device always has a move unless a driver never takes or never acks its
+IRQ, so <code>A[] not deadlock</code> states that no driver is stuck on its IRQ. A receiver stuck
+on a buffered channel while others run is not a deadlock: the lost-wake-up
+query above catches it. Each queue holds at most 3 in the model (its capacity if
+smaller). A result that holds there holds of the real capacity once the
+small-capacity argument is proved
+(<a href="https://github.com/fiducia-lang/fic/issues/601">#601</a>, obligation 6).</p>
 <h2 id="worked-example-ping-pong"><a class="header" href="#worked-example-ping-pong">Worked example: ping-pong</a></h2>
 <p><code>demo/pingpong/</code> has two PDs, <code>ping</code> and <code>pong</code>, which bounce a
 notification <code>ROUNDS</code> times over a cyclic channel (<code>ping &lt;-&gt; pong</code>) and
