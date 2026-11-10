@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1a939cec.js";
+            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -253,8 +253,8 @@ and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
 boot body) and the <code>microkit.notified</code>-bound process becomes the
 <code>notified()</code> event loop.</li>
-<li>The process bound to <code>microkit.notified</code> must be <em>receive-headed</em>: every
-path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
+<li>The process bound to <code>microkit.notified</code>, if it receives at all, must be
+<em>receive-headed</em>: every path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
 and no <code>default</code> at the top. The kernel invokes it for a message, which
 the head consumes; a handler that could run without one would never

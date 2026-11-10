@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-1a939cec.js";
+            window.path_to_searchindex_js = "searchindex-7fcaa453.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -928,6 +928,10 @@ names must match exactly; typing resolves each event back to the declared
 <code>ChannelDecl</code> and checks that the PD is one of its endpoints, that it may
 send or receive there (either end may do both on a <code>&lt;-&gt;</code> channel), and
 that the value matches the payload type.</p>
+<p>Channel events are the only way to a channel. Imported C or Pancake cannot
+call the ring behind a buffered channel: in a <code>.c</code> import the ring is not
+yet declared, and a separate driver or Pancake object that calls it fails
+to link.</p>
 <p>See <a href="#channel-events">Event Declarations → Channel events</a>
 for the inline event grammar and <a href="#process-definitions">Process Definitions</a>
 for how channel events sit in a process expression.</p>
@@ -942,10 +946,6 @@ an external authority such as <code>fire verify</code>. The demos <code>pingpong
 for the check and its error.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
-<li>A struct payload types the receive binder in the generated C, but the
-payload <strong>transport</strong> (the ring copy through the backing region) is not
-generated yet — it is an explicit follow-up under the data-diode case
-study (#201). The generated code marks the pending copy with a comment.</li>
 <li>The <code>Sync</code> modifier rejects bidirectional <code>&lt;-&gt;</code> syntactically; sync
 bidirectional channels would require a richer call/reply protocol than
 the current implementation supports.</li>
@@ -975,7 +975,7 @@ For Pancake it scans the source for <code>export fun</code> declarations, which 
 at most four word arguments and return one word; their <code>/@ ... @/</code>
 contract blocks are read alongside.</p>
 <pre><code class="language-text">import "include/eth.h" as eth;     // C header; src/eth.c is linked
-import "include/channel.h" as chan; // call: chan.o2d_has_msg()
+import "include/virtio_net.h" as vio; // call: vio.virtio_net_ack()
 import "pingpong.pnk" as io;       // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —
@@ -1104,7 +1104,8 @@ optional). A PD with no boot work still declares a no-op:</p>
 <pre><code class="language-text">@bind(microkit.init)
 proc Init() { Skip; }
 </code></pre>
-<p>The <code>@bind(microkit.notified)</code> process, in turn, must be receive-headed;
+<p>The <code>@bind(microkit.notified)</code> process, in turn, must be receive-headed if it
+receives at all;
 see <a href="#annotations-bind">Annotations</a>.</p>
 <blockquote>
 <p>The requirement is enforced on the C / image path only. Pure
@@ -1532,8 +1533,8 @@ and the UPPAAL lowering pick kernel entry points by binding, not by
 process name: the <code>microkit.init</code>-bound process becomes <code>init()</code> (the
 boot body) and the <code>microkit.notified</code>-bound process becomes the
 <code>notified()</code> event loop.</li>
-<li>The process bound to <code>microkit.notified</code> must be <em>receive-headed</em>: every
-path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
+<li>The process bound to <code>microkit.notified</code>, if it receives at all, must be
+<em>receive-headed</em>: every path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
 and no <code>default</code> at the top. The kernel invokes it for a message, which
 the head consumes; a handler that could run without one would never
@@ -1820,7 +1821,7 @@ it.</p>
 end reports one that does not, naming the PD and the missing entry, before
 any backend runs: <code>fic --check</code>, <code>--emit=xta</code> and <code>--emit=c</code> all stop.
 Each entry point binds at most one process.</p>
-<p>The <code>notified</code> process must be <em>receive-headed</em>: it starts by consuming
+<p>A <code>notified</code> process that receives must be <em>receive-headed</em>: it starts by consuming
 the message or interrupt that woke it (see
 <a href="#annotations-bind">Process Definitions</a>). The
 generated C makes each receive or interrupt await in the process a
@@ -2109,16 +2110,17 @@ proc Pick() { [ready] bump -&gt; Skip default Skip; }    // accepted: bump is an
 receive (`c?…`) — the default's guard cannot see an empty buffer
 </code></pre>
 <h2 id="the-notified-handler-is-receive-headed"><a class="header" href="#the-notified-handler-is-receive-headed">The <code>notified</code> handler is receive-headed</a></h2>
-<p>Microkit invokes <code>notified</code> with a message to handle. The process bound to
-<code>microkit.notified</code> must therefore begin, on every path, with a receive
-(<code>c?x</code>) or an interrupt await (<code>irq?N</code>), through <code>[]</code>, the left of <code>;</code> and
-a helper process’s body, and with no guard and no <code>default</code> at the top.
-Otherwise the handler could run without consuming the message that woke it
-and never return to the kernel.</p>
+<p>Microkit invokes <code>notified</code> with a message to handle. A process bound to
+<code>microkit.notified</code> that receives at all must therefore begin, on every
+path, with a receive (<code>c?x</code>) or an interrupt await (<code>irq?N</code>), through <code>[]</code>,
+the left of <code>;</code> and a helper process’s body, and with no guard and no
+<code>default</code> at the top. Otherwise the handler could run without consuming the
+message that woke it and never return to the kernel. A <code>notified</code> that never
+receives (a PD that only sends) needs no head.</p>
 <pre><code class="language-text">@bind(microkit.notified)
 proc Notified() { ball! -&gt; ball? -&gt; Skip; }   // rejected: starts with a send
 @bind(microkit.notified)
-proc Notified() { Skip; }                     // rejected: starts with nothing
+proc Notified() { Skip; }                     // accepted: never receives
 @bind(microkit.notified)
 proc Notified() { ball? -&gt; ball! -&gt; Notified(); }   // accepted
 </code></pre>

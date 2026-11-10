@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1a939cec.js";
+            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -216,7 +216,7 @@ it.</p>
 end reports one that does not, naming the PD and the missing entry, before
 any backend runs: <code>fic --check</code>, <code>--emit=xta</code> and <code>--emit=c</code> all stop.
 Each entry point binds at most one process.</p>
-<p>The <code>notified</code> process must be <em>receive-headed</em>: it starts by consuming
+<p>A <code>notified</code> process that receives must be <em>receive-headed</em>: it starts by consuming
 the message or interrupt that woke it (see
 <a href="../items/process-blocks.html#annotations-bind">Process Definitions</a>). The
 generated C makes each receive or interrupt await in the process a

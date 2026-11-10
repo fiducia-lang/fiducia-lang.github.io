@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1a939cec.js";
+            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -232,16 +232,17 @@ proc Pick() { [ready] bump -&gt; Skip default Skip; }    // accepted: bump is an
 receive (`c?…`) — the default's guard cannot see an empty buffer
 </code></pre>
 <h2 id="the-notified-handler-is-receive-headed"><a class="header" href="#the-notified-handler-is-receive-headed">The <code>notified</code> handler is receive-headed</a></h2>
-<p>Microkit invokes <code>notified</code> with a message to handle. The process bound to
-<code>microkit.notified</code> must therefore begin, on every path, with a receive
-(<code>c?x</code>) or an interrupt await (<code>irq?N</code>), through <code>[]</code>, the left of <code>;</code> and
-a helper process’s body, and with no guard and no <code>default</code> at the top.
-Otherwise the handler could run without consuming the message that woke it
-and never return to the kernel.</p>
+<p>Microkit invokes <code>notified</code> with a message to handle. A process bound to
+<code>microkit.notified</code> that receives at all must therefore begin, on every
+path, with a receive (<code>c?x</code>) or an interrupt await (<code>irq?N</code>), through <code>[]</code>,
+the left of <code>;</code> and a helper process’s body, and with no guard and no
+<code>default</code> at the top. Otherwise the handler could run without consuming the
+message that woke it and never return to the kernel. A <code>notified</code> that never
+receives (a PD that only sends) needs no head.</p>
 <pre><code class="language-text">@bind(microkit.notified)
 proc Notified() { ball! -&gt; ball? -&gt; Skip; }   // rejected: starts with a send
 @bind(microkit.notified)
-proc Notified() { Skip; }                     // rejected: starts with nothing
+proc Notified() { Skip; }                     // accepted: never receives
 @bind(microkit.notified)
 proc Notified() { ball? -&gt; ball! -&gt; Notified(); }   // accepted
 </code></pre>

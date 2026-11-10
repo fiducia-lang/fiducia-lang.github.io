@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1a939cec.js";
+            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -204,7 +204,7 @@ For Pancake it scans the source for <code>export fun</code> declarations, which 
 at most four word arguments and return one word; their <code>/@ ... @/</code>
 contract blocks are read alongside.</p>
 <pre><code class="language-text">import "include/eth.h" as eth;     // C header; src/eth.c is linked
-import "include/channel.h" as chan; // call: chan.o2d_has_msg()
+import "include/virtio_net.h" as vio; // call: vio.virtio_net_ack()
 import "pingpong.pnk" as io;       // Pancake source — same call shape
 </code></pre>
 <p>Multiple imports are allowed, and they may interleave with mappings —

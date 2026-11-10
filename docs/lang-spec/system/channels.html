@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-1a939cec.js";
+            window.path_to_searchindex_js = "../searchindex-7fcaa453.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -274,6 +274,10 @@ names must match exactly; typing resolves each event back to the declared
 <code>ChannelDecl</code> and checks that the PD is one of its endpoints, that it may
 send or receive there (either end may do both on a <code>&lt;-&gt;</code> channel), and
 that the value matches the payload type.</p>
+<p>Channel events are the only way to a channel. Imported C or Pancake cannot
+call the ring behind a buffered channel: in a <code>.c</code> import the ring is not
+yet declared, and a separate driver or Pancake object that calls it fails
+to link.</p>
 <p>See <a href="../items/event-blocks.html#channel-events">Event Declarations → Channel events</a>
 for the inline event grammar and <a href="../items/process-blocks.html">Process Definitions</a>
 for how channel events sit in a process expression.</p>
@@ -288,10 +292,6 @@ an external authority such as <code>fire verify</code>. The demos <code>pingpong
 for the check and its error.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
-<li>A struct payload types the receive binder in the generated C, but the
-payload <strong>transport</strong> (the ring copy through the backing region) is not
-generated yet — it is an explicit follow-up under the data-diode case
-study (#201). The generated code marks the pending copy with a comment.</li>
 <li>The <code>Sync</code> modifier rejects bidirectional <code>&lt;-&gt;</code> syntactically; sync
 bidirectional channels would require a richer call/reply protocol than
 the current implementation supports.</li>
