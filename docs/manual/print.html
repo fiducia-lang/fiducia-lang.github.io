@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-a3984160.js";
+            window.path_to_searchindex_js = "searchindex-dcedeacf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -920,12 +920,13 @@ the UPPAAL GUI, to find them.</p>
 <p>A buffered channel <code>c</code> is a <code>queue q_c</code> holding its <code>length</code> (in place of
 the ring’s two indices), <code>signalled</code> (as filib’s signal word: <code>false</code> while
 the receiver asks to be notified) and <code>capacity</code>, plus <code>pend_c</code>, Microkit’s
-pending notification. No values are kept. A PD that receives on one has a
-local <code>awake</code>:</p>
+pending notification. Its values are <code>q_c_val</code>, oldest first. A PD that
+receives on one has a local <code>awake</code>:</p>
 <ul>
-<li>a send that fits adds one and, if the receiver asked, sets <code>pend_c</code>; on
-a full queue it is lost;</li>
-<li>a receive needs <code>awake &amp;&amp; q_c.length &gt; 0</code>;</li>
+<li>a send that fits stores its value at <code>q_c_val[q_c.length]</code>, adds one
+and, if the receiver asked, sets <code>pend_c</code>; on a full queue it is lost;</li>
+<li>a receive needs <code>awake &amp;&amp; q_c.length &gt; 0</code>, takes <code>q_c_val[0]</code> and shifts
+the rest down;</li>
 <li>at a resume point the PD parks (<code>awake = false</code>, asking on each buffered
 arm) when no arm is enabled, and wakes on a pending notification.</li>
 </ul>
@@ -945,6 +946,15 @@ query above catches it. Each queue holds at most 3 in the model (its capacity if
 smaller). A result that holds there holds of the real capacity once the
 small-capacity argument is proved
 (<a href="https://github.com/fiducia-lang/fic/issues/601">#601</a>, obligation 6).</p>
+<p>A struct in the model keeps its fields but its arrays: a <code>.fi</code> program
+never indexes one, so no guard reads it. A call whose contract fixes a
+field of its result (<code>ensures \result.origin == origin</code>) sets that field
+and leaves the others as they were.</p>
+<p>That is enough for secrecy, a reachability query. <code>demo/datadiode</code>’s
+<code>Frame</code> carries <code>origin</code>, the network it came in on, which <code>eth_frame</code>’s
+contract fixes; <code>A[] not (... dd.f.origin == ORIGIN_INNER ...)</code> states that
+no frame from the inner network reaches a PD on the outer side, in any
+variable or queue slot.</p>
 <h2 id="worked-example-ping-pong"><a class="header" href="#worked-example-ping-pong">Worked example: ping-pong</a></h2>
 <p><code>demo/pingpong/</code> has two PDs, <code>ping</code> and <code>pong</code>, which bounce a
 notification <code>ROUNDS</code> times over a cyclic channel (<code>ping &lt;-&gt; pong</code>) and
