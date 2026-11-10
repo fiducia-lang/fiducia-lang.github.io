@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-8e860e4b.js";
+            window.path_to_searchindex_js = "searchindex-e2bde41b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -854,7 +854,8 @@ SyncChannelDecl   ::= 'Sync' 'Chan' ident '=' ident '--&gt;' ident ';'?
 AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident '--&gt;' ident ViaClause? ';'?
                     | 'Async'? 'Chan' ident '=' ident '&lt;-&gt;' ident ';'?
 
-ViaClause         ::= 'via' ident '&lt;' Type '&gt;'
+ViaClause         ::= 'via' ident '&lt;' Type (',' Capacity)? '&gt;'
+Capacity          ::= int | ident          -- a literal or a const
 </code></pre>
 <p>A <em>channel declaration</em> introduces one named communication endpoint between
 two protection domains. Channels live in <code>.fis</code> system files; the <code>.fi</code>
@@ -938,9 +939,12 @@ single-producer single-consumer queue, which needs no lock because each
 index has one writer (the sender moves the tail, the receiver the head).</p>
 <ul>
 <li><strong>Layout.</strong> A 16-byte header holding the two indices and a signal
-word, then N = ⌊(size − 16) / sizeof(T)⌋ slots of <code>T</code>, packed. N is the channel’s
-capacity. A region too small for one slot after the header is an error
-at the channel.</li>
+word, then N slots of <code>T</code>, packed. N is the channel’s capacity:
+<code>via r&lt;T, N&gt;</code> declares it (a literal or a const), and it must be at
+least 1 and fit in the region after the header, else an error at the
+channel; without it, N is as many as fit, ⌊(size − 16) / sizeof(T)⌋, or
+2³¹ − 1 if that is smaller (the indices’ bound), with a warning that the
+rest of the region is unused.</li>
 <li><strong>Order.</strong> Values are received in the order they were sent, each once.</li>
 <li><strong>Send, <code>c!e</code>.</strong> Copies the value of <code>e</code> into the next slot, and
 notifies the receiver if the receiver asked. A send to a full ring is
@@ -1576,9 +1580,10 @@ boot body) and the <code>microkit.notified</code>-bound process becomes the
 <li>The process bound to <code>microkit.notified</code>, if it receives at all, must be
 <em>receive-headed</em>: every path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
-and no <code>default</code> at the top. The kernel invokes it for a message, which
-the head consumes; a handler that could run without one would never
-return to the kernel. See
+and no <code>default</code> at the top (a receive on a buffered channel may be
+guarded: its values wait in the ring). The kernel invokes it for a
+message, which the head consumes; a handler that could run without one
+would never return to the kernel. See
 <a href="#the-notified-handler-is-receive-headed">Well-Formedness</a>.</li>
 <li>Both a <code>@bind(microkit.init)</code> <strong>and</strong> a <code>@bind(microkit.notified)</code>
 process are <strong>mandatory</strong> for every PD with a program when targeting
@@ -1631,13 +1636,13 @@ c?x -&gt; ...              // channel-event prefix
 error: it is always enabled, so it discriminates nothing. A branch that is
 a sequence is judged by its first item.</p>
 <p>The optional <code>default</code> arm is taken when no branch’s guard succeeds. It
-needs no discriminator of its own, but when a choice has a <code>default</code>, no
-branch may begin with a receive (<code>c?x</code>, <code>irq?N</code>), through guards and
-nested plain choices: a guard cannot see that a buffer is empty, so the
-default could fire while a message waits (see
+needs no discriminator of its own. A branch that begins with a receive on a
+buffered channel fires beside it when the ring holds a value, so the
+<code>default</code> runs only on an empty ring; a signal receive or IRQ await beside
+a <code>default</code> is a branch with no guard (see
 <a href="#a-default-branch-and-receives">Well-Formedness</a>).</p>
-<pre><code class="language-text">// Rejected: the second branch begins with a receive, and a default follows.
-[ready] c! -&gt; Skip [] c? -&gt; Skip default Skip;
+<pre><code class="language-text">// d buffered: take a value if there is one, else go on.
+d?v -&gt; Use(v) default Skip;
 </code></pre>
 <h3 id="examples-7"><a class="header" href="#examples-7">Examples</a></h3>
 <pre><code class="language-text">// Two branches, no default.
@@ -2153,16 +2158,17 @@ proc Notified() { ball? -&gt; ball! -&gt; Notified(); }         // accepted
 `Notified` — its continuation would need a return stack
 </code></pre>
 <h2 id="a-default-branch-and-receives"><a class="header" href="#a-default-branch-and-receives">A <code>default</code> branch and receives</a></h2>
-<p>The <code>default</code> arm of a choice runs when no branch’s guard holds. A guard
-cannot see whether a channel’s buffer is empty, so if any other branch
-begins with a receive, the default could fire while a message is waiting.
-No branch of a choice with a <code>default</code> may therefore begin with a receive
-(<code>c?x</code> or <code>irq?N</code>), through guards and nested choices.</p>
-<pre><code class="language-text">proc Pick() { [ready] c? -&gt; Skip default Skip; }      // rejected
-proc Pick() { [ready] bump -&gt; Skip default Skip; }    // accepted: bump is an event
-</code></pre>
-<pre><code class="language-text">error: process `Pick`: a branch of a `default` choice may not begin with a
-receive (`c?…`) — the default's guard cannot see an empty buffer
+<p>The <code>default</code> arm of a choice runs when no branch’s guard holds. Beside a
+<code>default</code>, a branch that begins with a receive on a <strong>buffered</strong> channel
+fires when its ring holds a value, and the <code>default</code> only when the ring is
+empty: fic guards the receive with the ring’s state. That is a receive
+that gives up, as sDDF’s copier drops a frame when its client has no free
+buffer.</p>
+<p>A signal receive or an IRQ await has no such state, so beside a <code>default</code>
+it is a branch with no guard, and a warning.</p>
+<pre><code class="language-text">// d buffered, c a signal channel
+proc Copy() { d?v -&gt; Use(v) default drop -&gt; Skip; }     // the default on an empty ring
+proc Pick() { c? -&gt; Skip default Skip; }                // warning: a branch with no guard
 </code></pre>
 <h2 id="the-notified-handler-is-receive-headed"><a class="header" href="#the-notified-handler-is-receive-headed">The <code>notified</code> handler is receive-headed</a></h2>
 <p>Microkit invokes <code>notified</code> with a message to handle. A process bound to
@@ -2172,6 +2178,10 @@ the left of <code>;</code> and a helper process’s body, and with no guard and 
 <code>default</code> at the top. Otherwise the handler could run without consuming the
 message that woke it and never return to the kernel. A <code>notified</code> that never
 receives (a PD that only sends) needs no head.</p>
+<p>A receive on a buffered channel may be guarded at the head: its ring is
+tested on every pass, guard first, so while the guard is false its values
+stay queued. A driver holds back this way while its device’s queue is full:
+<code>[eth.rx_room()] free?b -&gt; …</code>.</p>
 <pre><code class="language-text">@bind(microkit.notified)
 proc Notified() { ball! -&gt; ball? -&gt; Skip; }   // rejected: starts with a send
 @bind(microkit.notified)

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-8e860e4b.js";
+            window.path_to_searchindex_js = "../searchindex-e2bde41b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -225,16 +225,17 @@ proc Notified() { ball? -&gt; ball! -&gt; Notified(); }         // accepted
 `Notified` — its continuation would need a return stack
 </code></pre>
 <h2 id="a-default-branch-and-receives"><a class="header" href="#a-default-branch-and-receives">A <code>default</code> branch and receives</a></h2>
-<p>The <code>default</code> arm of a choice runs when no branch’s guard holds. A guard
-cannot see whether a channel’s buffer is empty, so if any other branch
-begins with a receive, the default could fire while a message is waiting.
-No branch of a choice with a <code>default</code> may therefore begin with a receive
-(<code>c?x</code> or <code>irq?N</code>), through guards and nested choices.</p>
-<pre><code class="language-text">proc Pick() { [ready] c? -&gt; Skip default Skip; }      // rejected
-proc Pick() { [ready] bump -&gt; Skip default Skip; }    // accepted: bump is an event
-</code></pre>
-<pre><code class="language-text">error: process `Pick`: a branch of a `default` choice may not begin with a
-receive (`c?…`) — the default's guard cannot see an empty buffer
+<p>The <code>default</code> arm of a choice runs when no branch’s guard holds. Beside a
+<code>default</code>, a branch that begins with a receive on a <strong>buffered</strong> channel
+fires when its ring holds a value, and the <code>default</code> only when the ring is
+empty: fic guards the receive with the ring’s state. That is a receive
+that gives up, as sDDF’s copier drops a frame when its client has no free
+buffer.</p>
+<p>A signal receive or an IRQ await has no such state, so beside a <code>default</code>
+it is a branch with no guard, and a warning.</p>
+<pre><code class="language-text">// d buffered, c a signal channel
+proc Copy() { d?v -&gt; Use(v) default drop -&gt; Skip; }     // the default on an empty ring
+proc Pick() { c? -&gt; Skip default Skip; }                // warning: a branch with no guard
 </code></pre>
 <h2 id="the-notified-handler-is-receive-headed"><a class="header" href="#the-notified-handler-is-receive-headed">The <code>notified</code> handler is receive-headed</a></h2>
 <p>Microkit invokes <code>notified</code> with a message to handle. A process bound to
@@ -244,6 +245,10 @@ the left of <code>;</code> and a helper process’s body, and with no guard and 
 <code>default</code> at the top. Otherwise the handler could run without consuming the
 message that woke it and never return to the kernel. A <code>notified</code> that never
 receives (a PD that only sends) needs no head.</p>
+<p>A receive on a buffered channel may be guarded at the head: its ring is
+tested on every pass, guard first, so while the guard is false its values
+stay queued. A driver holds back this way while its device’s queue is full:
+<code>[eth.rx_room()] free?b -&gt; …</code>.</p>
 <pre><code class="language-text">@bind(microkit.notified)
 proc Notified() { ball! -&gt; ball? -&gt; Skip; }   // rejected: starts with a send
 @bind(microkit.notified)

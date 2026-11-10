@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-8e860e4b.js";
+            window.path_to_searchindex_js = "../searchindex-e2bde41b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -256,9 +256,10 @@ boot body) and the <code>microkit.notified</code>-bound process becomes the
 <li>The process bound to <code>microkit.notified</code>, if it receives at all, must be
 <em>receive-headed</em>: every path at its head, through <code>[]</code>, the left of <code>;</code> and a helper’s body,
 begins with a receive (<code>c?x</code>) or an IRQ await (<code>irq?N</code>), with no guard
-and no <code>default</code> at the top. The kernel invokes it for a message, which
-the head consumes; a handler that could run without one would never
-return to the kernel. See
+and no <code>default</code> at the top (a receive on a buffered channel may be
+guarded: its values wait in the ring). The kernel invokes it for a
+message, which the head consumes; a handler that could run without one
+would never return to the kernel. See
 <a href="../checks/well-formedness.html#the-notified-handler-is-receive-headed">Well-Formedness</a>.</li>
 <li>Both a <code>@bind(microkit.init)</code> <strong>and</strong> a <code>@bind(microkit.notified)</code>
 process are <strong>mandatory</strong> for every PD with a program when targeting
@@ -311,13 +312,13 @@ c?x -&gt; ...              // channel-event prefix
 error: it is always enabled, so it discriminates nothing. A branch that is
 a sequence is judged by its first item.</p>
 <p>The optional <code>default</code> arm is taken when no branch’s guard succeeds. It
-needs no discriminator of its own, but when a choice has a <code>default</code>, no
-branch may begin with a receive (<code>c?x</code>, <code>irq?N</code>), through guards and
-nested plain choices: a guard cannot see that a buffer is empty, so the
-default could fire while a message waits (see
+needs no discriminator of its own. A branch that begins with a receive on a
+buffered channel fires beside it when the ring holds a value, so the
+<code>default</code> runs only on an empty ring; a signal receive or IRQ await beside
+a <code>default</code> is a branch with no guard (see
 <a href="../checks/well-formedness.html#a-default-branch-and-receives">Well-Formedness</a>).</p>
-<pre><code class="language-text">// Rejected: the second branch begins with a receive, and a default follows.
-[ready] c! -&gt; Skip [] c? -&gt; Skip default Skip;
+<pre><code class="language-text">// d buffered: take a value if there is one, else go on.
+d?v -&gt; Use(v) default Skip;
 </code></pre>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-text">// Two branches, no default.
