@@ -209,23 +209,14 @@
           <div class="code-header"><span>System Declaration</span><span class="file-ext">datadiode.fis</span></div>
 <pre><span class="cmt">// Data diode: eth_outer → dd → eth_inner, one-way Low → High.</span>
 
-<span class="cmt">// Field order keeps the packed fic layout equal to the natural C layout</span>
-<span class="cmt">// (checked by the generated _Static_asserts).</span>
-<span class="kw">struct</span> Message {
-    length: <span class="kw">uint16</span>;
-    kind: <span class="kw">uint16</span>;
-    offset: <span class="kw">uint32</span>;
+<span class="cmt">// A frame crosses the diode by copy, as the channels' value; `data` holds</span>
+<span class="cmt">// a virtio-net buffer (`VIRTIO_NET_BUF_SIZE`).</span>
+<span class="kw">struct</span> <span class="fn">Frame</span> {
+    len: <span class="kw">uint16</span>;
+    data: <span class="kw">uint8</span>[<span class="num">2048</span>];
 }
 
-<span class="kw">struct</span> Slot {
-    flags: <span class="kw">uint16</span>;
-    seq: <span class="kw">uint16</span>;
-    msg: Message;
-}
-
-<span class="kw">const</span> SLOT_SIZE: <span class="kw">uint</span> = <span class="num">2</span> * <span class="num">1024</span>;
-
-<span class="cmt">// Slot rings, mapped into both endpoints of their channel.</span>
+<span class="cmt">// The channels' rings, mapped into both endpoints of their channel.</span>
 <span class="label">Low</span> <span class="kw">MemoryRegion</span> eth_outer_output(<span class="num">0x200000</span>, <span class="num">0x200000</span>);
 <span class="label">High</span> <span class="kw">MemoryRegion</span> eth_inner_input(<span class="num">0x200000</span>, <span class="num">0x200000</span>);
 
@@ -243,57 +234,39 @@
 <span class="kw">ProtectionDomain</span> dd(<span class="num">150</span>);
 <span class="kw">ProtectionDomain</span> eth_inner(<span class="num">199</span>, <span class="num">78</span>);
 
-<span class="kw">Chan</span> o2d = eth_outer <span class="op">--&gt;</span> dd <span class="kw">via</span> eth_outer_output&lt;Slot&gt;;
-<span class="kw">Chan</span> d2i = dd <span class="op">--&gt;</span> eth_inner <span class="kw">via</span> eth_inner_input&lt;Slot&gt;;
+<span class="kw">Chan</span> o2d = eth_outer --&gt; dd <span class="kw">via</span> eth_outer_output&lt;Frame&gt;;
+<span class="kw">Chan</span> d2i = dd --&gt; eth_inner <span class="kw">via</span> eth_inner_input&lt;Frame&gt;;
 
 <span class="kw">System</span> = eth_outer <span class="op">|||</span> dd <span class="op">|||</span> eth_inner;</pre>
         </div>
 
         <div class="code-block">
           <div class="code-header"><span>Data Diode Process</span><span class="file-ext">dd.fi</span></div>
-<pre><span class="cmt">// Forwards slots one way, o2d → d2i.</span>
-<span class="kw">import</span> <span class="str">"include/channel.h"</span> <span class="kw">as</span> chan;
-<span class="kw">import</span> <span class="str">"include/util.h"</span> <span class="kw">as</span> util;
-
-<span class="attr">@bind(microkit.init)</span>
+<pre><span class="cmt">// Forwards frames one way, o2d -&gt; d2i. A full d2i loses the frame: the Low</span>
+<span class="cmt">// side is never back-pressured.</span>
+@bind(microkit.init)
 <span class="kw">proc</span> <span class="fn">Init</span>() {
-    ready <span class="op">-&gt;</span> <span class="kw">Skip</span>;
+    ready -&gt; Skip;
 }
 
-<span class="cmt">// One o2d notification may cover several slots: drain the ring.</span>
-<span class="attr">@bind(microkit.notified)</span>
+@bind(microkit.notified)
 <span class="kw">proc</span> <span class="fn">Notified</span>() {
-    o2d?pkt <span class="op">-&gt;</span> <span class="fn">Drain</span>(pkt);
-    <span class="fn">Notified</span>();
-}
-
-<span class="kw">proc</span> <span class="fn">Drain</span>(pkt: Slot) {
-        [chan.o2d_has_msg() &amp;&amp; !chan.d2i_has_msg()] forward.pkt <span class="op">-&gt;</span> d2i!pkt <span class="op">-&gt;</span> next_msg <span class="op">-&gt;</span> <span class="fn">Drain</span>(pkt)
-     <span class="cmt">// d2i full: drop, never back-pressure the Low side.</span>
-     <span class="op">[]</span> [chan.o2d_has_msg() &amp;&amp; chan.d2i_has_msg()] drop_full <span class="op">-&gt;</span> <span class="kw">Skip</span>
-     <span class="kw">default</span> <span class="kw">Skip</span>;
+    o2d?f -&gt; forward -&gt; d2i!f -&gt; Notified();
 }
 
 <span class="kw">evt</span> ready: dbg(<span class="str">"diode transport ready"</span>);
 
-<span class="kw">evt</span> forward.|pkt: Slot|: {
-    chan.dd_forward(pkt);
-    dbg(<span class="str">"pass o2d -&gt; d2i"</span>);
-}
-
-<span class="kw">evt</span> next_msg: chan.o2d_read_next();
-
-<span class="kw">evt</span> drop_full: dbg(<span class="str">"can't pass buffer (no space for inner)"</span>);</pre>
+<span class="kw">evt</span> forward: dbg(<span class="str">"pass o2d -&gt; d2i"</span>);</pre>
         </div>
 
         <p style="margin-top:8px;">
           <strong style="color:var(--text);">What fic checks:</strong>
-          each channel's ring is mapped into its two endpoints and nowhere else; a <code>High</code> region is never mapped at <code>Low</code>, so data cannot flow from High to Low through a mapping; every channel is one-way (<code>--&gt;</code>) and the channel graph has no cycle (WF2), so no path leads back from <code>eth_inner</code> to <code>eth_outer</code>; and each <code>Notified</code> handler starts with a receive. Labels are checked on mappings, not on values: fic decides where data can go, while what the imported C does to it is the C code's job.
+          each channel's ring is mapped into its two endpoints and nowhere else; a <code>High</code> region is never mapped at <code>Low</code>, so data cannot flow from High to Low through a mapping; every channel is one-way (<code>--&gt;</code>) and the channel graph has no cycle (WF2), so no path leads back from <code>eth_inner</code> to <code>eth_outer</code>; and each <code>Notified</code> handler starts with a receive. Labels are checked on mappings, not on values: fic decides where data can go, while what the imported C does to it is the C code's job. Information-flow and well-formedness checking are at an initial stage, still under research.
         </p>
       </div>
 
       <div class="contact-note">
-        Both files pass <code>fic --check</code>. <a href="../docs/manual/installation.html">Install fic</a> or read the <a href="../docs/lang-spec/">language reference</a>.
+        Both files pass <code>fic --check</code>. The <a href="../docs/manual/tutorial.html">tutorial</a> builds this diode step by step; <a href="../docs/manual/installation.html">install fic</a> or read the <a href="../docs/lang-spec/">language reference</a>.
       </div>
     </div>
   </div>

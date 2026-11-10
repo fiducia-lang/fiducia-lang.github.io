@@ -229,35 +229,62 @@
             <div class="code-head"><span class="path" data-files-path>demo/datadiode/datadiode.fis</span><span data-files-note>system declaration</span></div>
 
 <div role="tabpanel" id="p-fis" aria-labelledby="t-fis" tabindex="0"><pre class="code-body"><span class="c">// Data diode: eth_outer → dd → eth_inner, one-way Low → High.</span>
-<span class="k">struct</span> <span class="f">Message</span> { length: <span class="k">uint16</span>; kind: <span class="k">uint16</span>; offset: <span class="k">uint32</span>; }
-<span class="k">struct</span> <span class="f">Slot</span> { flags: <span class="k">uint16</span>; seq: <span class="k">uint16</span>; msg: Message; }
 
-<span class="c">// Slot rings, mapped into both endpoints of their channel.</span>
-<span class="lo">Low</span>  <span class="k">MemoryRegion</span> eth_outer_output(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
+<span class="c">// A frame crosses the diode by copy, as the channels' value; `data` holds</span>
+<span class="c">// a virtio-net buffer (`VIRTIO_NET_BUF_SIZE`).</span>
+<span class="k">struct</span> <span class="f">Frame</span> {
+    len: <span class="k">uint16</span>;
+    data: <span class="k">uint8</span>[<span class="n">2048</span>];
+}
+
+<span class="c">// The channels' rings, mapped into both endpoints of their channel.</span>
+<span class="lo">Low</span> <span class="k">MemoryRegion</span> eth_outer_output(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
 <span class="hi">High</span> <span class="k">MemoryRegion</span> eth_inner_input(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
 
-<span class="lo">Low</span>  <span class="k">MemoryRegion</span> outer_dma(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
+<span class="c">// One 4 KiB page of QEMU virt's virtio-mmio slots 24..31, where both NICs</span>
+<span class="c">// sit; each eth PD binds a different device in it.</span>
+<span class="k">MemoryRegion</span> virtio_window(<span class="n">0x1000</span>, <span class="n">0x1000</span>, <span class="n">0xa003000</span>);
+
+<span class="c">// Virtio rings + buffers; physically contiguous, paddr patched by the tool.</span>
+<span class="lo">Low</span> <span class="k">MemoryRegion</span> outer_dma(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
 <span class="hi">High</span> <span class="k">MemoryRegion</span> inner_dma(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
 
+<span class="c">// IRQ = 48 + mmio slot. QEMU puts the first -device in slot 31 (IRQ 79),</span>
+<span class="c">// the second in slot 30 (IRQ 78).</span>
 <span class="k">ProtectionDomain</span> eth_outer(<span class="n">99</span>, <span class="n">79</span>);
 <span class="k">ProtectionDomain</span> dd(<span class="n">150</span>);
 <span class="k">ProtectionDomain</span> eth_inner(<span class="n">199</span>, <span class="n">78</span>);
 
-<span class="k">Chan</span> o2d = eth_outer --&gt; dd <span class="k">via</span> eth_outer_output&lt;Slot&gt;;
-<span class="k">Chan</span> d2i = dd --&gt; eth_inner <span class="k">via</span> eth_inner_input&lt;Slot&gt;;
+<span class="k">Chan</span> o2d = eth_outer --&gt; dd <span class="k">via</span> eth_outer_output&lt;Frame&gt;;
+<span class="k">Chan</span> d2i = dd --&gt; eth_inner <span class="k">via</span> eth_inner_input&lt;Frame&gt;;
 
 <span class="k">System</span> = eth_outer ||| dd ||| eth_inner;</pre></div>
 
-<div role="tabpanel" id="p-outer" aria-labelledby="t-outer" tabindex="0" hidden><pre class="code-body"><span class="c">// Low-side NIC: forwards frames across the diode,
-// answers ARP/ping for us locally.</span>
+<div role="tabpanel" id="p-outer" aria-labelledby="t-outer" tabindex="0" hidden><pre class="code-body"><span class="c">// Low-side NIC: forwards frames not addressed to us across the diode,</span>
+<span class="c">// answers ARP/ping for us locally.</span>
 <span class="k">import</span> <span class="s">"include/eth.h"</span> <span class="k">as</span> eth;
+<span class="k">import</span> <span class="s">"include/util.h"</span> <span class="k">as</span> util;
+<span class="k">import</span> <span class="s">"include/virtio_net.h"</span> <span class="k">as</span> vio;
 
 <span class="lo">Low</span> <span class="k">Mapping</span> vwin(virtio_window, <span class="n">0x2_000_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 <span class="lo">Low</span> <span class="k">Mapping</span> dma(outer_dma, <span class="n">0x2_400_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 
+<span class="c">// Set by each poll: rx = 1 if a frame was read; kind 1 = forward,</span>
+<span class="c">// 2 = ARP for us, 3 = IPv4 for us, 0 = drop.</span>
+rx: <span class="k">int</span>;
+kind: <span class="k">int</span>;
+reply_len: <span class="k">uint16</span>;
+<span class="c">// What `o2d` sends: the frame, copied into the ring.</span>
+frame: Frame;
+
 <span class="k">evt</span> poll: {
     rx = eth.eth_poll();
     kind = eth.eth_pkt_kind();
+}
+
+<span class="k">evt</span> stage_forward: {
+    frame = eth.eth_frame();
+    dbg(<span class="s">"forward -&gt; o2d"</span>);
 }
 
 @bind(microkit.notified)
@@ -268,69 +295,57 @@
 
 <span class="k">proc</span> <span class="f">Drain</span>() {
     poll -&gt; Skip;
-        [rx == <span class="n">1</span> &amp;&amp; kind == <span class="n">1</span>] stage_forward -&gt; o2d!slot -&gt; Drain()
-     [] [rx == <span class="n">1</span> &amp;&amp; (kind == <span class="n">2</span> || kind == <span class="n">3</span>)]
-            handle_ping -&gt; send_frame.reply_len -&gt; Drain()
+        [rx == <span class="n">1</span> &amp;&amp; kind == <span class="n">1</span>] stage_forward -&gt; o2d!frame -&gt; Drain()
+     [] [rx == <span class="n">1</span> &amp;&amp; (kind == <span class="n">2</span> || kind == <span class="n">3</span>)] handle_ping -&gt; send_frame.reply_len -&gt; Drain()
      [] [rx == <span class="n">1</span> &amp;&amp; kind == <span class="n">0</span>] Drain()
      <span class="k">default</span> Skip;
 }</pre></div>
 
-<div role="tabpanel" id="p-dd" aria-labelledby="t-dd" tabindex="0" hidden><pre class="code-body"><span class="c">// Forwards slots one way, o2d → d2i.</span>
-<span class="k">import</span> <span class="s">"include/channel.h"</span> <span class="k">as</span> chan;
-
+<div role="tabpanel" id="p-dd" aria-labelledby="t-dd" tabindex="0" hidden><pre class="code-body"><span class="c">// Forwards frames one way, o2d -&gt; d2i. A full d2i loses the frame: the Low</span>
+<span class="c">// side is never back-pressured.</span>
 @bind(microkit.init)
 <span class="k">proc</span> <span class="f">Init</span>() {
     ready -&gt; Skip;
 }
 
-<span class="c">// One o2d notification may cover several slots: drain the ring.</span>
 @bind(microkit.notified)
 <span class="k">proc</span> <span class="f">Notified</span>() {
-    o2d?pkt -&gt; Drain(pkt);
-    Notified();
+    o2d?f -&gt; forward -&gt; d2i!f -&gt; Notified();
 }
 
-<span class="k">proc</span> <span class="f">Drain</span>(pkt: Slot) {
-        [chan.o2d_has_msg() &amp;&amp; !chan.d2i_has_msg()]
-            forward.pkt -&gt; d2i!pkt -&gt; next_msg -&gt; Drain(pkt)
-     <span class="c">// d2i full: drop, never back-pressure the Low side.</span>
-     [] [chan.o2d_has_msg() &amp;&amp; chan.d2i_has_msg()] drop_full -&gt; Skip
-     <span class="k">default</span> Skip;
-}
+<span class="k">evt</span> ready: dbg(<span class="s">"diode transport ready"</span>);
 
-<span class="k">evt</span> forward.|pkt: Slot|: {
-    chan.dd_forward(pkt);
-    dbg(<span class="s">"pass o2d -&gt; d2i"</span>);
-}
-<span class="k">evt</span> next_msg: chan.o2d_read_next();</pre></div>
+<span class="k">evt</span> forward: dbg(<span class="s">"pass o2d -&gt; d2i"</span>);</pre></div>
 
-<div role="tabpanel" id="p-inner" aria-labelledby="t-inner" tabindex="0" hidden><pre class="code-body"><span class="c">// High-side NIC: transmits slots received on d2i.</span>
+<div role="tabpanel" id="p-inner" aria-labelledby="t-inner" tabindex="0" hidden><pre class="code-body"><span class="c">// High-side NIC: transmits frames received on d2i; its own RX is acked</span>
+<span class="c">// and dropped.</span>
 <span class="k">import</span> <span class="s">"include/eth.h"</span> <span class="k">as</span> eth;
+<span class="k">import</span> <span class="s">"include/util.h"</span> <span class="k">as</span> util;
+<span class="k">import</span> <span class="s">"include/virtio_net.h"</span> <span class="k">as</span> vio;
 
 <span class="hi">High</span> <span class="k">Mapping</span> vwin(virtio_window, <span class="n">0x2_000_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 <span class="hi">High</span> <span class="k">Mapping</span> dma(inner_dma, <span class="n">0x2_400_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 
-<span class="k">evt</span> send_frame.|m: Slot|: {
-    eth.eth_send_slot(m);
+<span class="k">evt</span> send_frame.|f: Frame|: {
+    eth.eth_send_frame_value(f);
     dbg(<span class="s">"delivered"</span>);
 }
 
 @bind(microkit.notified)
 <span class="k">proc</span> <span class="f">Notified</span>() {
         irq?<span class="n">78</span> -&gt; DrainNic()
-     [] d2i?m -&gt; Deliver(m);
+     [] d2i?f -&gt; Deliver(f);
     Notified();
 }
 
-<span class="k">proc</span> <span class="f">Deliver</span>(m: Slot) {
-    send_frame.m -&gt; next_msg -&gt; Skip;
+<span class="k">proc</span> <span class="f">Deliver</span>(f: Frame) {
+    send_frame.f -&gt; Skip;
 }</pre></div>
 
 <div role="tabpanel" id="p-eth" aria-labelledby="t-eth" tabindex="0" hidden><pre class="code-body"><span class="k">#include</span> <span class="s">"eth.h"</span>
-<span class="k">#include</span> <span class="s">"channel.h"</span>
+<span class="k">#include</span> <span class="s">"util.h"</span>
 <span class="k">#include</span> <span class="s">"virtio_net.h"</span>
 
-<span class="c">/* One eth.c serves both NIC domains, eth_outer and eth_inner. */</span>
 <span class="k">int64_t</span> <span class="f">eth_poll</span>(<span class="k">void</span>)
 {
     <span class="k">if</span> (!virtio_net_rx(cur, &amp;cur_len)) {
@@ -341,28 +356,28 @@
     <span class="k">if</span> (cur_len &gt;= <span class="k">sizeof</span>(<span class="k">struct</span> eth_header)) {
         <span class="k">struct</span> eth_header *hdr = (<span class="k">struct</span> eth_header *)cur;
         <span class="k">if</span> (!(mac_match(hdr-&gt;dest_mac, fic_eth_mac) ||
-              mac_match(hdr-&gt;dest_mac, (<span class="k">const uint8_t</span> *)<span class="s">"\xff\xff\xff\xff\xff\xff"</span>))) {
+              mac_match(hdr-&gt;dest_mac, (<span class="k">const</span> <span class="k">uint8_t</span> *)<span class="s">"\xff\xff\xff\xff\xff\xff"</span>))) {
             cur_kind = <span class="n">1</span>;
-        } <span class="k">else if</span> (swap16(hdr-&gt;ethertype) == ETHERTYPE_ARP) {
+        } <span class="k">else</span> <span class="k">if</span> (swap16(hdr-&gt;ethertype) == ETHERTYPE_ARP) {
             cur_kind = <span class="n">2</span>;
-        } <span class="k">else if</span> (swap16(hdr-&gt;ethertype) == ETHERTYPE_IPV4) {
+        } <span class="k">else</span> <span class="k">if</span> (swap16(hdr-&gt;ethertype) == ETHERTYPE_IPV4) {
             cur_kind = <span class="n">3</span>;
         }
     }
     <span class="k">return</span> <span class="n">1</span>;
 }
 
-<span class="k">void</span> <span class="f">eth_stage_forward</span>(<span class="k">void</span>)
+<span class="k">struct</span> Frame <span class="f">eth_frame</span>(<span class="k">void</span>)
 {
-    o2d_push(cur, cur_len);
+    <span class="k">struct</span> Frame f;
+    f.len = cur_len;
+    mycpy(f.data, cur, cur_len);
+    <span class="k">return</span> f;
 }
 
-<span class="k">void</span> <span class="f">eth_send_slot</span>(<span class="k">struct</span> Slot m)
+<span class="k">void</span> <span class="f">eth_send_frame_value</span>(<span class="k">struct</span> Frame f)
 {
-    <span class="k">uint16_t</span> len = d2i_current_len();
-    (<span class="k">void</span>)m;
-    mycpy(scratch, d2i_payload(m), len);
-    virtio_net_tx(scratch, len);
+    virtio_net_tx(f.data, f.len);
 }</pre></div>
           </div>
         </div>
@@ -373,40 +388,39 @@
           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; padding: 16px">
             <div style="flex: 999 1 560px; min-width: 0; overflow-x: auto">
               <svg viewBox="0 0 816 168" style="display: block; width: 100%; min-width: 600px; height: auto" role="img" aria-labelledby="dd-title">
-                <title id="dd-title">Automaton for dd: Init, ready, Notified, receive on o2d, Drain, forward, L3, send on d2i, L4, then next_msg back to Drain.</title>
+                <title id="dd-title">Automaton for dd: Init, ready, Notified, receive on o2d, L2, forward, L3, send on d2i, Exit, then back to Notified.</title>
                 <defs><marker id="ah-code" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#8b929c"/></marker></defs>
                 <g fill="none" stroke="#8b929c" stroke-width="2">
                   <path d="M120 60H186" marker-end="url(#ah-code)"/>
                   <path d="M288 60H354" marker-end="url(#ah-code)"/>
                   <path d="M456 60H522" marker-end="url(#ah-code)"/>
                   <path d="M624 60H690" marker-end="url(#ah-code)"/>
-                  <path d="M744 80V120H408V86" marker-end="url(#ah-code)"/>
+                  <path d="M744 80V120H240V86" marker-end="url(#ah-code)"/>
                 </g>
                 <g font-family="IBM Plex Mono, monospace" font-size="13" text-anchor="middle" fill="#e6e8eb">
                   <rect x="24" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="72" y="65">Init</text>
                   <rect x="192" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="240" y="65">Notified</text>
-                  <rect x="360" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#fb7185" stroke-width="1.5"/><text x="408" y="65">Drain</text>
+                  <rect x="360" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#fb7185" stroke-width="1.5"/><text x="408" y="65">L2</text>
                   <rect x="528" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="576" y="65">L3</text>
-                  <rect x="696" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="744" y="65">L4</text>
+                  <rect x="696" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="744" y="65">Exit</text>
                 </g>
                 <g font-family="IBM Plex Mono, monospace" font-size="12" text-anchor="middle">
                   <text x="156" y="44" fill="#a9afb8">ready</text>
                   <text x="324" y="44" fill="#8ab4ff">o2d?</text>
                   <text x="492" y="44" fill="#a9afb8">forward</text>
                   <text x="660" y="44" fill="#8ab4ff">d2i!</text>
-                  <text x="576" y="144" fill="#a9afb8">next_msg</text>
                 </g>
               </svg>
             </div>
 <pre class="code-body" style="flex: 1 1 220px; padding: 0"><span class="c">// datadiode.q</span>
 <span class="k">A[]</span> not deadlock
-<span class="k">E&lt;&gt;</span> dd.Drain
+<span class="k">E&lt;&gt;</span> dd.L2
 
-<span class="c">// Drain → Exit → Notified
-// when d2i is full (drop)</span></pre>
+<span class="c">// fire verify on the diode waits
+// for buffered channels in the model</span></pre>
           </div>
         </div>
-        <p style="margin: 16px 0 0; font-size: 14px" class="muted">Run it yourself with <code>fire run demo/datadiode/</code> (<a href="docs/manual/fire-run.html">fire run</a> in the manual).</p>
+        <p style="margin: 16px 0 0; font-size: 14px" class="muted">Walk through it in the <a href="docs/manual/tutorial.html">tutorial</a>, or run it yourself with <code>fire run demo/datadiode/</code> (<a href="docs/manual/fire-run.html">fire run</a> in the manual).</p>
         <p class="more-examples">
           <a href="examples/nrl-pump.html">NRL Pump</a>
           <a href="examples/mls-email.html">MLS Email Guard</a>
