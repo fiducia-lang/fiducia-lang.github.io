@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-36641132.js";
+            window.path_to_searchindex_js = "searchindex-adcb8b8c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -202,14 +202,17 @@ this page links to it rather than repeat it.</p>
 ├── eth_outer.fi     the Low NIC's PD
 ├── dd.fi            the diode PD
 ├── eth_inner.fi     the High NIC's PD
-├── include/         the C headers the .fi files import
-├── src/             their C sources: eth.c, util.c, virtio_net.c
+├── include/         the C headers: eth.h, which the .fi files import, and
+│                    the util.h and virtio_net.h it builds on
+├── src/             the C sources: eth.c, util.c, virtio_net.c
 ├── spec/            the queries fire verify checks
 └── inject.py        the host side: sends frames, checks what comes out
 </code></pre>
 <p>Each protection domain (PD) declared in the <code>.fis</code> has a <code>.fi</code> of the same
-name: <code>dd.fi</code> implements the PD <code>dd</code>. A <code>.fi</code> imports C headers; each
-<code>include/x.h</code> is linked with its <code>src/x.c</code>.</p>
+name: <code>dd.fi</code> implements the PD <code>dd</code>. A <code>.fi</code> imports the C headers it
+calls; each <code>include/x.h</code> is linked with its <code>src/x.c</code>. The project’s other
+C goes into one archive, from which each PD links what its C calls: <code>eth.c</code>
+calls <code>util.c</code> and <code>virtio_net.c</code>, which no <code>.fi</code> imports.</p>
 <p><code>fire.toml</code> names the project and says how to run it. Its <code>[run]</code> section
 is the QEMU command line: an AArch64 <code>virt</code> board and two virtio-net NICs
 on UDP sockets, which <code>inject.py</code> talks to. The outer NIC must be the first
@@ -320,8 +323,6 @@ event <code>forward</code>, sends <code>f</code> on <code>d2i</code> (<code>d2i!
 <p><code>eth_outer</code> drives a real NIC through C: imports, mappings, state, events,
 then processes.</p>
 <pre><code class="language-text">import "include/eth.h" as eth;
-import "include/util.h" as util;
-import "include/virtio_net.h" as vio;
 
 Low Mapping vwin(virtio_window, 0x2_000_000, "rw", false);
 Low Mapping dma(outer_dma, 0x2_400_000, "rw", false);
