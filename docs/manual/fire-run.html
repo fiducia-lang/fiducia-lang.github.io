@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27e9d98d.js";
+            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -181,18 +181,13 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="building-and-running-fire-build--fire-run"><a class="header" href="#building-and-running-fire-build--fire-run">Building and Running: <code>fire build</code> / <code>fire run</code></a></h1>
-<p><code>fire build</code> compiles a project to a bootable Microkit image;
-<code>fire run</code> builds and then launches it as configured in
-<a href="fire-toml.html"><code>fire.toml</code></a> — mimicking the <code>cargo</code> tools.</p>
-<blockquote>
-<p>🚧 The <code>build</code> / <code>run</code> subcommands land with
-<a href="https://github.com/fiducia-lang/fic/pull/174">PR #174</a>. On earlier
-versions the same behaviour is the bare <code>fire &lt;PROJECT_DIR&gt;</code>
-invocation.</p>
-</blockquote>
+<p><code>fire build</code> compiles a project to a bootable Microkit image and its
+UPPAAL model; <code>fire run</code> builds the image and launches it, as configured
+in <a href="fire-toml.html"><code>fire.toml</code></a>. <code>fire clean</code> removes what they generated.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
-<pre><code class="language-bash">fire build [PROJECT_DIR] [-o &lt;IMG&gt;]   # produce the image only
-fire run   [PROJECT_DIR] [-o &lt;IMG&gt;]   # build, then launch
+<pre><code class="language-bash">fire build [PROJECT_DIR] [-o &lt;IMG&gt;] [--target &lt;img,xta&gt;] [--pretty]
+fire run   [PROJECT_DIR] [-o &lt;IMG&gt;]
+fire clean [PROJECT_DIR]
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -200,53 +195,45 @@ fire run   [PROJECT_DIR] [-o &lt;IMG&gt;]   # build, then launch
 <tr><th>Argument / flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
-<tr><td><code>-o, --output &lt;IMG&gt;</code></td><td>Override the output <code>.img</code> path (default: <code>&lt;src&gt;/build/&lt;name&gt;.img</code>).</td></tr>
+<tr><td><code>PROJECT_DIR</code></td><td>The directory holding <code>fire.toml</code>. Defaults to the current directory.</td></tr>
+<tr><td><code>-o, --output &lt;IMG&gt;</code></td><td>The image path, instead of <code>&lt;src&gt;/build/&lt;name&gt;.img</code>.</td></tr>
+<tr><td><code>--target &lt;img,xta&gt;</code></td><td>What <code>fire build</code> builds: the image (<code>img</code>), the model (<code>xta</code>), or both, the default.</td></tr>
+<tr><td><code>--pretty</code></td><td>Also write the model as the UPPAAL GUI’s XML, <code>build/&lt;name&gt;.xml</code>.</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
 <ol>
-<li>Reads <code>fire.toml</code> from <code>PROJECT_DIR</code> and resolves the source
-directory (<code>project.src</code>).</li>
-<li>Builds the image — incrementally, like <code>cargo</code>: when
-<code>build/&lt;name&gt;.img</code> is already newer than every source file and
-<code>fire.toml</code>, the rebuild is skipped (<code>✓ image up to date</code>).
-Otherwise it invokes <code>fic &lt;src&gt; --board &lt;board&gt; --build-profile &lt;profile&gt;</code> (image generation is fic’s default
-mode), with the toolchain from <code>[run.target]</code>
-(or the <code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment). This compiles
-each PD’s C file, patches the mapping setvars, and packs the
-loader, seL4 kernel, and PD ELFs into <code>build/&lt;name&gt;.img</code>. The
-freshness check is mtime-based — coarser than cargo’s fingerprints,
-but any source edit triggers a rebuild.</li>
-<li>(<code>fire run</code> only) In <code>mode = "qemu"</code>, launches
-<code>qemu-system-aarch64</code> with the <code>[run] args</code>, substituting <code>{img}</code>
-with the built image path. <code>mode = "hardware"</code> is reserved and not
-yet implemented.</li>
+<li>Reads <code>fire.toml</code> and resolves the source directory (<code>project.src</code>).</li>
+<li>Builds the image with <code>fic &lt;src&gt; --board &lt;board&gt; --build-profile &lt;profile&gt;</code>,
+with the toolchain from <code>[run.target]</code> or the environment, and the
+model with <code>fic &lt;src&gt; --emit=xta</code>. Each is skipped when it is newer
+than every source file and <code>fire.toml</code> (<code>✓ image up to date</code>).</li>
+<li><code>fire run</code> only: launches <code>qemu-system-aarch64</code> with the <code>[run] args</code>,
+<code>{img}</code> replaced by the image’s path.</li>
 </ol>
-<h2 id="walkthrough-the-data-diode-demo"><a class="header" href="#walkthrough-the-data-diode-demo">Walkthrough: the data-diode demo</a></h2>
-<pre><code class="language-console">$ fire run demo/datadiode/
-fire: building datadiode for qemu_virt_aarch64 (debug)
-  ✓ Parsed 1 system + 3 program files
-  ✓ Resolved data layer (2 structs, 1 consts)
-  ✓ Resolved names
-  ✓ Resolved mapping vaddrs
-  ✓ Type-checked information flow
-  ✓ Checked channel dependency acyclicity (WF2)
-MICROKIT|CAPDL SPEC: number of root objects = 84, spec footprint = 12.44 KiB
-MICROKIT|INITIAL TASK: memory size = 412 KiB
-MICROKIT|LOADER: image file size = 2.59 MiB
-fire: launching QEMU ...
+<p><code>fire clean</code> removes <code>build/</code> (the image, the model, and anything the
+UPPAAL GUI saved beside it) and <code>include/gen/</code>, then <code>include/</code> if that
+leaves it empty. It never touches the sources or <code>spec/</code>.</p>
+<h2 id="walkthrough-ping-pong"><a class="header" href="#walkthrough-ping-pong">Walkthrough: ping-pong</a></h2>
+<pre><code class="language-console">$ fire build demo/pingpong/
+fire: building pingpong for qemu_virt_aarch64 (debug)
+  ✓ Wrote the data-layer headers to demo/pingpong/include/gen
+  ✓ Parsed 1 system + 2 program files + 1 foreign module(s)
+  ...
+  ✓ Generated 2 C file(s) in demo/pingpong/build/gen
+MICROKIT|CAPDL SPEC: number of root objects = 52, spec footprint = 7.55 KiB
+MICROKIT|INITIAL TASK: memory size = 384 KiB
+MICROKIT|LOADER: image file size = 2.64 MiB
+  ✓ image: demo/pingpong/build/pingpong.img
+  ...
+  ✓ UPPAAL model written to demo/pingpong/build/pingpong.xta
 </code></pre>
-<p>QEMU then boots the image; with <code>-serial mon:stdio</code> the PDs’ serial
-output appears in your terminal. Exit QEMU with <code>Ctrl-A x</code>.</p>
-<p>To produce the image without launching:</p>
-<pre><code class="language-bash">fire build demo/datadiode/
-ls demo/datadiode/build/datadiode.img
-</code></pre>
-<p>A Microkit build report is written next to the image at
-<code>build/report.txt</code> — useful for inspecting the memory layout and the
-setvar patches applied to each PD.</p>
+<p><code>fire run demo/pingpong/</code> then boots the image in QEMU; with
+<code>-serial mon:stdio</code> the PDs’ output appears in your terminal. Exit QEMU
+with <code>Ctrl-A x</code>.</p>
+<p>The Microkit build report, <code>build/report.txt</code>, shows the memory layout
+and the values patched into each PD.</p>
 <h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
 <div class="table-wrapper">
 <table>
@@ -254,14 +241,13 @@ setvar patches applied to each PD.</p>
 <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
 </thead>
 <tbody>
-<tr><td><code>could not read .../fire.toml</code></td><td><code>PROJECT_DIR</code> doesn’t contain a manifest; pass the project directory, not the repo root.</td></tr>
-<tr><td><code>Could not read MICROKIT_SDK environment variable</code></td><td>Set <code>$MICROKIT_SDK</code> or <code>[run.target] sdk</code>. Same pattern for <code>GCC</code> / <code>LD</code>.</td></tr>
-<tr><td><code>board path '...' does not exist</code></td><td><code>[run.target] board</code>/<code>profile</code> doesn’t match a directory under <code>&lt;sdk&gt;/board/</code>.</td></tr>
-<tr><td><code>fic: command not found</code></td><td>Install <code>fic</code> on <code>PATH</code> or set <code>$FIRE_FIC</code> to the binary.</td></tr>
-<tr><td><code>could not patch symbol '...' ... no symbol named '...'</code></td><td>A channel declared in the <code>.fis</code> has no matching <code>uint64_t &lt;chan&gt;;</code> symbol in the PD’s C file. Mapping symbols (<code>&lt;mapping&gt;_vaddr</code> …) are emitted only when declared, but channel-ID symbols are required.</td></tr>
-<tr><td><code>warning: WF2 violation: channel dependency graph contains a cycle</code></td><td>The topology is cyclic; the build goes on, and the cycle can deadlock. Either restructure the channels, or establish deadlock-freedom with <a href="fire-verify.html"><code>fire verify</code></a> and set <code>allow_wf2_cycles = true</code> in <code>[run.target]</code>.</td></tr>
-<tr><td>C compile errors</td><td><code>fic</code> compiles each <code>&lt;pd&gt;.c</code> with <code>-Wall -Werror</code>; fix the warning or build the file out-of-band.</td></tr>
-<tr><td>QEMU exits immediately</td><td>Check the <code>[run] args</code> device/loader address against the board; the demo uses <code>addr=0x70000000</code> for <code>qemu_virt_aarch64</code>.</td></tr>
+<tr><td><code>could not read .../fire.toml</code></td><td><code>PROJECT_DIR</code> has no manifest: pass the project directory, not the repository root.</td></tr>
+<tr><td><code>Could not read MICROKIT_SDK environment variable</code></td><td>Set <code>$MICROKIT_SDK</code> or <code>[run.target] sdk</code>. Likewise for <code>GCC</code> and <code>LD</code>.</td></tr>
+<tr><td><code>board path '...' does not exist</code></td><td><code>[run.target] board</code> / <code>profile</code> is not a directory under <code>&lt;sdk&gt;/board/</code>.</td></tr>
+<tr><td><code>failed to launch fic</code></td><td>Put <code>fic</code> beside <code>fire</code> or on <code>PATH</code>, or set <code>$FIRE_FIC</code>.</td></tr>
+<tr><td><code>warning: WF2 violation: channel dependency graph contains a cycle</code></td><td>See <a href="fic-reference.html#--allow-wf2-cycles"><code>--allow-wf2-cycles</code></a>.</td></tr>
+<tr><td>C compile errors</td><td>The C is compiled with <code>-Wall -Werror</code>: fix the warning in the imported file.</td></tr>
+<tr><td>QEMU exits at once</td><td>Check the <code>[run] args</code> loader address against the board: <code>addr=0x70000000</code> for <code>qemu_virt_aarch64</code>.</td></tr>
 </tbody>
 </table>
 </div>

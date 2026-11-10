@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27e9d98d.js";
+            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -181,9 +181,10 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
-<p>Fiducia ships two binaries: <code>fic</code> (the compiler) and <code>fire</code> (the
-project runner). They are not yet published to crates.io — install
-the pre-built binaries from the website.</p>
+<p>Fiducia ships three binaries: <code>fic</code> (the compiler), <code>fire</code> (the
+project runner) and <code>fic-lsp</code> (the language server), and a VS Code
+extension. They are not yet published to crates.io — install the
+pre-built binaries from the website.</p>
 <h2 id="pre-built-binaries-recommended"><a class="header" href="#pre-built-binaries-recommended">Pre-built binaries (recommended)</a></h2>
 <p>Pre-built binaries are published monthly (and on manual dispatch) to
 <a href="https://fiducia-lang.github.io/releases/">fiducia-lang.github.io/releases</a>.
@@ -193,10 +194,10 @@ curl -fsSL -o fic.tar.gz \
   https://fiducia-lang.github.io/releases/v&lt;version&gt;/fic-&lt;platform&gt;-&lt;version&gt;.tar.gz
 tar -xzf fic.tar.gz
 
-# Move to a directory in your PATH (the tarball contains both binaries)
-sudo mv fic fire /usr/local/bin/
+# Move to a directory in your PATH (the tarball contains all three binaries)
+sudo mv fic fire fic-lsp /usr/local/bin/
 # Or for user-local installation
-mv fic fire ~/.local/bin/
+mv fic fire fic-lsp ~/.local/bin/
 
 # Verify installation — fic and fire share one toolchain version
 fic --version
@@ -209,6 +210,20 @@ published at <a href="https://fiducia-lang.github.io/docs/manual">fiducia-lang.g
 <p>ℹ️ <code>cargo install fic fire</code> will become available once the project
 is published to crates.io after the language design stabilises.</p>
 </blockquote>
+<h2 id="editor-support"><a class="header" href="#editor-support">Editor support</a></h2>
+<p>The VS Code extension (also for Cursor) highlights <code>.fis</code> and <code>.fi</code>
+files, marks syntax errors and shows hover information. It runs
+<code>fic-lsp</code>, from the tarball above, as its language server.</p>
+<pre><code class="language-bash">curl -fsSL -o fiducia.vsix \
+  https://fiducia-lang.github.io/releases/v&lt;version&gt;/fiducia-&lt;version&gt;.vsix
+code --install-extension fiducia.vsix
+</code></pre>
+<p>If <code>fic-lsp</code> is not on your <code>PATH</code>, set its location in the editor’s
+settings:</p>
+<pre><code class="language-json">{ "fiducia.serverPath": "/path/to/fic-lsp" }
+</code></pre>
+<p>Resolution and type errors are not shown in the editor yet; <code>fic --check</code>
+and <code>fire build</code> report them.</p>
 <h2 id="building-from-source"><a class="header" href="#building-from-source">Building from source</a></h2>
 <blockquote>
 <p>ℹ️ The source repository is private while the language is under
@@ -219,6 +234,7 @@ access.</p>
 cd fic
 cargo install --path .       # fic
 cargo install --path fire    # fire
+cargo install --path fic-lsp # fic-lsp
 </code></pre>
 <p>The repository also provides a Nix flake (<code>nix develop</code>) that supplies
 the full toolchain — Rust, the Microkit SDK, and the cross-compiler —
@@ -231,10 +247,10 @@ bare-metal cross-compiler.</p>
 <h3 id="microkit-sdk"><a class="header" href="#microkit-sdk">Microkit SDK</a></h3>
 <pre><code class="language-bash"># macOS (Apple Silicon):
 curl -fsSL -o microkit-sdk.tar.gz \
-  https://github.com/seL4/microkit/releases/download/2.2.0/microkit-sdk-2.2.0-macos-aarch64.tar.gz
+  https://github.com/seL4/microkit/releases/download/2.3.0/microkit-sdk-2.3.0-macos-aarch64.tar.gz
 # Linux (x86-64):
 curl -fsSL -o microkit-sdk.tar.gz \
-  https://github.com/seL4/microkit/releases/download/2.2.0/microkit-sdk-2.2.0-linux-x86-64.tar.gz
+  https://github.com/seL4/microkit/releases/download/2.3.0/microkit-sdk-2.3.0-linux-x86-64.tar.gz
 
 tar -xzf microkit-sdk.tar.gz
 </code></pre>
@@ -255,8 +271,15 @@ tar -xJf arm-gnu-toolchain.tar.xz
 <p><code>fire verify</code> runs the <a href="https://uppaal.org/">UPPAAL</a> command-line
 model checker <code>verifyta</code>. Download UPPAAL and either put <code>verifyta</code>
 on your <code>PATH</code>, set <code>$VERIFYTA</code>, or point to it from
-<a href="fire-toml.html#verify--formal-verification"><code>fire.toml</code></a>.
+<a href="fire-toml.html#verifymodel_checker--the-model-checker"><code>fire.toml</code></a>.
 UPPAAL requires a (free academic) licence.</p>
+<h3 id="frama-c-and-pancake2viper-for-contracts"><a class="header" href="#frama-c-and-pancake2viper-for-contracts">Frama-C and pancake2viper (for contracts)</a></h3>
+<p>A project whose imports carry contracts needs a tool to read and prove
+them. For C with ACSL annotations, that is <a href="https://frama-c.com/">Frama-C</a>
+33 with its WP plugin, and the <code>fic-acsl</code> plugin from the repository,
+which <code>fic</code> uses to read the contracts. For Pancake, <code>fire verify</code> runs
+<code>pancake2viper</code>, and building the image needs the CakeML compiler
+<code>cake</code>. The Nix flake provides all of them.</p>
 <h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
 <div class="table-wrapper">
 <table>
@@ -264,11 +287,15 @@ UPPAAL requires a (free academic) licence.</p>
 <tr><th>Variable</th><th>Needed by</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>MICROKIT_SDK</code></td><td><code>fire build</code> / <code>run</code>, <code>fic</code> image generation</td><td>Path to the extracted Microkit SDK. Fallback when <code>[run.target] sdk</code> is not set.</td></tr>
-<tr><td><code>GCC</code></td><td><code>fire build</code> / <code>run</code>, <code>fic</code> image generation</td><td>Full path to the AArch64 cross-compiler binary. Fallback for <code>[run.target] gcc</code>.</td></tr>
-<tr><td><code>LD</code></td><td><code>fire build</code> / <code>run</code>, <code>fic</code> image generation</td><td>Full path to the AArch64 cross-linker binary. Fallback for <code>[run.target] ld</code>.</td></tr>
-<tr><td><code>VERIFYTA</code></td><td><code>fire verify</code></td><td>Path to the <code>verifyta</code> binary (falls back to <code>PATH</code>).</td></tr>
-<tr><td><code>FIRE_FIC</code></td><td><code>fire</code></td><td>Override the path to the <code>fic</code> binary.</td></tr>
+<tr><td><code>MICROKIT_SDK</code></td><td>image builds</td><td>Path to the extracted Microkit SDK. Fallback for <code>[run.target] sdk</code>.</td></tr>
+<tr><td><code>GCC</code></td><td>image builds</td><td>AArch64 cross-compiler binary. Fallback for <code>[run.target] gcc</code>.</td></tr>
+<tr><td><code>LD</code></td><td>image builds</td><td>AArch64 cross-linker binary. Fallback for <code>[run.target] ld</code>.</td></tr>
+<tr><td><code>CAKE_ML</code></td><td>image builds with <code>.pnk</code> imports</td><td>The CakeML compiler binary.</td></tr>
+<tr><td><code>FRAMAC</code></td><td><code>fic</code> and <code>fire verify</code>, with ACSL imports</td><td>The <code>frama-c</code> binary (falls back to <code>PATH</code>).</td></tr>
+<tr><td><code>FIC_ACSL_PLUGIN</code></td><td><code>fic</code>, with ACSL imports</td><td>A <code>fic-acsl</code> plugin build that is not installed into Frama-C.</td></tr>
+<tr><td><code>VERIFYTA</code></td><td><code>fire verify</code></td><td>The <code>verifyta</code> binary (falls back to <code>PATH</code>).</td></tr>
+<tr><td><code>PANCAKE2VIPER</code></td><td><code>fire verify</code>, with <code>.pnk</code> imports</td><td>The <code>pancake2viper</code> binary (falls back to <code>PATH</code>).</td></tr>
+<tr><td><code>FIRE_FIC</code></td><td><code>fire</code></td><td>The <code>fic</code> binary <code>fire</code> runs (falls back to the <code>fic</code> beside <code>fire</code>, then <code>PATH</code>).</td></tr>
 </tbody>
 </table>
 </div>
@@ -277,7 +304,7 @@ export MICROKIT_SDK=&lt;path-to-microkit-sdk&gt;
 export GCC=&lt;path-to-arm-gnu-toolchain&gt;/bin/aarch64-none-elf-gcc
 export LD=&lt;path-to-arm-gnu-toolchain&gt;/bin/aarch64-none-elf-ld
 </code></pre>
-<p>Projects can instead pin these per-project in
+<p>A project can instead pin the first three in
 <a href="fire-toml.html#runtarget--board-and-toolchain"><code>fire.toml</code>’s <code>[run.target]</code> section</a>.</p>
 
                     </main>

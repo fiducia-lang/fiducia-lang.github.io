@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27e9d98d.js";
+            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -181,16 +181,11 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="verifying-fire-verify"><a class="header" href="#verifying-fire-verify">Verifying: <code>fire verify</code></a></h1>
-<p><code>fire verify</code> checks a project’s process-algebra model with the
-<a href="https://uppaal.org/">UPPAAL</a> model checker. It runs <code>verifyta</code> on the UPPAAL
-XTA model <code>fire build</code> wrote (every PD’s processes as timed automata, channels
-as synchronisations) and pretty-prints per-query PASS / FAIL results. It only
-verifies: it never emits or rewrites the model, so run <code>fire build</code> first.</p>
-<blockquote>
-<p>🚧 The <code>verify</code> subcommand lands with
-<a href="https://github.com/fiducia-lang/fic/pull/174">PR #174</a>. On earlier
-versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p>
-</blockquote>
+<p><code>fire verify</code> checks the UPPAAL model <code>fire build</code> wrote against the
+project’s queries, with UPPAAL’s <code>verifyta</code>. The model assumes the
+contracts of the imported code, so it proves those first. It never
+writes the model: run <code>fire build</code> first, and again after a source
+changes.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <pre><code class="language-bash">fire verify [PROJECT_DIR] [-q &lt;QUERY_FILE&gt;] [-o &lt;OUTPUT_FILE&gt;]
 </code></pre>
@@ -200,99 +195,70 @@ versions the same behaviour is <code>fic &lt;PROJECT_DIR&gt; --verify</code>.</p
 <tr><th>Argument / flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>PROJECT_DIR</code></td><td>Directory containing <code>fire.toml</code>. Defaults to the current directory.</td></tr>
-<tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>Query file to check (defaults to every hand-written <code>.q</code> in <code>&lt;src&gt;/spec/</code>).</td></tr>
-<tr><td><code>-o, --output &lt;OUTPUT_FILE&gt;</code></td><td>Save the verification report as plain text (the same content printed to stderr, without ANSI color). Written even when the run fails.</td></tr>
+<tr><td><code>PROJECT_DIR</code></td><td>The directory holding <code>fire.toml</code>. Defaults to the current directory.</td></tr>
+<tr><td><code>-q, --query &lt;QUERY_FILE&gt;</code></td><td>One query file, instead of every <code>.q</code> in <code>&lt;src&gt;/spec/</code>.</td></tr>
+<tr><td><code>-o, --output &lt;OUTPUT_FILE&gt;</code></td><td>Also save the report as plain text, even when the run fails.</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="writing-queries"><a class="header" href="#writing-queries">Writing queries</a></h2>
-<p>Queries are <strong>user-authored</strong> — which properties matter is
-application-dependent, so <code>fic</code> emits only the model and you state the
-properties. Write a <a href="https://docs.uppaal.org/language-reference/requirements-specification/">UPPAAL query file</a>
-in <code>&lt;src&gt;/spec/</code> (it is part of the project, so commit it; <code>fire clean</code>
-never touches it). <code>fire verify</code> runs every <code>.q</code> there, against the model
-<code>fire build</code> wrote. The customary first line is deadlock-freedom:</p>
-<pre><code class="language-text">/* the system never gets permanently stuck */
-A[] not deadlock
-
-/* the diode can complete a forward */
-E&lt;&gt; dd.L1
-</code></pre>
-<p>Queries reference the process <em>instance</em> names from the emitted model
-(the PD names, snake_case) and template location names; a PD’s variables
-keep their names and types, a struct’s field as <code>pd.var.field</code> — inspect
-<code>build/&lt;name&gt;.xta</code> (or open the pretty-printed <code>build/&lt;name&gt;.xml</code> from
-<code>fire build --pretty</code> in the UPPAAL GUI) to find them.</p>
 <h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
 <ol>
 <li>Reads <code>fire.toml</code> and resolves the source directory.</li>
-<li>Reads the model <code>fire build</code> wrote, <code>build/&lt;name&gt;.xta</code> (the UPPAAL
-model, as text). <code>fire verify</code> never emits or rewrites it: run
-<code>fire build</code> first, and again after a source changes. The pretty-printed XML
-(<code>--pretty</code>) is only for the GUI and is never read here.</li>
-<li>Locates the query files: the <code>-q</code> flag, or every <code>.q</code> in <code>&lt;src&gt;/spec/</code>.
-Errors if there are none.</li>
-<li>Locates <code>verifyta</code> — <code>[verify.model_checker] path</code> → <code>$VERIFYTA</code> → <code>PATH</code> —
-and runs it with <code>-t 0</code> (request a counterexample / witness trace),
-the model, each query file, and any <code>[verify.model_checker] args</code>.</li>
-<li>Parses the output and prints one PASS / FAIL line per query.
-Exits non-zero if any query fails, or if <code>verifyta</code> answered fewer
-queries than a file holds (a refused licence, a crash).</li>
+<li>Proves the imported code’s contracts with the
+<a href="fire-toml.html#verifycode_verifier--code-verifiers">code verifier</a>
+for each language that has any: Frama-C for annotated C, <code>pancake2viper</code>
+for Pancake. Files without contracts have nothing to prove.</li>
+<li>Reads <code>build/&lt;name&gt;.xta</code>. The <code>--pretty</code> XML is for the GUI only.</li>
+<li>Runs <code>verifyta</code> (<code>[verify.model_checker] path</code>, then <code>$VERIFYTA</code>, then
+<code>PATH</code>) on the model and each query file, asking for a trace.</li>
+<li>Prints one PASS / FAIL line per query, and exits non-zero if any
+check fails, or if <code>verifyta</code> answered fewer queries than a file holds
+(a refused licence, a crash).</li>
 </ol>
-<h2 id="reading-the-output"><a class="header" href="#reading-the-output">Reading the output</a></h2>
-<pre><code class="language-console">$ fire verify demo/datadiode/
-  ✓ Running verifyta: /opt/uppaal/bin/verifyta
-
-  A[] not deadlock                          PASS
-  E&lt;&gt; EthOuter.Handle_eth                   PASS
-  ...
-</code></pre>
-<p>A failing query prints <code>FAIL</code> and, when verifyta produces one, the
-counterexample trace:</p>
-<pre><code class="language-console">  A[] not deadlock                          FAIL
-    Trace (12 steps):
-      pd0.State0 → pd0.State1
-      ...
-      ↯ stuck at: pd0.State1, pd1.State2, ...
-</code></pre>
-<p>The <code>↯ stuck at</code> line lists each automaton’s location in the deadlocked
-state — usually enough to spot the circular wait. A <code>FAIL</code> on a
-reachability query with <em>(property unreachable — no counterexample
-trace)</em> means the named location can never be entered.</p>
+<h2 id="writing-queries"><a class="header" href="#writing-queries">Writing queries</a></h2>
+<p>Which properties matter depends on the application, so <code>fic</code> emits only
+the model and you write the queries: a
+<a href="https://docs.uppaal.org/language-reference/requirements-specification/">UPPAAL query file</a>
+in <code>&lt;src&gt;/spec/</code>, part of the project’s sources.</p>
+<p>Queries name the process <em>instances</em> of the model (the PD names) and
+their locations; a PD’s variables keep their names, and a struct’s field
+is <code>pd.var.field</code>. Read <code>build/&lt;name&gt;.xta</code>, or open the <code>--pretty</code> XML in
+the UPPAAL GUI, to find them.</p>
 <h2 id="worked-example-ping-pong"><a class="header" href="#worked-example-ping-pong">Worked example: ping-pong</a></h2>
-<p><code>demo/pingpong/</code> ships two PDs (<code>ping</code>/<code>pong</code>) that bounce a bounded
-notification <code>ROUNDS</code> times over a genuinely cyclic channel
-(<code>ping &lt;-&gt; pong</code>), then go quiescent — a real case where WF2’s
-over-approximation would reject a topology that’s actually
-deadlock-free. Its hand-written <code>pingpong.q</code> states that, verified
-against the real emitted model (see <code>tests/uppaal/pingpong/expected.xta</code>
-for a known-good snapshot):</p>
-<pre><code class="language-bash">fire verify demo/pingpong/
-#   A[] (deadlock imply ping.rounds == ROUNDS)   PASS
-#   E&lt;&gt; ping.rounds == ROUNDS                    PASS
-#   A[] ping.rounds &lt;= ROUNDS                    PASS
-#   E&lt;&gt; pong.L1                                  PASS
+<p><code>demo/pingpong/</code> has two PDs, <code>ping</code> and <code>pong</code>, which bounce a
+notification <code>ROUNDS</code> times over a cyclic channel (<code>ping &lt;-&gt; pong</code>) and
+then stop. WF2 would reject the cycle, so the manifest sets
+<code>allow_wf2_cycles</code> and <code>spec/pingpong.q</code> decides deadlock freedom
+instead:</p>
+<pre><code class="language-console">$ fire verify demo/pingpong/
+fire: verifying pingpong
+  ✓ Running frama-c: /usr/local/bin/frama-c
+
+  ACSL: pingpong.c                                         PASS
+  ✓ Running verifyta: /opt/uppaal/bin/verifyta
+  ✓ Query file: demo/pingpong/spec/pingpong.q
+
+  Q1  A[] (deadlock imply ping.rounds == ROUNDS)           PASS
+  Q2  E&lt;&gt; ping.rounds == ROUNDS                            PASS
+  Q3  A[] ping.rounds &lt;= ROUNDS                            PASS
+  Q4  E&lt;&gt; pong.L2                                          PASS
+  Q5  A&lt;&gt; ping.rounds == ROUNDS                            PASS
 </code></pre>
-<p>The first query is deadlock-freedom <em>modulo intended termination</em>: the
-only reachable quiescent state is the completed rally, so a blanket
-<code>A[] not deadlock</code> would itself report a false “deadlock” at the
-correct terminal state — see the header comment in
-<code>demo/pingpong/pingpong.q</code> for the full reasoning.</p>
-<h2 id="ad-hoc-queries"><a class="header" href="#ad-hoc-queries">Ad-hoc queries</a></h2>
-<p>Pass a different query file for a one-off check — a per-invocation
-input, like a <code>cargo test</code> filter:</p>
-<pre><code class="language-bash">fire verify demo/datadiode -q queries/liveness.q
+<p>Q1 is deadlock freedom up to the intended end: the finished rally is a
+state where both PDs wait, so a plain <code>A[] not deadlock</code> would fail on it.
+Q5 says the rally finishes on every path.</p>
+<h2 id="reading-a-failure"><a class="header" href="#reading-a-failure">Reading a failure</a></h2>
+<p>A failing query prints <code>FAIL</code> and, when <code>verifyta</code> produces one, the
+trace:</p>
+<pre><code class="language-console">  Q1  A[] not deadlock                                     FAIL
+    Trace (12 steps):
+      ...
+      ↯ stuck at: ping.L1, pong.L2
 </code></pre>
-<h2 id="relationship-to-the-wf2-check"><a class="header" href="#relationship-to-the-wf2-check">Relationship to the WF2 check</a></h2>
-<p><code>fic</code> always runs <strong>WF2</strong>, a structural acyclicity check on the
-channel dependency graph, before emitting a deployable image. WF2 is
-an over-approximation: it rejects every cyclic topology, including
-systems that are deadlock-free under a fair scheduler (<code>demo/pingpong</code>’s
-<code>ping &lt;-&gt; pong</code>, for instance). When <code>fire verify</code> establishes
-deadlock-freedom, you can build such systems anyway with
-<code>fic --allow-wf2-cycles</code> — see the
-<a href="fic-reference.html#--allow-wf2-cycles"><code>fic</code> reference</a>.</p>
+<p>The <code>↯ stuck at</code> line gives each automaton’s location in the deadlocked
+state, usually enough to spot the circular wait. A reachability query
+that fails with <em>(property unreachable — no counterexample trace)</em> names
+a state that can never be entered.</p>
 
                     </main>
 

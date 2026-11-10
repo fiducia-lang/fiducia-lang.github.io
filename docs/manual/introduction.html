@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27e9d98d.js";
+            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -182,64 +182,54 @@
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p><strong>Fiducia</strong> is a language for building embedded applications on
-<a href="https://github.com/seL4/microkit">seL4 Microkit</a> systems. A Fiducia
-project describes a system of <em>protection domains</em> (PDs) connected by
-<em>channels</em>, each PD implemented by external C / Rust code and modelled
-by a CSP-style process algebra. From this single description the
-toolchain produces both a bootable Microkit image and a formal model
-that can be checked for deadlock-freedom.</p>
-<p>This manual is the task-oriented guide to the toolchain. For the
-syntax and semantics of the language itself, see the
-<a href="https://fiducia-lang.github.io/docs/lang-spec">Fiducia Language Reference</a>
-— it stays focused on <code>.fis</code> / <code>.fi</code> syntax, while this manual covers
-installing, configuring, running, and verifying projects day-to-day.</p>
+<a href="https://github.com/seL4/microkit">seL4 Microkit</a> systems. A project
+describes a system of <em>protection domains</em> (PDs) connected by <em>channels</em>.
+Each PD’s behaviour is a CSP-style process, which calls imported C or
+Pancake code. From this one description the toolchain builds a bootable
+Microkit image, and a UPPAAL model to check the system against.</p>
+<p>This manual covers installing, configuring, building, running and
+verifying projects. The syntax and semantics of the language are in the
+<a href="https://fiducia-lang.github.io/docs/lang-spec">Fiducia Language Reference</a>.</p>
 <blockquote>
-<p>🚧 Fiducia is under active development. The language and tools are
-not yet complete; interfaces described here may change between
-releases.</p>
+<p>🚧 Fiducia is under active development; interfaces described here may
+change between releases.</p>
 </blockquote>
-<h2 id="the-toolchain-at-a-glance"><a class="header" href="#the-toolchain-at-a-glance">The toolchain at a glance</a></h2>
+<h2 id="the-toolchain"><a class="header" href="#the-toolchain">The toolchain</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Tool</th><th>Role</th></tr>
 </thead>
 <tbody>
-<tr><td><code>fic</code></td><td>The compiler: parses, validates, and type-checks a project; emits ASTs, SDF XML, topology graphs, UPPAAL models, or a bootable Microkit image.</td></tr>
-<tr><td><code>fire</code></td><td>The project runner: reads <code>fire.toml</code> and drives <code>fic</code> — <code>fire build</code> produces the image, <code>fire run</code> builds and launches it on QEMU or hardware, <code>fire verify</code> model-checks the UPPAAL model with <code>verifyta</code>.</td></tr>
+<tr><td><code>fic</code></td><td>The compiler: checks a project and builds its Microkit image, or emits an intermediate form instead (see <a href="fic-reference.html">the <code>fic</code> reference</a>).</td></tr>
+<tr><td><code>fire</code></td><td>The project runner: reads <code>fire.toml</code> and drives <code>fic</code>. <code>fire build</code> writes the image and the UPPAAL model, <code>fire run</code> launches the image, <code>fire verify</code> checks the model, <code>fire clean</code> removes what was generated.</td></tr>
+<tr><td><code>fic-lsp</code></td><td>The language server the editor extension runs.</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="a-fiducia-project"><a class="header" href="#a-fiducia-project">A Fiducia project</a></h2>
-<p>A project is a directory containing:</p>
+<p>A project is a directory holding:</p>
 <ul>
-<li>one <strong><code>.fis</code></strong> file — the <em>system description</em>: memory regions,
+<li>one <strong><code>.fis</code></strong> file, the <em>system description</em>: memory regions,
 protection domains, channels, and the system composition;</li>
-<li>one <strong><code>.fi</code></strong> file <em>per protection domain</em> — the PD implementation:
-imports of C sources, memory mappings, event declarations, and
-process definitions (the file <code>eth_outer.fi</code> implements the PD named
-<code>eth_outer</code>);</li>
-<li>the imported <strong><code>.c</code></strong> implementation files (<code>.rs</code> imports parse but
-aren’t runnable yet — the C backend rejects them; see <code>--emit=c</code>);</li>
-<li>a <strong><code>fire.toml</code></strong> manifest telling <code>fire</code> how to build and run it
-(see <a href="fire-toml.html">The Project Manifest</a>).</li>
+<li>one <strong><code>.fi</code></strong> file per protection domain, its implementation: imports,
+memory mappings, events and processes. The file <code>eth_outer.fi</code>
+implements the PD named <code>eth_outer</code>;</li>
+<li>the imported files: C (<code>.c</code>, <code>.h</code>) and Pancake (<code>.pnk</code>);</li>
+<li><strong><code>spec/*.q</code></strong>, the queries <a href="fire-verify.html"><code>fire verify</code></a> checks;</li>
+<li><strong><code>fire.toml</code></strong>, the <a href="fire-toml.html">manifest</a>.</li>
 </ul>
-<p>The compiler pipeline is:</p>
-<pre><code class="language-text">discover → parse → resolve → validate → typecheck → WF2 → emit
-</code></pre>
-<p>where <em>typecheck</em> enforces information-flow security (no High→Low
-leaks via channels) and <em>WF2</em> checks the channel dependency graph for
-cycles (a structural deadlock-freedom condition).</p>
+<p><code>demo/ring/</code> in the repository is the smallest complete project (one
+buffered channel), <code>demo/pingpong/</code> adds C contracts and verification,
+and <code>demo/datadiode/</code> is a larger one.</p>
 <h2 id="where-to-go-next"><a class="header" href="#where-to-go-next">Where to go next</a></h2>
 <ol>
 <li><a href="installation.html">Install the tools</a>.</li>
-<li><a href="fire-toml.html">Write or copy a <code>fire.toml</code></a>.</li>
-<li><a href="fire-run.html">Build and run on QEMU</a> — the
-<code>demo/datadiode/</code> project in the repository is a complete worked
-example.</li>
-<li><a href="fire-verify.html">Verify deadlock-freedom</a>.</li>
-<li>Consult the <a href="fic-reference.html"><code>fic</code> reference</a> for the individual
-compiler emit modes.</li>
+<li><a href="fire-toml.html">Write a <code>fire.toml</code></a>.</li>
+<li><a href="fire-run.html">Build and run on QEMU</a>.</li>
+<li><a href="fire-verify.html">Verify the model</a>.</li>
+<li>Consult the <a href="fic-reference.html"><code>fic</code> reference</a> for the compiler’s
+checks and emit formats.</li>
 </ol>
 
                     </main>

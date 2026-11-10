@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27e9d98d.js";
+            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -181,26 +181,18 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="the-project-manifest-firetoml"><a class="header" href="#the-project-manifest-firetoml">The Project Manifest (<code>fire.toml</code>)</a></h1>
-<p><code>fire</code> reads a <code>fire.toml</code> manifest from the project directory.
-It names the project, locates the sources, and configures how
-<code>fire build</code> / <code>fire run</code> build and execute the image and how <code>fire verify</code> invokes
-the model checker.</p>
-<blockquote>
-<p>🚧 This page documents the manifest schema introduced with the
-<code>fire build</code> / <code>fire run</code> / <code>fire verify</code> subcommands
-(<a href="https://github.com/fiducia-lang/fic/pull/174">PR #174</a>). Until
-that lands on a release, the previous <code>[target]</code> / <code>[qemu]</code> layout
-applies — see the <code>CHEATSHEET.md</code> of your installed version.</p>
-</blockquote>
-<h2 id="complete-example"><a class="header" href="#complete-example">Complete example</a></h2>
+<p><code>fire</code> reads <code>fire.toml</code> from the project directory. It names the
+project, locates the sources, and says how <code>fire build</code> and <code>fire run</code>
+build and launch the image and how <code>fire verify</code> runs its verifiers.</p>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p><code>demo/pingpong/fire.toml</code>:</p>
 <pre><code class="language-toml">[project]
-name = "datadiode"     # output filename stem: build/datadiode.img / .xta
-src  = "."             # directory with the .fis/.fi files, relative to this file
+name = "pingpong"      # output stem: build/pingpong.img, build/pingpong.xta
+src  = "."             # the .fis/.fi files, relative to this file
 
 [run]
-mode = "qemu"          # qemu | hardware (hardware is not yet implemented)
-# Arguments for qemu-system-aarch64; {img} is substituted with the
-# absolute path to the built image at runtime.
+mode = "qemu"
+# {img}: the built image.
 args = [
     "-machine", "virt,virtualization=on",
     "-cpu",     "cortex-a53",
@@ -211,18 +203,18 @@ args = [
 ]
 
 [run.target]
-board   = "qemu_virt_aarch64"   # Microkit board identifier
-profile = "debug"               # debug | release
-# sdk / gcc / ld — optional, fall back to $MICROKIT_SDK / $GCC / $LD
-# allow_wf2_cycles = true       # skip WF2 (else a cycle is a warning) when `fire verify` covers deadlock-freedom
+board   = "qemu_virt_aarch64"
+profile = "debug"
+# sdk, gcc, ld default to $MICROKIT_SDK, $GCC, $LD.
+# ping&lt;-&gt;pong is a 2-cycle; pingpong.q decides deadlock freedom instead.
+allow_wf2_cycles = true
 
 [verify.model_checker]
-mode = "verifyta"               # verification engine
-# path / args — optional; path falls back to $VERIFYTA / PATH
+mode = "verifyta"  # path defaults to $VERIFYTA, then PATH
 
-# [[verify.code_verifier]]      # optional — one entry per foreign language
-# language = "pnk"          # only needed by projects with .pnk imports
-# path / args — optional; path falls back to $PANCAKE2VIPER / PATH
+[[verify.code_verifier]]
+language = "c"  # path defaults to $FRAMAC, then PATH
+args = ["-wp-rte", "-wp-prover", "qed"]
 </code></pre>
 <h2 id="project--identity-and-sources"><a class="header" href="#project--identity-and-sources"><code>[project]</code> — identity and sources</a></h2>
 <div class="table-wrapper">
@@ -231,20 +223,20 @@ mode = "verifyta"               # verification engine
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>name</code></td><td>yes</td><td>Short name used as the output filename stem: <code>fire build</code> / <code>fire run</code> write <code>build/&lt;name&gt;.img</code>, <code>fire build</code> writes <code>build/&lt;name&gt;.xta</code>, which <code>fire verify</code> reads with the hand-written queries in <code>&lt;src&gt;/spec/</code>.</td></tr>
-<tr><td><code>src</code></td><td>yes</td><td>Directory containing the <code>.fis</code> / <code>.fi</code> files, relative to <code>fire.toml</code>. Build artifacts go to <code>&lt;src&gt;/build/</code>.</td></tr>
+<tr><td><code>name</code></td><td>yes</td><td>The output filename stem: <code>build/&lt;name&gt;.img</code> and <code>build/&lt;name&gt;.xta</code>.</td></tr>
+<tr><td><code>src</code></td><td>yes</td><td>The directory holding the <code>.fis</code> / <code>.fi</code> files, relative to <code>fire.toml</code>. Generated files go to <code>&lt;src&gt;/build/</code> and <code>&lt;src&gt;/include/gen/</code>; queries live in <code>&lt;src&gt;/spec/</code>.</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="run--execution-mode-and-arguments"><a class="header" href="#run--execution-mode-and-arguments"><code>[run]</code> — execution mode and arguments</a></h2>
+<h2 id="run--how-to-launch"><a class="header" href="#run--how-to-launch"><code>[run]</code> — how to launch</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>mode</code></td><td>yes</td><td><code>qemu</code> or <code>hardware</code>. Hardware deployment is not yet implemented.</td></tr>
-<tr><td><code>args</code></td><td>yes</td><td>Arguments passed verbatim to the executor (<code>qemu-system-aarch64</code> in QEMU mode). The placeholder <code>{img}</code> is substituted with the absolute path to the built <code>.img</code>.</td></tr>
+<tr><td><code>mode</code></td><td>yes</td><td><code>qemu</code> or <code>hardware</code>. Hardware is not implemented yet.</td></tr>
+<tr><td><code>args</code></td><td>no</td><td>Arguments passed to <code>qemu-system-aarch64</code>. <code>{img}</code> is replaced by the image’s absolute path.</td></tr>
 </tbody>
 </table>
 </div>
@@ -255,57 +247,46 @@ mode = "verifyta"               # verification engine
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>board</code></td><td>yes</td><td>Microkit board identifier, e.g. <code>qemu_virt_aarch64</code>, <code>kria_k26</code>. Must exist in the SDK’s <code>board/</code> directory.</td></tr>
+<tr><td><code>board</code></td><td>yes</td><td>Microkit board, e.g. <code>qemu_virt_aarch64</code>: a directory under the SDK’s <code>board/</code>.</td></tr>
 <tr><td><code>profile</code></td><td>yes</td><td>Microkit build profile: <code>debug</code> or <code>release</code>.</td></tr>
-<tr><td><code>sdk</code></td><td>no</td><td>Path to the Microkit SDK root. Falls back to <code>$MICROKIT_SDK</code>.</td></tr>
-<tr><td><code>gcc</code></td><td>no</td><td>AArch64 cross-compiler binary. Falls back to <code>$GCC</code>.</td></tr>
-<tr><td><code>ld</code></td><td>no</td><td>AArch64 cross-linker binary. Falls back to <code>$LD</code>.</td></tr>
-<tr><td><code>allow_wf2_cycles</code></td><td>no</td><td>Pass <code>--allow-wf2-cycles</code> to <code>fic</code>: skip the structural WF2 acyclicity check (without the flag a cycle is a warning, and the build goes on). Use when deadlock-freedom is established by <a href="fire-verify.html"><code>fire verify</code></a> instead — WF2 rejects cyclic topologies even when they are deadlock-free under a fair scheduler. Default <code>false</code>.</td></tr>
+<tr><td><code>sdk</code></td><td>no</td><td>The Microkit SDK. Falls back to <code>$MICROKIT_SDK</code>.</td></tr>
+<tr><td><code>gcc</code></td><td>no</td><td>The AArch64 cross-compiler. Falls back to <code>$GCC</code>.</td></tr>
+<tr><td><code>ld</code></td><td>no</td><td>The AArch64 cross-linker. Falls back to <code>$LD</code>.</td></tr>
+<tr><td><code>allow_wf2_cycles</code></td><td>no</td><td>Pass <a href="fic-reference.html#--allow-wf2-cycles"><code>--allow-wf2-cycles</code></a> to <code>fic</code>. Default <code>false</code>.</td></tr>
 </tbody>
 </table>
 </div>
-<p>When <code>sdk</code> / <code>gcc</code> / <code>ld</code> are set they are passed to the <code>fic</code> child
-process as environment variables, overriding any values already in
-your environment — useful for pinning a toolchain per project.</p>
+<p><code>sdk</code>, <code>gcc</code> and <code>ld</code>, when set, override the environment for the <code>fic</code>
+that <code>fire</code> runs, which pins a toolchain per project.</p>
 <h2 id="verifymodel_checker--the-model-checker"><a class="header" href="#verifymodel_checker--the-model-checker"><code>[verify.model_checker]</code> — the model checker</a></h2>
-<p>Configures the model checker <a href="fire-verify.html"><code>fire verify</code></a> runs against
-the emitted model.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>mode</code></td><td>yes</td><td>Verification engine. Currently <code>verifyta</code> (UPPAAL); <code>spin</code>, <code>prism</code>, … may follow.</td></tr>
-<tr><td><code>path</code></td><td>no</td><td>Path to the model checker binary. Falls back to <code>$VERIFYTA</code>, then to <code>verifyta</code> on <code>PATH</code>.</td></tr>
-<tr><td><code>args</code></td><td>no</td><td>Extra flags appended after the model and query arguments.</td></tr>
+<tr><td><code>mode</code></td><td>yes</td><td>The model checker. <code>verifyta</code> (UPPAAL) is the only one.</td></tr>
+<tr><td><code>path</code></td><td>no</td><td>The binary. Falls back to <code>$VERIFYTA</code>, then <code>verifyta</code> on <code>PATH</code>.</td></tr>
+<tr><td><code>args</code></td><td>no</td><td>Extra flags, after the model and query arguments.</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="verifycode_verifier--code-verifiers"><a class="header" href="#verifycode_verifier--code-verifiers"><code>[[verify.code_verifier]]</code> — code verifiers</a></h2>
-<p>Optional array of tables, one entry per foreign language with a code
-verifier configured — each proves the contracts the model assumes for that
-language’s imports (e.g. Pancake’s <code>requires</code>/<code>ensures</code>). Absent for a
-project with no such imports.</p>
+<p>One entry per foreign language whose imports carry contracts. The model
+assumes those contracts, so <code>fire verify</code> proves them first, and fails if
+a project has contracts in a language with no entry.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Field</th><th>Required</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>language</code></td><td>yes</td><td>Foreign extension this entry verifies (<code>"pnk"</code> today).</td></tr>
-<tr><td><code>path</code></td><td>no</td><td>Path to the code verifier binary. Falls back to <code>$PANCAKE2VIPER</code>, then <code>pancake2viper</code> on <code>PATH</code>.</td></tr>
-<tr><td><code>args</code></td><td>no</td><td>Extra flags appended after the code verifier’s own arguments.</td></tr>
+<tr><td><code>language</code></td><td>yes</td><td><code>"c"</code>: Frama-C’s WP plugin proves the ACSL. <code>"pnk"</code>: <code>pancake2viper</code> proves the Pancake contracts.</td></tr>
+<tr><td><code>path</code></td><td>no</td><td>The binary. Falls back to <code>$FRAMAC</code> / <code>$PANCAKE2VIPER</code>, then <code>frama-c</code> / <code>pancake2viper</code> on <code>PATH</code>.</td></tr>
+<tr><td><code>args</code></td><td>no</td><td>Extra flags, after the verifier’s own arguments.</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="worked-example"><a class="header" href="#worked-example">Worked example</a></h2>
-<p>The repository’s <code>demo/datadiode/fire.toml</code> is a complete,
-runnable manifest for the data-diode demo — three protection domains
-(<code>eth_outer</code>, <code>dd</code>, <code>eth_inner</code>) built into one image and launched on
-<code>qemu_virt_aarch64</code> with two virtio-net devices, driven from the host
-(<code>demo/datadiode/inject.py</code>) since a foreign-MAC diode needs raw
-frames a NAT can’t deliver.</p>
 
                     </main>
 

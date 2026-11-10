@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-27e9d98d.js";
+            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-47800150.js"></script>
@@ -181,57 +181,54 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="the-fic-compiler"><a class="header" href="#the-fic-compiler">The <code>fic</code> Compiler</a></h1>
-<p><code>fic</code> is the Fiducia compiler. <code>fire</code> drives it for the common
-build-and-run / verify workflows; invoke it directly to check a
-project, build an image with explicit flags, or inspect any
-intermediate representation.</p>
+<p><code>fic</code> is the Fiducia compiler. <code>fire</code> drives it; run it directly to
+check a project, build an image with explicit flags, or inspect an
+intermediate form.</p>
 <pre><code class="language-bash">fic &lt;PROJECT_DIR&gt; --board &lt;BOARD&gt; --build-profile &lt;PROFILE&gt; [-o &lt;IMG&gt;]   # image (default)
-fic &lt;PROJECT_DIR&gt; --check                                               # front-end only
-fic &lt;PROJECT_DIR&gt; --emit=&lt;FORMAT&gt; [-o &lt;PATH&gt;]                           # inspection emits
+fic &lt;PROJECT_DIR&gt; --check                                               # checks only
+fic &lt;PROJECT_DIR&gt; --emit=&lt;FORMAT&gt; [-o &lt;PATH&gt;]                           # an intermediate form
 </code></pre>
-<p><code>PROJECT_DIR</code> is a directory containing exactly one <code>.fis</code> file and
-one <code>.fi</code> file per protection domain (bound by filename: <code>eth_outer.fi</code>
-implements PD <code>eth_outer</code>).</p>
-<p>By default — like <code>rustc</code>, whose default output is a binary — <code>fic</code>
-compiles the project to a bootable Microkit image: it runs the full
-front-end, lowers to SDF, cross-compiles each PD’s C file, patches the
-setvars, and packs the loader, seL4 kernel, and PD ELFs into
-<code>&lt;project&gt;.img</code>. This requires <code>--board</code> / <code>--build-profile</code> and the
-<code>MICROKIT_SDK</code> / <code>GCC</code> / <code>LD</code> environment.</p>
-<p>With <code>--check</code>, <code>fic</code> stops after the front-end — parse, data-layer
-resolution, name resolution, vaddr materialization, information-flow
-typecheck, well-formedness (below) — and reports diagnostics without writing
-any output (the <code>cargo check</code> of Fiducia):</p>
-<pre><code class="language-console">$ fic demo/datadiode/ --check
-  ✓ Parsed 1 system + 3 program files
-  ✓ Resolved data layer (2 structs, 1 consts)
+<p><code>PROJECT_DIR</code> is a <a href="introduction.html#a-fiducia-project">project directory</a>.</p>
+<p>By default <code>fic</code> compiles the project to a bootable Microkit image,
+<code>&lt;project&gt;.img</code> (default output paths are in the project directory and
+named after it): it runs the checks below, generates each PD’s C,
+compiles and links it with the imported code, and packs the loader, the
+seL4 kernel and the PD ELFs into the image. This needs <code>--board</code>,
+<code>--build-profile</code> and the <a href="installation.html#environment-variables">toolchain</a>.</p>
+<p>With <code>--check</code>, <code>fic</code> runs the checks only. It writes nothing but the
+data-layer headers (<code>include/gen/</code>) that a project’s imported code reads:</p>
+<pre><code class="language-console">$ fic demo/ring/ --check
+  ✓ Parsed 1 system + 2 program files + 0 foreign module(s)
   ✓ Resolved names
   ✓ Resolved mapping vaddrs
+  ✓ Built the resolved AST
+  ✓ Built the typed AST
+  ✓ Checked process bodies (tail references)
+  ✓ Bound the kernel entry points of every protection domain
+  ✓ Built the graphs and checked the notified ones (receive-headed, receives at the head only, guarded choices)
   ✓ Type-checked information flow
   ✓ Checked channel dependency acyclicity (WF2)
 </code></pre>
 <h2 id="--emit-formats"><a class="header" href="#--emit-formats"><code>--emit</code> formats</a></h2>
-<p><code>--emit</code> replaces the default image output with an intermediate
-representation:</p>
+<p><code>--emit</code> writes an intermediate form instead of the image:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Format</th><th>Output (default path)</th><th>Description</th></tr>
+<tr><th>Format</th><th>Output (default)</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>rawast</code></td><td>stdout / <code>-o</code></td><td>Parsed AST as JSON, before validation.</td></tr>
-<tr><td><code>ast</code></td><td>stdout / <code>-o</code></td><td>Validated AST as JSON (vaddrs allocated, names resolved).</td></tr>
-<tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>Generated per-PD C state machines plus <code>&lt;pd&gt;_types.h</code>; they include the data layer from <code>&lt;project&gt;/include/gen/types.h</code>, written on every run. No image is built.</td></tr>
-<tr><td><code>sdf</code></td><td><code>&lt;project&gt;.system</code></td><td>SDF IR as XML — debug bridge for Microkit developers.</td></tr>
-<tr><td><code>dot</code></td><td><code>&lt;project&gt;.dot</code></td><td>Graphviz topology graph. Render with <code>dot -Tpng &lt;project&gt;.dot -o topology.png</code>.</td></tr>
-<tr><td><code>xta</code></td><td><code>&lt;project&gt;.xta</code> (<code>&lt;project&gt;.xml</code> with <code>--pretty</code>)</td><td>UPPAAL model: the text verifyta reads, or with <code>--pretty</code> the same model pretty-printed as XML for the UPPAAL GUI (verification uses the <code>.xta</code>). Queries are user-authored — see <a href="fire-verify.html#writing-queries"><code>fire verify</code></a>.</td></tr>
+<tr><td><code>rawast</code></td><td>stdout</td><td>The parsed syntax tree as JSON, before name resolution.</td></tr>
+<tr><td><code>ast</code></td><td>stdout</td><td>The syntax tree as JSON, after the front end’s checks.</td></tr>
+<tr><td><code>rast</code></td><td>stdout</td><td>The resolved tree as JSON: every name an id, vaddrs allocated.</td></tr>
+<tr><td><code>tast</code></td><td>stdout</td><td>The typed tree as JSON: every declaration typed, constants folded.</td></tr>
+<tr><td><code>ccfg</code></td><td>stdout</td><td>The graphs as JSON: per program, one graph per entry point.</td></tr>
+<tr><td><code>c</code></td><td><code>&lt;project&gt;/build/gen/</code></td><td>The generated C, one file per PD; <code>-o</code> names the directory.</td></tr>
+<tr><td><code>dot</code></td><td><code>&lt;project&gt;.dot</code></td><td>The topology as a Graphviz graph: <code>dot -Tpng &lt;project&gt;.dot -o &lt;project&gt;.png</code>.</td></tr>
+<tr><td><code>xta</code></td><td><code>&lt;project&gt;.xta</code></td><td>The UPPAAL model, as the text <code>verifyta</code> reads. With <code>--pretty</code>, the same model as the XML the UPPAAL GUI opens, <code>&lt;project&gt;.xml</code>. Queries are yours to write: see <a href="fire-verify.html#writing-queries"><code>fire verify</code></a>.</td></tr>
 </tbody>
 </table>
 </div>
-<p>The inspection formats (<code>rawast</code>, <code>ast</code>, <code>c</code>, <code>dot</code>) skip the WF2 check —
-they have no deployment target. <code>xta</code> exists precisely to analyse
-cyclic systems, so it also skips WF2; image generation (the default)
-and <code>sdf</code> run it.</p>
+<p>Only <code>--check</code> and the image run WF2.</p>
 <h3 id="well-formedness"><a class="header" href="#well-formedness">Well-formedness</a></h3>
 <p>The Lean model’s flattening theorem assumes the checks below. All but the
 first are <strong>warnings</strong>: a finding is a program the theorem does not cover,
@@ -265,51 +262,38 @@ pair of branches is compared, and a branch need not start with an event:
 <code>[g] e -&gt; P [] [!g] Skip</code> is decided.</p>
 <h2 id="options"><a class="header" href="#options">Options</a></h2>
 <h3 id="--check"><a class="header" href="#--check"><code>--check</code></a></h3>
-<p>Run the front-end only; produce no artifact. Conflicts with <code>--emit</code>.</p>
+<p>Run the checks only. Conflicts with <code>--emit</code>.</p>
 <h3 id="-o---output-path"><a class="header" href="#-o---output-path"><code>-o, --output &lt;PATH&gt;</code></a></h3>
-<p>Override the default output path for the image or the chosen emit mode.</p>
+<p>The output path, instead of the default for the image or the emit format.</p>
 <h3 id="--board-board---build-profile-profile"><a class="header" href="#--board-board---build-profile-profile"><code>--board &lt;BOARD&gt;</code>, <code>--build-profile &lt;PROFILE&gt;</code></a></h3>
-<p>Required for image generation (the default mode): the Microkit board
-identifier (e.g. <code>qemu_virt_aarch64</code>, <code>kria_k26</code>) and build profile
-(<code>debug</code> / <code>release</code>). Must match a directory under
+<p>Required for the image: the Microkit board (e.g. <code>qemu_virt_aarch64</code>)
+and build profile (<code>debug</code> or <code>release</code>), a directory under
 <code>$MICROKIT_SDK/board/</code>.</p>
+<h3 id="--pretty"><a class="header" href="#--pretty"><code>--pretty</code></a></h3>
+<p>With <code>--emit=xta</code>: write the model as the UPPAAL GUI’s XML.</p>
 <h3 id="--allow-wf2-cycles"><a class="header" href="#--allow-wf2-cycles"><code>--allow-wf2-cycles</code></a></h3>
-<p>Skip the WF2 acyclic-channel-dependency check.</p>
-<p>WF2 is a structural over-approximation: it rejects any cyclic channel
-dependency graph, including programs that are deadlock-free under a
-fair scheduler (e.g. the asymmetric dining philosophers, Hoare CSP
-§2.5.4). Use this flag when deadlock-freedom is established by an
-external authority — typically <a href="fire-verify.html"><code>fire verify</code></a> on the
-emitted UPPAAL model.</p>
+<p>Skip the WF2 check. WF2 rejects every cyclic channel dependency graph,
+including systems that are deadlock-free (e.g. the asymmetric dining
+philosophers, Hoare CSP §2.5.4, or <code>demo/pingpong</code>’s <code>ping &lt;-&gt; pong</code>).
+Without the flag, a cycle is a warning and the build goes on. Use it when
+deadlock freedom is established another way, typically by
+<a href="fire-verify.html"><code>fire verify</code></a> on the model.</p>
 <h2 id="language-server"><a class="header" href="#language-server">Language server</a></h2>
 <p>The Language Server Protocol server is a separate binary, <code>fic-lsp</code>
 (analogous to <code>rust-analyzer</code> vs <code>rustc</code>), built from the <code>fic-lsp</code>
 workspace crate and used by the editor integrations under <code>editors/</code>.
-Install it with <code>cargo install --path fic-lsp</code>; it speaks LSP on stdio.</p>
+It ships in the release tarball beside <code>fic</code> and <code>fire</code> (see
+<a href="installation.html#editor-support">Installation</a>); it speaks LSP on stdio.</p>
 <h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Variable</th><th>Needed by</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>MICROKIT_SDK</code></td><td>image generation</td><td>Path to the extracted Microkit SDK.</td></tr>
-<tr><td><code>GCC</code></td><td>image generation</td><td>AArch64 cross-compiler binary.</td></tr>
-<tr><td><code>LD</code></td><td>image generation</td><td>AArch64 cross-linker binary.</td></tr>
-<tr><td><code>RUST_LOG</code></td><td>debugging</td><td>Log verbosity (<code>debug</code>, <code>info</code>, <code>warn</code>).</td></tr>
-<tr><td><code>RUST_BACKTRACE</code></td><td>debugging</td><td>Show backtraces on panic (<code>1</code> or <code>full</code>).</td></tr>
-</tbody>
-</table>
-</div>
+<p>See <a href="installation.html#environment-variables">Installation</a>.</p>
 <h2 id="diagnostics"><a class="header" href="#diagnostics">Diagnostics</a></h2>
-<p>Errors are rendered as annotated source snippets with the offending
-span highlighted — parse errors, duplicate names, undeclared
-references, vaddr misalignment / overlaps, information-flow
-violations, and WF2 cycles all point back to the <code>.fis</code> / <code>.fi</code>
-source location.</p>
+<p>Errors and warnings are rendered as annotated source snippets, pointing
+at the <code>.fis</code> / <code>.fi</code> source: parse errors, duplicate names, undeclared
+references, vaddr misalignment and overlaps, information-flow violations,
+and the well-formedness findings.</p>
 <h2 id="exit-status"><a class="header" href="#exit-status">Exit status</a></h2>
-<p><code>fic</code> exits <code>0</code> on success and non-zero when any pipeline stage
-reports diagnostics, making it safe to use in scripts and CI.</p>
+<p><code>fic</code> exits <code>0</code> on success, warnings included, and non-zero on any
+error, so it is safe to use in scripts and CI.</p>
 
                     </main>
 
