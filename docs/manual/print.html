@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-adcb8b8c.js";
+            window.path_to_searchindex_js = "searchindex-2074a5cc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -1000,7 +1000,7 @@ data-layer headers (<code>include/gen/</code>) that a project’s imported code 
 <p>Only <code>--check</code> and the image run WF2.</p>
 <h3 id="well-formedness"><a class="header" href="#well-formedness">Well-formedness</a></h3>
 <p>The Lean model’s flattening theorem assumes the checks below. All but the
-first are <strong>warnings</strong>: a finding is a program the theorem does not cover,
+tail references and the <code>Sync</code> receives are <strong>warnings</strong>: a finding is a program the theorem does not cover,
 not a rejected one. The receive and choice checks read the graph of the
 process bound to <code>microkit.notified</code>, every process it reaches unfolded;
 <code>Init</code> is not checked.</p>
@@ -1019,6 +1019,7 @@ the <code>bᵢ</code> the other branches’ guards (<code>true</code> when ungua
 <tr><td>Tail references (<code>tailRec</code>)</td><td><strong>Error.</strong> A process references one being lowered in non-tail position.</td></tr>
 <tr><td>Receive-headed <code>notified</code> (<code>recvHeaded</code>)</td><td>The head has a guard or a step that is not a receive, in a <code>notified</code> that receives.</td></tr>
 <tr><td>Receives at the head</td><td>A signal receive or IRQ await outside the head (a buffered receive may be anywhere); two at the head on one channel or IRQ.</td></tr>
+<tr><td><code>Sync</code> receives in <code>protected</code></td><td><strong>Error.</strong> The <code>protected</code> head is not unguarded <code>Sync</code> receives, one per channel; a receive or IRQ await after it; a <code>Sync</code> receive in <code>init</code> or <code>notified</code>.</td></tr>
 <tr><td>Channel dependency (WF2)</td><td>The channels form a cycle; <code>--allow-wf2-cycles</code> skips the check.</td></tr>
 <tr><td>Guarded choices</td><td>Outside the head: an unguarded branch, two branches that can both be enabled, or a state where none is.</td></tr>
 </tbody>
