@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-b9b5fe08.js";
+            window.path_to_searchindex_js = "searchindex-63eaf610.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-47800150.js"></script>
+        <script src="toc-4338b323.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -219,10 +219,12 @@ implements the PD named <code>eth_outer</code>;</li>
 </ul>
 <p><code>demo/ring/</code> in the repository is the smallest complete project (one
 buffered channel), <code>demo/pingpong/</code> adds C contracts and verification,
-and <code>demo/datadiode/</code> is a larger one.</p>
+and <code>demo/datadiode/</code> is a larger one, the subject of the
+<a href="#tutorial-a-data-diode">tutorial</a>.</p>
 <h2 id="where-to-go-next"><a class="header" href="#where-to-go-next">Where to go next</a></h2>
 <ol>
 <li><a href="#installation">Install the tools</a>.</li>
+<li><a href="#tutorial-a-data-diode">Follow the tutorial</a>, a walk through the data diode.</li>
 <li><a href="#the-project-manifest-firetoml">Write a <code>fire.toml</code></a>.</li>
 <li><a href="#building-and-running-fire-build--fire-run">Build and run on QEMU</a>.</li>
 <li><a href="#verifying-fire-verify">Verify the model</a>.</li>
@@ -356,6 +358,332 @@ export LD=&lt;path-to-arm-gnu-toolchain&gt;/bin/aarch64-none-elf-ld
 </code></pre>
 <p>A project can instead pin the first three in
 <a href="#runtarget--board-and-toolchain"><code>fire.toml</code>’s <code>[run.target]</code> section</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="tutorial-a-data-diode"><a class="header" href="#tutorial-a-data-diode">Tutorial: a Data Diode</a></h1>
+<p>This tutorial walks through <code>demo/datadiode/</code>, a complete Fiducia project:
+a network data diode on seL4 Microkit. Ethernet frames enter on an
+untrusted (<code>Low</code>) network, cross one forwarding protection domain and
+leave on a trusted (<code>High</code>) network, and nothing travels back. You read
+the project file by file, in the order the concepts are needed, then build
+it, boot it in QEMU and drive it with real traffic.</p>
+<pre><code class="language-text">host ──virtio──▶ eth_outer ──o2d──▶ dd ──d2i──▶ eth_inner ──virtio──▶ host
+ (untrusted)      (Low NIC)      (diode)       (High NIC)      (trusted)
+</code></pre>
+<p>You need the tools from <a href="#installation">Installation</a>, including its
+prerequisites for building images, QEMU and Python 3. The syntax of each
+construct is in the
+<a href="https://fiducia-lang.github.io/docs/lang-spec">Fiducia Language Reference</a>;
+this page links to it rather than repeat it.</p>
+<h2 id="1-the-project"><a class="header" href="#1-the-project">1. The project</a></h2>
+<pre><code class="language-text">demo/datadiode/
+├── fire.toml        the manifest
+├── datadiode.fis    the system: regions, PDs, channels
+├── eth_outer.fi     the Low NIC's PD
+├── dd.fi            the diode PD
+├── eth_inner.fi     the High NIC's PD
+├── include/         the C headers the .fi files import
+├── src/             their C sources: eth.c, util.c, virtio_net.c
+├── spec/            the queries fire verify checks
+└── inject.py        the host side: sends frames, checks what comes out
+</code></pre>
+<p>Each protection domain (PD) declared in the <code>.fis</code> has a <code>.fi</code> of the same
+name: <code>dd.fi</code> implements the PD <code>dd</code>. A <code>.fi</code> imports C headers; each
+<code>include/x.h</code> is linked with its <code>src/x.c</code>.</p>
+<p><code>fire.toml</code> names the project and says how to run it. Its <code>[run]</code> section
+is the QEMU command line: an AArch64 <code>virt</code> board and two virtio-net NICs
+on UDP sockets, which <code>inject.py</code> talks to. The outer NIC must be the first
+<code>-device</code>. See <a href="#the-project-manifest-firetoml">The Project Manifest</a> for every field.</p>
+<h2 id="2-the-system-description"><a class="header" href="#2-the-system-description">2. The system description</a></h2>
+<p><code>datadiode.fis</code> describes the whole system: what each PD is, what memory
+exists, and how the PDs are connected. It holds no behaviour.</p>
+<h3 id="a-struct-for-the-frame"><a class="header" href="#a-struct-for-the-frame">A struct for the frame</a></h3>
+<pre><code class="language-text">struct Frame {
+    len: uint16;
+    data: uint8[2048];
+}
+</code></pre>
+<p><code>Frame</code> is the value that crosses the diode. A struct declared in the
+<code>.fis</code> is shared by every PD and by the C code: the build writes it to
+<code>include/gen/types.h</code>, which <code>include/eth.h</code> includes, so C sees the same
+<code>struct Frame</code>. See
+<a href="https://fiducia-lang.github.io/docs/lang-spec/system/data-layer.html">Data Layer</a>.</p>
+<h3 id="memory-regions"><a class="header" href="#memory-regions">Memory regions</a></h3>
+<pre><code class="language-text">Low MemoryRegion eth_outer_output(0x200000, 0x200000);
+High MemoryRegion eth_inner_input(0x200000, 0x200000);
+
+MemoryRegion virtio_window(0x1000, 0x1000, 0xa003000);
+
+Low MemoryRegion outer_dma(0x200000, 0x200000);
+High MemoryRegion inner_dma(0x200000, 0x200000);
+</code></pre>
+<p>A region is a size, a page size and, for a device, a physical address.
+<code>virtio_window</code> is the page of QEMU’s virtio-mmio devices where both NICs
+sit, <code>outer_dma</code> and <code>inner_dma</code> hold each NIC’s virtio rings and buffers,
+and the first two back the channels below.</p>
+<p>Each region carries a security label, <code>Low</code> or <code>High</code>. <code>fic</code> checks one
+rule over labels: a mapping of a region is labelled at least as high as the
+region, so <code>High</code> memory is never mapped into a <code>Low</code> context. See
+<a href="https://fiducia-lang.github.io/docs/lang-spec/checks/information-flow.html">Information Flow</a>.
+This check, like the <a href="https://fiducia-lang.github.io/docs/lang-spec/checks/well-formedness.html">well-formedness</a>
+checks, is a placeholder: both are still under research.</p>
+<h3 id="protection-domains"><a class="header" href="#protection-domains">Protection domains</a></h3>
+<pre><code class="language-text">ProtectionDomain eth_outer(99, 79);
+ProtectionDomain dd(150);
+ProtectionDomain eth_inner(199, 78);
+</code></pre>
+<p>A PD is a priority and, optionally, the IRQ it handles. Each NIC’s PD
+takes its device’s interrupt; <code>dd</code> touches no device.</p>
+<h3 id="channels-and-the-buffered-queue"><a class="header" href="#channels-and-the-buffered-queue">Channels and the buffered queue</a></h3>
+<pre><code class="language-text">Chan o2d = eth_outer --&gt; dd via eth_outer_output&lt;Frame&gt;;
+Chan d2i = dd --&gt; eth_inner via eth_inner_input&lt;Frame&gt;;
+
+System = eth_outer ||| dd ||| eth_inner;
+</code></pre>
+<p>A channel connects two PDs. <code>--&gt;</code> makes it one-way: <code>eth_outer</code> sends on
+<code>o2d</code> and <code>dd</code> receives, never the reverse, and no channel runs from
+<code>eth_inner</code> back towards <code>eth_outer</code>. That declared topology is what makes
+the diode one-way.</p>
+<p><code>via eth_outer_output&lt;Frame&gt;</code> makes <code>o2d</code> a <strong>buffered channel</strong>: it
+carries <code>Frame</code> values, queued in the region <code>eth_outer_output</code>, which is
+mapped into both of its PDs. A channel without <code>via</code> carries no value: it
+is a bare Microkit notification.</p>
+<p>The queue is a ring, Lamport’s single-producer single-consumer FIFO:</p>
+<ul>
+<li><strong>Capacity from the region.</strong> An 8-byte header holds the two indices,
+then the slots, packed. <code>o2d</code>’s 2 MiB region of 2050-byte <code>Frame</code>s holds
+⌊(0x200000 − 8) / 2050⌋ = 1022 frames.</li>
+<li><strong>First in, first out.</strong> The receiver takes frames in the order they
+were sent.</li>
+<li><strong>A send never waits.</strong> A send copies the value into the next slot and
+notifies the receiver. If the ring is full, the value is lost and the
+sender goes on.</li>
+<li><strong>A receive waits while the ring is empty.</strong> When the receiver is
+notified, it receives until the ring is empty, so several sends behind
+one notification are all received.</li>
+</ul>
+<p>A diode wants exactly this. The <code>Low</code> side must never wait on the <code>High</code>
+side, and with a lossy ring it cannot: when <code>eth_inner</code> falls behind, <code>d2i</code>
+fills and <code>dd</code> drops frames, and <code>eth_outer</code> and <code>dd</code> carry on. The queue
+holds up to 1022 frames in flight on each hop, so a burst from the network
+does not drop frames as long as the PDs downstream keep up.</p>
+<p><code>System</code> lists the PDs, interleaved. The
+<a href="https://fiducia-lang.github.io/docs/lang-spec/system/channels.html#buffered-channels">Channel Declarations</a>
+reference has the precise rules.</p>
+<h2 id="3-the-diode-ddfi"><a class="header" href="#3-the-diode-ddfi">3. The diode: <code>dd.fi</code></a></h2>
+<p><code>dd</code> is the whole diode, and the smallest PD:</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() {
+    ready -&gt; Skip;
+}
+
+@bind(microkit.notified)
+proc Notified() {
+    o2d?f -&gt; forward -&gt; d2i!f -&gt; Notified();
+}
+
+evt ready: dbg("diode transport ready");
+
+evt forward: dbg("pass o2d -&gt; d2i");
+</code></pre>
+<p>A PD’s behaviour is a set of <em>processes</em>. Microkit calls two entry points
+on every PD, and <code>@bind</code> says which process each runs: <code>microkit.init</code> at
+boot, <code>microkit.notified</code> whenever the PD is notified.</p>
+<p><code>Notified</code> receives a frame from <code>o2d</code> into <code>f</code> (<code>o2d?f</code>), performs the
+event <code>forward</code>, sends <code>f</code> on <code>d2i</code> (<code>d2i!f</code>), and starts again. While
+<code>o2d</code> is empty, <code>o2d?f</code> waits: the PD returns to the kernel until
+<code>eth_outer</code> sends.</p>
+<p>An <code>evt</code> is a named step of computation. Here both events only print with
+<code>dbg</code>, the lines you see on the serial console.</p>
+<h2 id="4-the-low-nic-eth_outerfi"><a class="header" href="#4-the-low-nic-eth_outerfi">4. The Low NIC: <code>eth_outer.fi</code></a></h2>
+<p><code>eth_outer</code> drives a real NIC through C: imports, mappings, state, events,
+then processes.</p>
+<pre><code class="language-text">import "include/eth.h" as eth;
+import "include/util.h" as util;
+import "include/virtio_net.h" as vio;
+
+Low Mapping vwin(virtio_window, 0x2_000_000, "rw", false);
+Low Mapping dma(outer_dma, 0x2_400_000, "rw", false);
+</code></pre>
+<p>An <code>import</code> makes a header’s functions callable as <code>eth.eth_poll()</code>. A
+<code>Mapping</code> puts a region into this PD’s address space, here at fixed
+virtual addresses, read-write and uncached, as device memory must be. A
+mapping’s addresses are readable in the program: <code>dma.paddr</code> below is the
+physical address of <code>outer_dma</code>.</p>
+<p>The PD’s state is a few variables, among them the frame to send:</p>
+<pre><code class="language-text">rx: int;
+kind: int;
+reply_len: uint16;
+frame: Frame;
+nic: int;
+</code></pre>
+<p>Events call into C and update that state:</p>
+<pre><code class="language-text">evt setup: nic = eth.eth_setup(1, dma.paddr);
+
+evt handle_irq: eth.eth_clear_irq();
+
+evt poll: {
+    rx = eth.eth_poll();
+    kind = eth.eth_pkt_kind();
+}
+
+evt stage_forward: {
+    frame = eth.eth_frame();
+    dbg("forward -&gt; o2d");
+}
+
+evt send_frame.|len: uint16|: {
+    eth.eth_send_frame(len);
+    dbg("Packet sent to network len=", len);
+}
+</code></pre>
+<p><code>eth_frame</code> returns a <code>struct Frame</code>, the type the <code>.fis</code> declared.
+<code>send_frame</code> carries a value: <code>send_frame.reply_len</code> performs it with
+<code>len</code> bound to <code>reply_len</code>.</p>
+<p>At boot, <code>Init</code> brings up the NIC and reports whether it came up, with a
+<em>guarded choice</em>: <code>[g] P [] [h] Q</code> runs the branch whose guard holds.</p>
+<pre><code class="language-text">@bind(microkit.init)
+proc Init() {
+    setup -&gt; ReportNic();
+}
+
+proc ReportNic() {
+        [nic &gt;= 0] nic_up -&gt; Skip
+     [] [nic &lt; 0] nic_failed -&gt; Skip;
+}
+</code></pre>
+<p>On each interrupt, <code>Notified</code> handles it and starts again:</p>
+<pre><code class="language-text">@bind(microkit.notified)
+proc Notified() {
+    irq?79 -&gt; HandleRx();
+    Notified();
+}
+
+proc HandleRx() {
+    handle_irq -&gt; Skip;
+    Drain();
+    irq!79 -&gt; Skip;
+}
+
+proc Drain() {
+    poll -&gt; Skip;
+        [rx == 1 &amp;&amp; kind == 1] stage_forward -&gt; o2d!frame -&gt; Drain()
+     [] [rx == 1 &amp;&amp; (kind == 2 || kind == 3)] handle_ping -&gt; send_frame.reply_len -&gt; Drain()
+     [] [rx == 1 &amp;&amp; kind == 0] Drain()
+     default Skip;
+}
+</code></pre>
+<p><code>irq?79</code> waits for the NIC’s interrupt and <code>irq!79</code> acknowledges it;
+<code>P; Q</code> runs <code>P</code>, then <code>Q</code>. <code>Drain</code> reads frames until there are none: a
+frame for another host is copied into <code>frame</code> and sent on <code>o2d</code>, an ARP
+request or ping for this PD is answered on the outer network, anything
+else is dropped, and <code>default</code> ends the loop once no guard holds. The send
+<code>o2d!frame</code> never waits, so a slow <code>dd</code> never stalls the outer NIC.</p>
+<h2 id="5-the-high-nic-eth_innerfi"><a class="header" href="#5-the-high-nic-eth_innerfi">5. The High NIC: <code>eth_inner.fi</code></a></h2>
+<p><code>eth_inner</code> starts like <code>eth_outer</code>, with <code>High</code> mappings of <code>inner_dma</code>.
+Its <code>Notified</code> waits for either of two things:</p>
+<pre><code class="language-text">@bind(microkit.notified)
+proc Notified() {
+        irq?78 -&gt; DrainNic()
+     [] d2i?f -&gt; Deliver(f);
+    Notified();
+}
+
+proc Deliver(f: Frame) {
+    send_frame.f -&gt; Skip;
+}
+</code></pre>
+<p><code>[]</code> without guards is an external choice: the branch whose first event
+happens runs. A frame on <code>d2i</code> is transmitted on the inner network; the
+NIC’s own interrupt is acknowledged, and what the inner network sends is
+dropped. No branch sends anything towards <code>dd</code>.</p>
+<h2 id="6-build"><a class="header" href="#6-build">6. Build</a></h2>
+<pre><code class="language-console">$ fire build demo/datadiode/
+fire: building datadiode for qemu_virt_aarch64 (debug)
+  ✓ Wrote the data-layer headers to demo/datadiode/include/gen
+  ✓ Parsed 1 system + 3 program files + 3 foreign module(s)
+  ✓ Resolved names
+  ...
+  ✓ Type-checked information flow
+  ✓ Checked channel dependency acyclicity (WF2)
+  ✓ Built the graphs and checked the notified ones (receive-headed, receives at the head only, guarded choices)
+  ✓ Generated 3 C file(s) in demo/datadiode/build/gen
+MICROKIT|CAPDL SPEC: number of root objects = 88, spec footprint = 13.05 KiB
+MICROKIT|INITIAL TASK: memory size = 432 KiB
+MICROKIT|LOADER: image file size = 2.68 MiB
+  ✓ image: demo/datadiode/build/datadiode.img
+  ...
+  ✓ UPPAAL model written to demo/datadiode/build/datadiode.xta
+</code></pre>
+<p><code>fire build</code> checks the project, generates C for each PD, compiles it with
+the imported C and builds the Microkit image; it also writes the UPPAAL
+model. It warns about events such as <code>forward</code> that only print: the model
+leaves <code>dbg</code> out, so there they do nothing. To check the project without
+building, run <code>fic demo/datadiode/ --check</code> (see
+<a href="#the-fic-compiler">the <code>fic</code> reference</a>).</p>
+<h2 id="7-run"><a class="header" href="#7-run">7. Run</a></h2>
+<p>Boot the image in one terminal:</p>
+<pre><code class="language-console">$ fire run demo/datadiode/
+  ✓ image up to date: demo/datadiode/build/datadiode.img
+fire: launching qemu-system-aarch64
+...
+MON|INFO: Microkit Monitor started!
+eth_inner: init
+eth_inner: virtio-net up on slot 6
+dd: init
+dd: diode transport ready
+eth_outer: init
+eth_outer: virtio-net up on slot 7
+</code></pre>
+<p>and send traffic from another:</p>
+<pre><code class="language-console">$ python3 demo/datadiode/inject.py
+forward: injected 4 on outer, received 4 on inner, 4 payload-identical
+ping: reply on outer
+arp: reply on outer
+diode: no leak (one-way upheld)
+RESULT: PASS
+</code></pre>
+<p><code>inject.py</code> sends four frames for a foreign host into the outer NIC and
+checks that they come out of the inner NIC unchanged, pings <code>eth_outer</code>
+and sends it an ARP request, and sends a frame into the inner NIC to check
+that it never reaches the outer one. The console shows each frame cross:</p>
+<pre><code class="language-text">eth_outer: forward -&gt; o2d
+dd: pass o2d -&gt; d2i
+eth_inner: delivered
+...
+eth_outer: Packet sent to network len=58
+eth_outer: Packet sent to network len=42
+</code></pre>
+<p>Exit QEMU with <code>Ctrl-A x</code>.</p>
+<h2 id="8-verify"><a class="header" href="#8-verify">8. Verify</a></h2>
+<p><code>fire verify</code> checks the UPPAAL model <code>fire build</code> wrote against the
+queries in <code>spec/</code>. The diode’s are:</p>
+<pre><code class="language-text">A[] not deadlock
+
+E&lt;&gt; dd.L2
+</code></pre>
+<p>The first says the system never deadlocks; the second, that <code>dd</code> can
+reach the location after its receive on <code>o2d</code>, so a forward can start.</p>
+<p>The model does not translate buffered channels yet, so <code>verifyta</code> rejects
+the diode’s model:</p>
+<pre><code class="language-console">$ fire verify demo/datadiode/
+fire: verifying datadiode
+  ✓ no contracts in the project's C files; nothing to prove
+  ...
+  demo/datadiode/build/datadiode.xta::50: [error] Unknown identifier: o2d_c.
+  ...
+  ✗ verifyta answered 0 of 2 queries
+Error: one or more queries failed
+</code></pre>
+<p><a href="#verifying-fire-verify">Verifying: <code>fire verify</code></a> runs the same steps to a pass
+on <code>demo/pingpong/</code>, whose channels are signalling channels.</p>
+<h2 id="where-to-go-next-1"><a class="header" href="#where-to-go-next-1">Where to go next</a></h2>
+<ul>
+<li>The <a href="https://fiducia-lang.github.io/docs/lang-spec">Fiducia Language Reference</a>
+for every construct used here.</li>
+<li><a href="#building-and-running-fire-build--fire-run">Building and Running</a> and <a href="#verifying-fire-verify">Verifying</a> for
+the commands’ options.</li>
+<li><code>demo/ring/</code> and <code>demo/pingpong/</code> in the repository, the smaller demos.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="the-project-manifest-firetoml"><a class="header" href="#the-project-manifest-firetoml">The Project Manifest (<code>fire.toml</code>)</a></h1>
 <p><code>fire</code> reads <code>fire.toml</code> from the project directory. It names the
