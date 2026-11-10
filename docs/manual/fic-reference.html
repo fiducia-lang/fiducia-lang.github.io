@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-6c1db11a.js";
+            window.path_to_searchindex_js = "searchindex-36641132.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -249,7 +249,7 @@ the <code>bᵢ</code> the other branches’ guards (<code>true</code> when ungua
 <tbody>
 <tr><td>Tail references (<code>tailRec</code>)</td><td><strong>Error.</strong> A process references one being lowered in non-tail position.</td></tr>
 <tr><td>Receive-headed <code>notified</code> (<code>recvHeaded</code>)</td><td>The head has a guard or a step that is not a receive, in a <code>notified</code> that receives.</td></tr>
-<tr><td>Receives at the head</td><td>A receive or IRQ await outside the head; two at the head on one channel or IRQ.</td></tr>
+<tr><td>Receives at the head</td><td>A signal receive or IRQ await outside the head (a buffered receive may be anywhere); two at the head on one channel or IRQ.</td></tr>
 <tr><td>Channel dependency (WF2)</td><td>The channels form a cycle; <code>--allow-wf2-cycles</code> skips the check.</td></tr>
 <tr><td>Guarded choices</td><td>Outside the head: an unguarded branch, two branches that can both be enabled, or a state where none is.</td></tr>
 </tbody>
