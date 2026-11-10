@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-561db681.js";
+            window.path_to_searchindex_js = "../searchindex-0d540d57.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -188,7 +188,11 @@ only one of them is fic’s.</p>
 <li>The <strong>model</strong> assumes it. <code>--emit=xta</code> turns a contracted function that a
 protection domain calls into a UPPAAL function <code>ffi_&lt;name&gt;</code>: each
 <code>requires</code> is an <code>assert</code> at every call (never a guard), and the
-deterministic <code>ensures</code> is the value the call returns.</li>
+deterministic <code>ensures</code> is the value the call returns. An <code>ensures</code> that
+only bounds the return value to an interval, comparing it with constants
+under <code>&amp;&amp;</code> and <code>||</code> (<code>\result == 0 || \result == 1</code>, <code>0 &lt;= \result &lt;= 3</code>), makes the value a choice: in an event, the edge that fires it selects
+any value the clause allows. That is how a driver’s input enters the
+model.</li>
 <li>A <strong>verifier</strong> proves it against the code: Frama-C with <code>-wp</code> for C,
 <code>pancake2viper</code> for Pancake. <code>fire verify</code> runs them; see the
 <a href="https://fiducia-lang.github.io/docs/manual/fire-verify.html"><code>fire verify</code> chapter of the manual</a>
