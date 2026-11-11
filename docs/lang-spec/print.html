@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-f02a99ab.js";
+            window.path_to_searchindex_js = "searchindex-d39ba893.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-95c1b5de.js"></script>
@@ -385,10 +385,9 @@ the same section), the surrounding prose names the dependency.</p>
 <h2 id="stability-markers"><a class="header" href="#stability-markers">Stability markers</a></h2>
 <p>A construct flagged with the 🚧 marker is <strong>not yet implemented</strong> by the
 parser. The form appears in the reference because it is part of the
-designed grammar, but the parser will reject it today. The marker links to
-the tracking issue:</p>
+designed grammar, but the parser will reject it today:</p>
 <blockquote>
-<p>🚧 <em>Not yet implemented</em> — see <a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>.</p>
+<p>🚧 <em>Not yet implemented.</em></p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="lexical-structure"><a class="header" href="#lexical-structure">Lexical Structure</a></h1>
@@ -1239,10 +1238,9 @@ inside an <a href="#event-declarations">event body</a>. The <code>ident: Type;</
 the only shape supported today; an initialiser (<code>ident: Type = expr;</code>) is
 reserved but not yet parsed.</p>
 <blockquote>
-<p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed — see
-<a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. For now, initialise locals from inside the body, and globals
-from the imported source’s <code>init()</code> function (see
-<a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>).</em></p>
+<p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed. For now,
+initialise locals from inside the body, and globals from the imported
+source’s <code>init()</code> function (see <a href="#boot-initialisation-the-microkitinit-process-and-auto-setvars">Boot Initialisation</a>).</em></p>
 </blockquote>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
 <p>Variables can appear in three positions inside a <code>.fi</code> file:</p>
@@ -1493,7 +1491,7 @@ and have no top-level declaration:</p>
 <pre><code class="language-text">proc Notified() { irq?159 -&gt; Handle_eth(); irq!159 -&gt; Notified(); }
 </code></pre>
 <blockquote>
-<p>🚧 <em><code>self.IRQ</code> syntax is planned (<a href="https://github.com/fiducia-lang/fic/issues/164">#164</a>) — <code>irq?self.IRQ</code> / <code>irq!self.IRQ</code>
+<p>🚧 <em><code>self.IRQ</code> syntax is planned — <code>irq?self.IRQ</code> / <code>irq!self.IRQ</code>
 will resolve the protection domain’s IRQ number without a magic literal.</em></p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div>

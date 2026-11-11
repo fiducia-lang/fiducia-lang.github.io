@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-f02a99ab.js";
+            window.path_to_searchindex_js = "../searchindex-d39ba893.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -190,10 +190,9 @@ inside an <a href="event-blocks.html">event body</a>. The <code>ident: Type;</co
 the only shape supported today; an initialiser (<code>ident: Type = expr;</code>) is
 reserved but not yet parsed.</p>
 <blockquote>
-<p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed — see
-<a href="https://github.com/fiducia-lang/fic/issues/105">#105</a>. For now, initialise locals from inside the body, and globals
-from the imported source’s <code>init()</code> function (see
-<a href="init-process.html">Boot Initialisation</a>).</em></p>
+<p>🚧 <em>Initialiser syntax (<code>= expr</code>) is reserved but unparsed. For now,
+initialise locals from inside the body, and globals from the imported
+source’s <code>init()</code> function (see <a href="init-process.html">Boot Initialisation</a>).</em></p>
 </blockquote>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
 <p>Variables can appear in three positions inside a <code>.fi</code> file:</p>
