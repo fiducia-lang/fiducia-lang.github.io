@@ -162,6 +162,7 @@ pre.code-body {
 .files-nav button[aria-selected="true"] { border-left-color: var(--accent); background: rgba(96,165,250,0.12); color: var(--text); font-weight: 600; }
 .files-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-view { flex: 999 1 480px; min-width: 0; }
+.files-view [role="tabpanel"] { max-height: 640px; overflow-y: auto; }
 
 /* ── Keyword cloud (homepage hero) ── */
 /* Without JS: a centred, wrapped list. site.js lays the words out as a cloud. */

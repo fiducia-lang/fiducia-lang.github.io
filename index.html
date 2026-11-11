@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=202611091705">
+  <link rel="stylesheet" href="assets/site.css?v=202611111200">
 </head>
 <body>
   <header class="site-header">
@@ -219,11 +219,18 @@
             <div class="files-group" aria-hidden="true">System description</div>
             <button role="tab" id="t-fis" aria-controls="p-fis" aria-selected="true" data-path="demo/datadiode/datadiode.fis" data-note="system declaration">datadiode.fis</button>
             <div class="files-group" aria-hidden="true">Domain processes</div>
-            <button role="tab" id="t-outer" aria-controls="p-outer" aria-selected="false" data-path="demo/datadiode/eth_outer.fi" data-note="Low NIC · excerpt">eth_outer.fi</button>
+            <button role="tab" id="t-outer" aria-controls="p-outer" aria-selected="false" data-path="demo/datadiode/eth_outer.fi" data-note="Low NIC">eth_outer.fi</button>
             <button role="tab" id="t-dd" aria-controls="p-dd" aria-selected="false" data-path="demo/datadiode/dd.fi" data-note="the diode">dd.fi</button>
-            <button role="tab" id="t-inner" aria-controls="p-inner" aria-selected="false" data-path="demo/datadiode/eth_inner.fi" data-note="High NIC · excerpt">eth_inner.fi</button>
+            <button role="tab" id="t-inner" aria-controls="p-inner" aria-selected="false" data-path="demo/datadiode/eth_inner.fi" data-note="High NIC">eth_inner.fi</button>
             <div class="files-group" aria-hidden="true">Foreign implementation</div>
-            <button role="tab" id="t-eth" aria-controls="p-eth" aria-selected="false" data-path="demo/datadiode/src/eth.c" data-note="NIC helpers · excerpt">eth.c</button>
+            <button role="tab" id="t-eth-h" aria-controls="p-eth-h" aria-selected="false" data-path="demo/datadiode/include/eth.h" data-note="NIC helpers · ACSL contracts">eth.h</button>
+            <button role="tab" id="t-eth" aria-controls="p-eth" aria-selected="false" data-path="demo/datadiode/src/eth.c" data-note="NIC helpers">eth.c</button>
+            <button role="tab" id="t-util-h" aria-controls="p-util-h" aria-selected="false" data-path="demo/datadiode/include/util.h" data-note="byte helpers">util.h</button>
+            <button role="tab" id="t-util" aria-controls="p-util" aria-selected="false" data-path="demo/datadiode/src/util.c" data-note="byte helpers">util.c</button>
+            <button role="tab" id="t-vio-h" aria-controls="p-vio-h" aria-selected="false" data-path="demo/datadiode/include/virtio_net.h" data-note="virtio-net driver">virtio_net.h</button>
+            <button role="tab" id="t-vio" aria-controls="p-vio" aria-selected="false" data-path="demo/datadiode/src/virtio_net.c" data-note="virtio-net driver">virtio_net.c</button>
+            <div class="files-group" aria-hidden="true">Specification</div>
+            <button role="tab" id="t-q" aria-controls="p-q" aria-selected="false" data-path="demo/datadiode/spec/datadiode.q" data-note="queries for fire verify">datadiode.q</button>
           </div>
           <div class="files-view">
             <div class="code-head"><span class="path" data-files-path>demo/datadiode/datadiode.fis</span><span data-files-note>system declaration</span></div>
@@ -234,8 +241,16 @@
 <span class="c">// a virtio-net buffer (`VIRTIO_NET_BUF_SIZE`).</span>
 <span class="k">struct</span> <span class="f">Frame</span> {
     len: <span class="k">uint16</span>;
+    <span class="c">// The NIC the frame came in on (ORIGIN_*), which the model tracks for</span>
+    <span class="c">// secrecy; the bytes stay in the C.</span>
+    origin: <span class="k">uint8</span>;
     data: <span class="k">uint8</span>[<span class="n">2048</span>];
 }
+
+<span class="c">// A frame's origin: the outer (Low) or inner (High) network. Neither is 0,</span>
+<span class="c">// so a zeroed frame has no origin.</span>
+<span class="k">const</span> ORIGIN_OUTER: <span class="k">uint8</span> = <span class="n">1</span>;
+<span class="k">const</span> ORIGIN_INNER: <span class="k">uint8</span> = <span class="n">2</span>;
 
 <span class="c">// The channels' rings, mapped into both endpoints of their channel.</span>
 <span class="lo">Low</span> <span class="k">MemoryRegion</span> eth_outer_output(<span class="n">0x200000</span>, <span class="n">0x200000</span>);
@@ -263,9 +278,8 @@
 <div role="tabpanel" id="p-outer" aria-labelledby="t-outer" tabindex="0" hidden><pre class="code-body"><span class="c">// Low-side NIC: forwards frames not addressed to us across the diode,</span>
 <span class="c">// answers ARP/ping for us locally.</span>
 <span class="k">import</span> <span class="s">"include/eth.h"</span> <span class="k">as</span> eth;
-<span class="k">import</span> <span class="s">"include/util.h"</span> <span class="k">as</span> util;
-<span class="k">import</span> <span class="s">"include/virtio_net.h"</span> <span class="k">as</span> vio;
 
+<span class="c">// Mapping names match eth_inner's: one eth.c serves both PDs.</span>
 <span class="lo">Low</span> <span class="k">Mapping</span> vwin(virtio_window, <span class="n">0x2_000_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 <span class="lo">Low</span> <span class="k">Mapping</span> dma(outer_dma, <span class="n">0x2_400_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 
@@ -277,20 +291,56 @@ reply_len: <span class="k">uint16</span>;
 <span class="c">// What `o2d` sends: the frame, copied into the ring.</span>
 frame: Frame;
 
+<span class="c">// nth=1: the outer NIC (first -device) is in the higher mmio slot.</span>
+<span class="c">// The slot the NIC came up in, or negative if it did not.</span>
+nic: <span class="k">int</span>;
+
+<span class="k">evt</span> setup: nic = eth.eth_setup(<span class="n">1</span>, dma.paddr);
+
+<span class="k">evt</span> nic_up: dbg(<span class="s">"virtio-net up on slot "</span>, nic);
+
+<span class="k">evt</span> nic_failed: dbg(<span class="s">"FAIL virtio-net init"</span>);
+
+<span class="k">evt</span> handle_irq: eth.eth_clear_irq();
+
 <span class="k">evt</span> poll: {
     rx = eth.eth_poll();
     kind = eth.eth_pkt_kind();
 }
 
 <span class="k">evt</span> stage_forward: {
-    frame = eth.eth_frame();
+    frame = eth.eth_frame(ORIGIN_OUTER);
     dbg(<span class="s">"forward -&gt; o2d"</span>);
+}
+
+<span class="k">evt</span> handle_ping:
+    reply_len = eth.eth_make_reply();
+
+<span class="k">evt</span> send_frame.|len: <span class="k">uint16</span>|: {
+    eth.eth_send_frame(len);
+    dbg(<span class="s">"Packet sent to network len="</span>, len);
+}
+
+@bind(microkit.init)
+<span class="k">proc</span> <span class="f">Init</span>() {
+    setup -&gt; ReportNic();
+}
+
+<span class="k">proc</span> <span class="f">ReportNic</span>() {
+        [nic &gt;= <span class="n">0</span>] nic_up -&gt; Skip
+     [] [nic &lt; <span class="n">0</span>] nic_failed -&gt; Skip;
 }
 
 @bind(microkit.notified)
 <span class="k">proc</span> <span class="f">Notified</span>() {
     irq?<span class="n">79</span> -&gt; HandleRx();
     Notified();
+}
+
+<span class="k">proc</span> <span class="f">HandleRx</span>() {
+    handle_irq -&gt; Skip;
+    Drain();
+    irq!<span class="n">79</span> -&gt; Skip;
 }
 
 <span class="k">proc</span> <span class="f">Drain</span>() {
@@ -320,15 +370,36 @@ frame: Frame;
 <div role="tabpanel" id="p-inner" aria-labelledby="t-inner" tabindex="0" hidden><pre class="code-body"><span class="c">// High-side NIC: transmits frames received on d2i; its own RX is acked</span>
 <span class="c">// and dropped.</span>
 <span class="k">import</span> <span class="s">"include/eth.h"</span> <span class="k">as</span> eth;
-<span class="k">import</span> <span class="s">"include/util.h"</span> <span class="k">as</span> util;
-<span class="k">import</span> <span class="s">"include/virtio_net.h"</span> <span class="k">as</span> vio;
 
+<span class="c">// Mapping names match eth_outer's: one eth.c serves both PDs.</span>
 <span class="hi">High</span> <span class="k">Mapping</span> vwin(virtio_window, <span class="n">0x2_000_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 <span class="hi">High</span> <span class="k">Mapping</span> dma(inner_dma, <span class="n">0x2_400_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
+
+<span class="c">// nth=0: the inner NIC (second -device) is in the lower mmio slot.</span>
+<span class="c">// The slot the NIC came up in, or negative if it did not.</span>
+nic: <span class="k">int</span>;
+
+<span class="k">evt</span> setup: nic = eth.eth_setup(<span class="n">0</span>, dma.paddr);
+
+<span class="k">evt</span> nic_up: dbg(<span class="s">"virtio-net up on slot "</span>, nic);
+
+<span class="k">evt</span> nic_failed: dbg(<span class="s">"FAIL virtio-net init"</span>);
+
+<span class="k">evt</span> handle_irq: eth.eth_clear_irq();
 
 <span class="k">evt</span> send_frame.|f: Frame|: {
     eth.eth_send_frame_value(f);
     dbg(<span class="s">"delivered"</span>);
+}
+
+@bind(microkit.init)
+<span class="k">proc</span> <span class="f">Init</span>() {
+    setup -&gt; ReportNic();
+}
+
+<span class="k">proc</span> <span class="f">ReportNic</span>() {
+        [nic &gt;= <span class="n">0</span>] nic_up -&gt; Skip
+     [] [nic &lt; <span class="n">0</span>] nic_failed -&gt; Skip;
 }
 
 @bind(microkit.notified)
@@ -340,11 +411,124 @@ frame: Frame;
 
 <span class="k">proc</span> <span class="f">Deliver</span>(f: Frame) {
     send_frame.f -&gt; Skip;
+}
+
+<span class="k">proc</span> <span class="f">DrainNic</span>() {
+    handle_irq -&gt; Skip;
+    irq!<span class="n">78</span> -&gt; Skip;
 }</pre></div>
 
+<div role="tabpanel" id="p-eth-h" aria-labelledby="t-eth-h" tabindex="0" hidden><pre class="code-body"><span class="c">/* NIC helpers shared by eth_outer and eth_inner, over virtio-net. */</span>
+<span class="k">#ifndef</span> ETH_H
+<span class="k">#define</span> ETH_H
+
+<span class="k">#include</span> <span class="s">&lt;stdbool.h&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;stdint.h&gt;</span>
+
+<span class="k">#include</span> <span class="s">"gen/types.h"</span>
+
+<span class="c">/* Bring up the `nth` virtio-net device in the shared MMIO window: the
+ * slot it is in, or negative if it did not come up. */</span>
+<span class="k">int64_t</span> <span class="f">eth_setup</span>(<span class="k">int</span> nth, <span class="k">uintptr_t</span> dma_paddr);
+
+<span class="c">/* Read-and-acknowledge the device interrupt (once per notification). */</span>
+<span class="k">void</span> <span class="f">eth_clear_irq</span>(<span class="k">void</span>);
+
+<span class="c">/* Read and classify the next received frame; 0 if none. The model reads
+ * the contract as a choice: a frame may or may not have arrived. */</span>
+<span class="ac">/*@ ensures \result == 0 || \result == 1; */</span>
+<span class="k">int64_t</span> <span class="f">eth_poll</span>(<span class="k">void</span>);
+
+<span class="c">/* Class of the current frame: 0 none, 1 forward across the diode,
+ * 2 ARP request for us, 3 ICMP echo request for us. */</span>
+<span class="ac">/*@ ensures 0 &lt;= \result &lt;= 3; */</span>
+<span class="k">int64_t</span> <span class="f">eth_pkt_kind</span>(<span class="k">void</span>);
+
+<span class="c">/* The current frame, to send on o2d. */</span>
+<span class="ac">/*@ ensures \result.origin == origin; */</span>
+<span class="k">struct</span> Frame <span class="f">eth_frame</span>(<span class="k">uint8_t</span> origin);
+
+<span class="c">/* Build the ARP/ping reply for the current frame; returns its length. */</span>
+<span class="k">uint16_t</span> <span class="f">eth_make_reply</span>(<span class="k">void</span>);
+
+<span class="c">/* Transmit the reply built by eth_make_reply. */</span>
+<span class="k">void</span> <span class="f">eth_send_frame</span>(<span class="k">uint16_t</span> len);
+
+<span class="c">/* Transmit a frame received on d2i. */</span>
+<span class="k">void</span> <span class="f">eth_send_frame_value</span>(<span class="k">struct</span> Frame f);
+
+<span class="k">#endif</span> <span class="c">/* ETH_H */</span></pre></div>
+
 <div role="tabpanel" id="p-eth" aria-labelledby="t-eth" tabindex="0" hidden><pre class="code-body"><span class="k">#include</span> <span class="s">"eth.h"</span>
+
 <span class="k">#include</span> <span class="s">"util.h"</span>
 <span class="k">#include</span> <span class="s">"virtio_net.h"</span>
+
+<span class="c">/* fic's runtime supplies it: a PD has no libc. */</span>
+<span class="k">void</span> *<span class="f">memcpy</span>(<span class="k">void</span> *dst, <span class="k">const</span> <span class="k">void</span> *src, <span class="k">size_t</span> n);
+
+<span class="k">#define</span> ETHERTYPE_IPV4 <span class="n">0x0800</span>
+<span class="k">#define</span> ETHERTYPE_ARP <span class="n">0x0806</span>
+
+<span class="k">#define</span> PACKED __attribute__((packed))
+
+<span class="k">struct</span> eth_header {
+    <span class="k">uint8_t</span> dest_mac[<span class="n">6</span>];
+    <span class="k">uint8_t</span> src_mac[<span class="n">6</span>];
+    <span class="k">uint16_t</span> ethertype;
+    <span class="k">uint8_t</span> payload[];
+} PACKED;
+
+<span class="k">struct</span> arp {
+    <span class="k">uint16_t</span> htype;
+    <span class="k">uint16_t</span> ptype;
+    <span class="k">uint8_t</span> hlen;
+    <span class="k">uint8_t</span> plen;
+    <span class="k">uint16_t</span> oper;
+    <span class="k">uint8_t</span> sha[<span class="n">6</span>];
+    <span class="k">uint8_t</span> spa[<span class="n">4</span>];
+    <span class="k">uint8_t</span> tha[<span class="n">6</span>];
+    <span class="k">uint8_t</span> tpa[<span class="n">4</span>];
+} PACKED;
+
+<span class="k">struct</span> ip {
+    <span class="k">uint8_t</span> ver_ihl;
+    <span class="k">uint8_t</span> tos;
+    <span class="k">uint16_t</span> len;
+    <span class="k">uint16_t</span> ident;
+    <span class="k">uint16_t</span> flags_frag;
+    <span class="k">uint8_t</span> ttl;
+    <span class="k">uint8_t</span> protocol;
+    <span class="k">uint16_t</span> checksum;
+    <span class="k">uint8_t</span> source_address[<span class="n">4</span>];
+    <span class="k">uint8_t</span> dest_address[<span class="n">4</span>];
+} PACKED;
+
+<span class="k">struct</span> icmp {
+    <span class="k">uint8_t</span> type;
+    <span class="k">uint8_t</span> code;
+    <span class="k">uint16_t</span> checksum;
+    <span class="k">uint16_t</span> rest_of_header;
+} PACKED;
+
+<span class="k">extern</span> <span class="k">uintptr_t</span> vwin_vaddr;
+<span class="k">extern</span> <span class="k">uintptr_t</span> dma_vaddr;
+
+<span class="k">static</span> <span class="k">uint8_t</span> cur[VIRTIO_NET_BUF_SIZE];
+<span class="k">static</span> <span class="k">uint16_t</span> cur_len;
+<span class="k">static</span> <span class="k">int</span> cur_kind;
+
+<span class="k">static</span> <span class="k">uint8_t</span> scratch[VIRTIO_NET_BUF_SIZE];
+
+<span class="k">int64_t</span> <span class="f">eth_setup</span>(<span class="k">int</span> nth, <span class="k">uintptr_t</span> dma_paddr)
+{
+    <span class="k">return</span> virtio_net_up(vwin_vaddr, (<span class="k">unsigned</span>)nth, dma_vaddr, dma_paddr);
+}
+
+<span class="k">void</span> <span class="f">eth_clear_irq</span>(<span class="k">void</span>)
+{
+    virtio_net_ack();
+}
 
 <span class="k">int64_t</span> <span class="f">eth_poll</span>(<span class="k">void</span>)
 {
@@ -367,24 +551,514 @@ frame: Frame;
     <span class="k">return</span> <span class="n">1</span>;
 }
 
-<span class="k">struct</span> Frame <span class="f">eth_frame</span>(<span class="k">void</span>)
+<span class="k">int64_t</span> <span class="f">eth_pkt_kind</span>(<span class="k">void</span>)
+{
+    <span class="c">/* cur_kind is one of 0..3; the test lets WP see it. */</span>
+    <span class="k">if</span> (cur_kind &lt; <span class="n">0</span> || cur_kind &gt; <span class="n">3</span>) {
+        <span class="k">return</span> <span class="n">0</span>;
+    }
+    <span class="k">return</span> cur_kind;
+}
+
+<span class="k">struct</span> Frame <span class="f">eth_frame</span>(<span class="k">uint8_t</span> origin)
 {
     <span class="k">struct</span> Frame f;
     f.len = cur_len;
-    mycpy(f.data, cur, cur_len);
+    f.origin = origin;
+    memcpy(f.data, cur, cur_len);
     <span class="k">return</span> f;
+}
+
+<span class="k">uint16_t</span> <span class="f">eth_make_reply</span>(<span class="k">void</span>)
+{
+    <span class="k">uint16_t</span> len = cur_len;
+    <span class="k">struct</span> eth_header *hdr = (<span class="k">struct</span> eth_header *)cur;
+    memcpy(scratch, cur, len);
+
+    <span class="k">struct</span> eth_header *reply = (<span class="k">struct</span> eth_header *)scratch;
+    set_mac(reply-&gt;dest_mac, hdr-&gt;src_mac);
+    set_mac(reply-&gt;src_mac, fic_eth_mac);
+
+    <span class="k">if</span> (swap16(reply-&gt;ethertype) == ETHERTYPE_ARP) {
+        <span class="k">struct</span> arp *a = (<span class="k">struct</span> arp *)&amp;reply-&gt;payload[<span class="n">0</span>];
+        a-&gt;oper = swap16(<span class="n">2</span>);
+        set_mac(a-&gt;tha, a-&gt;sha);
+        set_ip(a-&gt;tpa, a-&gt;spa);
+        set_mac(a-&gt;sha, fic_eth_mac);
+        set_ip(a-&gt;spa, fic_eth_ip);
+    } <span class="k">else</span> {
+        <span class="k">struct</span> ip *ip_hdr = (<span class="k">struct</span> ip *)&amp;reply-&gt;payload[<span class="n">0</span>];
+        <span class="k">uint8_t</span> header_len = (<span class="k">uint8_t</span>)((ip_hdr-&gt;ver_ihl &amp; <span class="n">0xf</span>) * <span class="n">4</span>);
+        <span class="k">if</span> (ip_hdr-&gt;protocol == <span class="n">1</span>) {
+            <span class="k">struct</span> icmp *icmp_hdr = (<span class="k">struct</span> icmp *)(&amp;reply-&gt;payload[header_len]);
+            set_ip(ip_hdr-&gt;dest_address, ip_hdr-&gt;source_address);
+            set_ip(ip_hdr-&gt;source_address, fic_eth_ip);
+            icmp_hdr-&gt;type = <span class="n">0</span>; <span class="c">/* echo reply */</span>
+            icmp_hdr-&gt;checksum = <span class="n">0</span>;
+            icmp_hdr-&gt;checksum =
+                cksum((<span class="k">uint8_t</span> *)icmp_hdr, (<span class="k">size_t</span>)(swap16(ip_hdr-&gt;len) - header_len));
+        }
+    }
+    <span class="k">return</span> len;
+}
+
+<span class="k">void</span> <span class="f">eth_send_frame</span>(<span class="k">uint16_t</span> len)
+{
+    virtio_net_tx(scratch, len);
 }
 
 <span class="k">void</span> <span class="f">eth_send_frame_value</span>(<span class="k">struct</span> Frame f)
 {
     virtio_net_tx(f.data, f.len);
 }</pre></div>
+
+<div role="tabpanel" id="p-util-h" aria-labelledby="t-util-h" tabindex="0" hidden><pre class="code-body"><span class="k">#ifndef</span> UTIL_H
+<span class="k">#define</span> UTIL_H
+
+<span class="k">#include</span> <span class="s">&lt;stddef.h&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;stdint.h&gt;</span>
+
+<span class="c">/* eth_outer's own addresses; frames to any other MAC are forwarded. */</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="k">uint8_t</span> fic_eth_mac[<span class="n">6</span>];
+<span class="k">extern</span> <span class="k">const</span> <span class="k">uint8_t</span> fic_eth_ip[<span class="n">4</span>];
+
+<span class="k">uint16_t</span> <span class="f">swap16</span>(<span class="k">uint16_t</span> v);
+<span class="k">int</span> <span class="f">mac_match</span>(<span class="k">const</span> <span class="k">uint8_t</span> *a, <span class="k">const</span> <span class="k">uint8_t</span> *b);
+<span class="k">void</span> <span class="f">set_mac</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src);
+<span class="k">void</span> <span class="f">set_ip</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src);
+<span class="k">uint16_t</span> <span class="f">cksum</span>(<span class="k">const</span> <span class="k">uint8_t</span> *data, <span class="k">size_t</span> len);
+
+<span class="k">#endif</span> <span class="c">/* UTIL_H */</span></pre></div>
+
+<div role="tabpanel" id="p-util" aria-labelledby="t-util" tabindex="0" hidden><pre class="code-body"><span class="k">#include</span> <span class="s">"util.h"</span>
+
+<span class="k">const</span> <span class="k">uint8_t</span> fic_eth_mac[<span class="n">6</span>] = {<span class="n">0x00</span>, <span class="n">0x16</span>, <span class="n">0x3e</span>, <span class="n">0x12</span>, <span class="n">0x34</span>, <span class="n">0x56</span>};
+<span class="k">const</span> <span class="k">uint8_t</span> fic_eth_ip[<span class="n">4</span>] = {<span class="n">10</span>, <span class="n">141</span>, <span class="n">2</span>, <span class="n">80</span>};
+
+<span class="k">uint16_t</span> <span class="f">swap16</span>(<span class="k">uint16_t</span> v)
+{
+    <span class="k">return</span> (<span class="k">uint16_t</span>)(((v &amp; <span class="n">0xff</span>) &lt;&lt; <span class="n">8</span>) | (v &gt;&gt; <span class="n">8</span>));
+}
+
+<span class="k">int</span> <span class="f">mac_match</span>(<span class="k">const</span> <span class="k">uint8_t</span> *a, <span class="k">const</span> <span class="k">uint8_t</span> *b)
+{
+    <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; <span class="n">6</span>; i++) {
+        <span class="k">if</span> (a[i] != b[i]) {
+            <span class="k">return</span> <span class="n">0</span>;
+        }
+    }
+    <span class="k">return</span> <span class="n">1</span>;
+}
+
+<span class="k">void</span> <span class="f">set_mac</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src)
+{
+    <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; <span class="n">6</span>; i++) {
+        dst[i] = src[i];
+    }
+}
+
+<span class="k">void</span> <span class="f">set_ip</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src)
+{
+    <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; <span class="n">4</span>; i++) {
+        dst[i] = src[i];
+    }
+}
+
+<span class="c">/* RFC 1071 internet checksum. */</span>
+<span class="k">uint16_t</span> <span class="f">cksum</span>(<span class="k">const</span> <span class="k">uint8_t</span> *d, <span class="k">size_t</span> len)
+{
+    <span class="k">uint32_t</span> sum = <span class="n">0</span>;
+    <span class="k">while</span> (len &gt; <span class="n">1</span>) {
+        sum += (<span class="k">uint32_t</span>)((d[<span class="n">0</span>] &lt;&lt; <span class="n">8</span>) | d[<span class="n">1</span>]);
+        d += <span class="n">2</span>;
+        len -= <span class="n">2</span>;
+    }
+    <span class="k">if</span> (len) {
+        sum += (<span class="k">uint32_t</span>)(d[<span class="n">0</span>] &lt;&lt; <span class="n">8</span>);
+    }
+    <span class="k">while</span> (sum &gt;&gt; <span class="n">16</span>) {
+        sum = (sum &amp; <span class="n">0xffff</span>) + (sum &gt;&gt; <span class="n">16</span>);
+    }
+    <span class="k">return</span> swap16((<span class="k">uint16_t</span>)~sum);
+}</pre></div>
+
+<div role="tabpanel" id="p-vio-h" aria-labelledby="t-vio-h" tabindex="0" hidden><pre class="code-body"><span class="c">/* Minimal virtio-net driver over the virtio-mmio modern (v2) transport:
+ * raw ethernet frames, no offloads.
+ *
+ * Adapted from sDDF's virtio network driver (github.com/au-ts/sddf,
+ * BSD-2-Clause) and the OASIS VIRTIO 1.2 virtqueue layouts (BSD-3-Clause).
+ */</span>
+<span class="k">#ifndef</span> VIRTIO_NET_H
+<span class="k">#define</span> VIRTIO_NET_H
+
+<span class="k">#include</span> <span class="s">&lt;stdbool.h&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;stdint.h&gt;</span>
+
+<span class="c">/* Queue size for both RX and TX rings (power of two, &lt;= QueueNumMax). */</span>
+<span class="k">#define</span> VIRTIO_NET_QUEUE_SIZE <span class="n">128</span>
+<span class="c">/* Per-frame buffer: 12-byte virtio-net header + frame, 2 KiB stride. */</span>
+<span class="k">#define</span> VIRTIO_NET_BUF_SIZE <span class="n">2048</span>
+
+<span class="c">/* Number of virtio-mmio slots in one 4 KiB window page (0x200 stride). */</span>
+<span class="k">#define</span> VIRTIO_MMIO_SLOTS_PER_PAGE <span class="n">8</span>
+
+<span class="c">/* Bring up the `nth` virtio-net device (counting from slot 0) in the
+ * window page at `window_vaddr`, with its virtqueues in
+ * [dma_vaddr, +2 MiB), uncached and physically contiguous, seen by the
+ * device at dma_paddr.
+ * Returns the slot index (0..7), negative on failure. */</span>
+<span class="k">int</span> <span class="f">virtio_net_up</span>(<span class="k">uintptr_t</span> window_vaddr, <span class="k">unsigned</span> nth, <span class="k">uintptr_t</span> dma_vaddr, <span class="k">uintptr_t</span> dma_paddr);
+
+<span class="c">/* Pop one received frame, without its virtio-net header, into `dst`
+ * (&gt;= VIRTIO_NET_BUF_SIZE). False if nothing pending or the frame is empty. */</span>
+<span class="k">bool</span> <span class="f">virtio_net_rx</span>(<span class="k">uint8_t</span> *dst, <span class="k">uint16_t</span> *len);
+
+<span class="c">/* Queue one frame for transmission; `frame` is copied. */</span>
+<span class="k">void</span> <span class="f">virtio_net_tx</span>(<span class="k">const</span> <span class="k">uint8_t</span> *frame, <span class="k">uint16_t</span> len);
+
+<span class="c">/* Read and acknowledge the device's interrupt status. */</span>
+<span class="k">uint32_t</span> <span class="f">virtio_net_ack</span>(<span class="k">void</span>);
+
+<span class="k">#endif</span> <span class="c">/* VIRTIO_NET_H */</span></pre></div>
+
+<div role="tabpanel" id="p-vio" aria-labelledby="t-vio" tabindex="0" hidden><pre class="code-body"><span class="k">#include</span> <span class="s">"virtio_net.h"</span>
+
+
+<span class="c">/* ── virtio-mmio register block (VIRTIO 1.2 §4.2.2) ──────────────────── */</span>
+
+<span class="k">#define</span> VIRTIO_MMIO_MAGIC <span class="n">0x74726976u</span>
+<span class="k">#define</span> VIRTIO_DEVICE_ID_NET <span class="n">1</span>
+
+<span class="k">typedef</span> <span class="k">volatile</span> <span class="k">struct</span> {
+    <span class="k">uint32_t</span> MagicValue;
+    <span class="k">uint32_t</span> Version;
+    <span class="k">uint32_t</span> DeviceID;
+    <span class="k">uint32_t</span> VendorID;
+    <span class="k">uint32_t</span> DeviceFeatures;
+    <span class="k">uint32_t</span> DeviceFeaturesSel;
+    <span class="k">uint32_t</span> _reserved0[<span class="n">2</span>];
+    <span class="k">uint32_t</span> DriverFeatures;
+    <span class="k">uint32_t</span> DriverFeaturesSel;
+    <span class="k">uint32_t</span> _reserved1[<span class="n">2</span>];
+    <span class="k">uint32_t</span> QueueSel;
+    <span class="k">uint32_t</span> QueueNumMax;
+    <span class="k">uint32_t</span> QueueNum;
+    <span class="k">uint32_t</span> _reserved2[<span class="n">2</span>];
+    <span class="k">uint32_t</span> QueueReady;
+    <span class="k">uint32_t</span> _reserved3[<span class="n">2</span>];
+    <span class="k">uint32_t</span> QueueNotify;
+    <span class="k">uint32_t</span> _reserved4[<span class="n">3</span>];
+    <span class="k">uint32_t</span> InterruptStatus;
+    <span class="k">uint32_t</span> InterruptACK;
+    <span class="k">uint32_t</span> _reserved5[<span class="n">2</span>];
+    <span class="k">uint32_t</span> Status;
+    <span class="k">uint32_t</span> _reserved6[<span class="n">3</span>];
+    <span class="k">uint32_t</span> QueueDescLow;
+    <span class="k">uint32_t</span> QueueDescHigh;
+    <span class="k">uint32_t</span> _reserved7[<span class="n">2</span>];
+    <span class="k">uint32_t</span> QueueDriverLow;
+    <span class="k">uint32_t</span> QueueDriverHigh;
+    <span class="k">uint32_t</span> _reserved8[<span class="n">2</span>];
+    <span class="k">uint32_t</span> QueueDeviceLow;
+    <span class="k">uint32_t</span> QueueDeviceHigh;
+    <span class="k">uint32_t</span> _reserved9[<span class="n">21</span>];
+    <span class="k">uint32_t</span> ConfigGeneration;
+    <span class="k">uint32_t</span> Config[];
+} virtio_mmio_regs_t;
+
+<span class="k">#define</span> STATUS_ACKNOWLEDGE <span class="n">0x1</span>
+<span class="k">#define</span> STATUS_DRIVER <span class="n">0x2</span>
+<span class="k">#define</span> STATUS_DRIVER_OK <span class="n">0x4</span>
+<span class="k">#define</span> STATUS_FEATURES_OK <span class="n">0x8</span>
+<span class="k">#define</span> STATUS_FAILED <span class="n">0x80</span>
+
+<span class="k">#define</span> VIRTIO_F_VERSION_1 <span class="n">32</span>
+
+<span class="c">/* ── virtqueue layouts (OASIS VIRTIO 1.2) ────────────────────────────── */</span>
+
+<span class="k">#define</span> VIRTQ_DESC_F_WRITE <span class="n">2</span>
+
+<span class="k">struct</span> virtq_desc {
+    <span class="k">uint64_t</span> addr;
+    <span class="k">uint32_t</span> len;
+    <span class="k">uint16_t</span> flags;
+    <span class="k">uint16_t</span> next;
+};
+
+<span class="k">struct</span> virtq_avail {
+    <span class="k">uint16_t</span> flags;
+    <span class="k">uint16_t</span> idx;
+    <span class="k">uint16_t</span> ring[];
+};
+
+<span class="k">struct</span> virtq_used_elem {
+    <span class="k">uint32_t</span> id;
+    <span class="k">uint32_t</span> len;
+};
+
+<span class="k">struct</span> virtq_used {
+    <span class="k">uint16_t</span> flags;
+    <span class="k">uint16_t</span> idx;
+    <span class="k">struct</span> virtq_used_elem ring[];
+};
+
+<span class="c">/* 12-byte header preceding every frame under VIRTIO_F_VERSION_1. */</span>
+<span class="k">struct</span> virtio_net_hdr {
+    <span class="k">uint8_t</span> flags;
+    <span class="k">uint8_t</span> gso_type;
+    <span class="k">uint16_t</span> hdr_len;
+    <span class="k">uint16_t</span> gso_size;
+    <span class="k">uint16_t</span> csum_start;
+    <span class="k">uint16_t</span> csum_offset;
+    <span class="k">uint16_t</span> num_buffers;
+};
+
+<span class="k">#define</span> NET_HDR_LEN ((<span class="k">uint32_t</span>)<span class="k">sizeof</span>(<span class="k">struct</span> virtio_net_hdr))
+
+<span class="c">/* ── driver state ────────────────────────────────────────────────────── */</span>
+
+<span class="k">#define</span> Q VIRTIO_NET_QUEUE_SIZE
+
+<span class="k">struct</span> vq {
+    <span class="k">volatile</span> <span class="k">struct</span> virtq_desc *desc;
+    <span class="k">volatile</span> <span class="k">struct</span> virtq_avail *avail;
+    <span class="k">volatile</span> <span class="k">struct</span> virtq_used *used;
+    <span class="k">volatile</span> <span class="k">uint8_t</span> *bufs; <span class="c">/* Q x VIRTIO_NET_BUF_SIZE */</span>
+    <span class="k">uint64_t</span> bufs_paddr;
+    <span class="k">uint16_t</span> last_used;
+};
+
+<span class="k">static</span> virtio_mmio_regs_t *regs;
+<span class="k">static</span> <span class="k">struct</span> vq rxq;
+<span class="k">static</span> <span class="k">struct</span> vq txq;
+<span class="k">static</span> <span class="k">uint16_t</span> tx_next;
+
+<span class="k">static</span> <span class="k">inline</span> <span class="k">void</span> <span class="f">barrier</span>(<span class="k">void</span>)
+{
+    __sync_synchronize();
+}
+
+<span class="k">static</span> <span class="k">int</span> <span class="f">scan</span>(<span class="k">uintptr_t</span> window_vaddr, <span class="k">unsigned</span> nth)
+{
+    <span class="k">unsigned</span> seen = <span class="n">0</span>;
+    <span class="k">for</span> (<span class="k">int</span> slot = <span class="n">0</span>; slot &lt; VIRTIO_MMIO_SLOTS_PER_PAGE; slot++) {
+        virtio_mmio_regs_t *r = (virtio_mmio_regs_t *)(window_vaddr + <span class="n">0x200u</span> * slot);
+        <span class="k">if</span> (r-&gt;MagicValue == VIRTIO_MMIO_MAGIC &amp;&amp; r-&gt;DeviceID == VIRTIO_DEVICE_ID_NET) {
+            <span class="k">if</span> (seen == nth) {
+                <span class="k">return</span> slot;
+            }
+            seen++;
+        }
+    }
+    <span class="k">return</span> -<span class="n">1</span>;
+}
+
+<span class="c">/* Lay out one queue at DMA offset `off`, each ring on its own 4 KiB
+ * page; returns the offset past it. */</span>
+<span class="k">static</span> <span class="k">uintptr_t</span> <span class="f">vq_carve</span>(<span class="k">struct</span> vq *q, <span class="k">uintptr_t</span> dma_vaddr, <span class="k">uintptr_t</span> dma_paddr, <span class="k">uintptr_t</span> off)
+{
+    <span class="k">uintptr_t</span> desc_off = off;
+    <span class="k">uintptr_t</span> avail_off = desc_off + <span class="n">0x1000</span>;
+    <span class="k">uintptr_t</span> used_off = avail_off + <span class="n">0x1000</span>;
+    <span class="k">uintptr_t</span> bufs_off = used_off + <span class="n">0x1000</span>;
+
+    q-&gt;desc = (<span class="k">volatile</span> <span class="k">struct</span> virtq_desc *)(dma_vaddr + desc_off);
+    q-&gt;avail = (<span class="k">volatile</span> <span class="k">struct</span> virtq_avail *)(dma_vaddr + avail_off);
+    q-&gt;used = (<span class="k">volatile</span> <span class="k">struct</span> virtq_used *)(dma_vaddr + used_off);
+    q-&gt;bufs = (<span class="k">volatile</span> <span class="k">uint8_t</span> *)(dma_vaddr + bufs_off);
+    q-&gt;bufs_paddr = dma_paddr + bufs_off;
+    q-&gt;last_used = <span class="n">0</span>;
+
+    <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; Q; i++) {
+        q-&gt;desc[i].addr = q-&gt;bufs_paddr + (<span class="k">uint64_t</span>)i * VIRTIO_NET_BUF_SIZE;
+        q-&gt;desc[i].len = VIRTIO_NET_BUF_SIZE;
+        q-&gt;desc[i].flags = <span class="n">0</span>;
+        q-&gt;desc[i].next = <span class="n">0</span>;
+    }
+    q-&gt;avail-&gt;flags = <span class="n">0</span>;
+    q-&gt;avail-&gt;idx = <span class="n">0</span>;
+    q-&gt;used-&gt;flags = <span class="n">0</span>;
+
+    <span class="k">return</span> bufs_off + (<span class="k">uintptr_t</span>)Q * VIRTIO_NET_BUF_SIZE;
+}
+
+<span class="k">static</span> <span class="k">void</span> <span class="f">vq_install</span>(<span class="k">unsigned</span> sel, <span class="k">const</span> <span class="k">struct</span> vq *q, <span class="k">uintptr_t</span> dma_vaddr, <span class="k">uintptr_t</span> dma_paddr)
+{
+    <span class="k">uint64_t</span> desc = (<span class="k">uintptr_t</span>)q-&gt;desc - dma_vaddr + dma_paddr;
+    <span class="k">uint64_t</span> avail = (<span class="k">uintptr_t</span>)q-&gt;avail - dma_vaddr + dma_paddr;
+    <span class="k">uint64_t</span> used = (<span class="k">uintptr_t</span>)q-&gt;used - dma_vaddr + dma_paddr;
+
+    regs-&gt;QueueSel = sel;
+    <span class="k">if</span> (regs-&gt;QueueNumMax &lt; Q) {
+        <span class="k">return</span>; <span class="c">/* caller checks QueueReady */</span>
+    }
+    regs-&gt;QueueNum = Q;
+    regs-&gt;QueueDescLow = (<span class="k">uint32_t</span>)desc;
+    regs-&gt;QueueDescHigh = (<span class="k">uint32_t</span>)(desc &gt;&gt; <span class="n">32</span>);
+    regs-&gt;QueueDriverLow = (<span class="k">uint32_t</span>)avail;
+    regs-&gt;QueueDriverHigh = (<span class="k">uint32_t</span>)(avail &gt;&gt; <span class="n">32</span>);
+    regs-&gt;QueueDeviceLow = (<span class="k">uint32_t</span>)used;
+    regs-&gt;QueueDeviceHigh = (<span class="k">uint32_t</span>)(used &gt;&gt; <span class="n">32</span>);
+    barrier();
+    regs-&gt;QueueReady = <span class="n">1</span>;
+}
+
+<span class="k">static</span> <span class="k">int</span> <span class="f">virtio_net_init</span>(<span class="k">uintptr_t</span> regs_vaddr, <span class="k">uintptr_t</span> dma_vaddr, <span class="k">uintptr_t</span> dma_paddr)
+{
+    regs = (virtio_mmio_regs_t *)regs_vaddr;
+
+    <span class="k">if</span> (regs-&gt;MagicValue != VIRTIO_MMIO_MAGIC) {
+        <span class="k">return</span> -<span class="n">1</span>;
+    }
+    <span class="k">if</span> (regs-&gt;Version != <span class="n">2</span>) {
+        <span class="k">return</span> -<span class="n">2</span>; <span class="c">/* legacy transport: launch QEMU with force-legacy=false */</span>
+    }
+    <span class="k">if</span> (regs-&gt;DeviceID != VIRTIO_DEVICE_ID_NET) {
+        <span class="k">return</span> -<span class="n">3</span>;
+    }
+
+    <span class="c">/* VIRTIO 1.2 §3.1.1 initialisation sequence. */</span>
+    regs-&gt;Status = <span class="n">0</span>;
+    regs-&gt;Status = STATUS_ACKNOWLEDGE;
+    regs-&gt;Status = STATUS_ACKNOWLEDGE | STATUS_DRIVER;
+
+    <span class="c">/* VERSION_1 only: no offloads. */</span>
+    regs-&gt;DriverFeaturesSel = <span class="n">0</span>;
+    regs-&gt;DriverFeatures = <span class="n">0</span>;
+    regs-&gt;DriverFeaturesSel = <span class="n">1</span>;
+    regs-&gt;DriverFeatures = <span class="n">1u</span> &lt;&lt; (VIRTIO_F_VERSION_1 - <span class="n">32</span>);
+    regs-&gt;Status = STATUS_ACKNOWLEDGE | STATUS_DRIVER | STATUS_FEATURES_OK;
+    <span class="k">if</span> (!(regs-&gt;Status &amp; STATUS_FEATURES_OK)) {
+        regs-&gt;Status = STATUS_FAILED;
+        <span class="k">return</span> -<span class="n">4</span>;
+    }
+
+    <span class="k">uintptr_t</span> off = vq_carve(&amp;rxq, dma_vaddr, dma_paddr, <span class="n">0</span>);
+    (<span class="k">void</span>)vq_carve(&amp;txq, dma_vaddr, dma_paddr, off);
+    tx_next = <span class="n">0</span>;
+
+    vq_install(<span class="n">0</span>, &amp;rxq, dma_vaddr, dma_paddr);
+    vq_install(<span class="n">1</span>, &amp;txq, dma_vaddr, dma_paddr);
+    regs-&gt;QueueSel = <span class="n">0</span>;
+    <span class="k">if</span> (!regs-&gt;QueueReady) {
+        regs-&gt;Status = STATUS_FAILED;
+        <span class="k">return</span> -<span class="n">5</span>;
+    }
+
+    <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; Q; i++) {
+        rxq.desc[i].flags = VIRTQ_DESC_F_WRITE;
+        rxq.avail-&gt;ring[i] = (<span class="k">uint16_t</span>)i;
+    }
+    barrier();
+    rxq.avail-&gt;idx = Q;
+    barrier();
+
+    regs-&gt;Status = STATUS_ACKNOWLEDGE | STATUS_DRIVER | STATUS_FEATURES_OK | STATUS_DRIVER_OK;
+    regs-&gt;QueueNotify = <span class="n">0</span>; <span class="c">/* kick RX so the device sees the buffers */</span>
+    <span class="k">return</span> <span class="n">0</span>;
+}
+
+<span class="k">int</span> <span class="f">virtio_net_up</span>(<span class="k">uintptr_t</span> window_vaddr, <span class="k">unsigned</span> nth, <span class="k">uintptr_t</span> dma_vaddr, <span class="k">uintptr_t</span> dma_paddr)
+{
+    <span class="k">int</span> slot = scan(window_vaddr, nth);
+    <span class="k">if</span> (slot &lt; <span class="n">0</span>) {
+        <span class="k">return</span> -<span class="n">100</span>;
+    }
+    <span class="k">int</span> rc = virtio_net_init(window_vaddr + <span class="n">0x200u</span> * (<span class="k">unsigned</span>)slot, dma_vaddr, dma_paddr);
+    <span class="k">return</span> rc == <span class="n">0</span> ? slot : rc;
+}
+
+<span class="k">bool</span> <span class="f">virtio_net_rx</span>(<span class="k">uint8_t</span> *dst, <span class="k">uint16_t</span> *len)
+{
+    barrier();
+    <span class="k">if</span> (rxq.last_used == rxq.used-&gt;idx) {
+        <span class="k">return</span> <span class="k">false</span>;
+    }
+    <span class="k">volatile</span> <span class="k">struct</span> virtq_used_elem *e = &amp;rxq.used-&gt;ring[rxq.last_used % Q];
+    <span class="k">uint16_t</span> id = (<span class="k">uint16_t</span>)e-&gt;id;
+    <span class="k">uint32_t</span> total = e-&gt;len;
+
+    <span class="k">uint16_t</span> frame_len = <span class="n">0</span>;
+    <span class="k">if</span> (total &gt; NET_HDR_LEN) {
+        frame_len = (<span class="k">uint16_t</span>)(total - NET_HDR_LEN);
+        <span class="k">volatile</span> <span class="k">const</span> <span class="k">uint8_t</span> *src = rxq.bufs + (<span class="k">uint32_t</span>)id * VIRTIO_NET_BUF_SIZE + NET_HDR_LEN;
+        <span class="k">for</span> (<span class="k">uint16_t</span> i = <span class="n">0</span>; i &lt; frame_len; i++) {
+            dst[i] = src[i];
+        }
+    }
+    *len = frame_len;
+    rxq.last_used++;
+
+    rxq.avail-&gt;ring[rxq.avail-&gt;idx % Q] = id;
+    barrier();
+    rxq.avail-&gt;idx++;
+    barrier();
+    regs-&gt;QueueNotify = <span class="n">0</span>;
+    <span class="k">return</span> frame_len != <span class="n">0</span>;
+}
+
+<span class="k">void</span> <span class="f">virtio_net_tx</span>(<span class="k">const</span> <span class="k">uint8_t</span> *frame, <span class="k">uint16_t</span> len)
+{
+    <span class="k">uint16_t</span> id = tx_next % Q;
+    tx_next++;
+
+    <span class="k">volatile</span> <span class="k">uint8_t</span> *buf = txq.bufs + (<span class="k">uint32_t</span>)id * VIRTIO_NET_BUF_SIZE;
+    <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; NET_HDR_LEN; i++) {
+        buf[i] = <span class="n">0</span>; <span class="c">/* no offloads: zeroed virtio-net header */</span>
+    }
+    <span class="k">for</span> (<span class="k">uint16_t</span> i = <span class="n">0</span>; i &lt; len; i++) {
+        buf[NET_HDR_LEN + i] = frame[i];
+    }
+    txq.desc[id].len = NET_HDR_LEN + len;
+    txq.desc[id].flags = <span class="n">0</span>;
+
+    txq.avail-&gt;ring[txq.avail-&gt;idx % Q] = id;
+    barrier();
+    txq.avail-&gt;idx++;
+    barrier();
+    regs-&gt;QueueNotify = <span class="n">1</span>;
+}
+
+<span class="k">uint32_t</span> <span class="f">virtio_net_ack</span>(<span class="k">void</span>)
+{
+    <span class="k">uint32_t</span> status = regs-&gt;InterruptStatus;
+    regs-&gt;InterruptACK = status;
+    <span class="k">return</span> status;
+}</pre></div>
+
+<div role="tabpanel" id="p-q" aria-labelledby="t-q" tabindex="0" hidden><pre class="code-body"><span class="c">/* Queries for `fire verify demo/datadiode/`. Each buffered channel is a
+   queue of its length, the signal word and Microkit's pending bit, at most
+   3 long in the model; the Environment raises each NIC's IRQ for ever, as
+   inject.py keeps feeding frames, masked until the driver acks it, as seL4
+   does (#355, #601). */</span>
+
+<span class="c">/* Never stuck: the device always has a move unless a driver never takes or
+   never acks its IRQ, so a deadlock would be a stuck driver. */</span>
+<span class="k">A[]</span> not deadlock
+
+<span class="c">/* A frame crosses each hop: dd takes one from o2d, eth_inner one from d2i. */</span>
+<span class="k">E&lt;&gt;</span> dd.L2
+<span class="k">E&lt;&gt;</span> eth_inner.Deliver
+
+<span class="c">/* No lost wake-up: a parked receiver with a value waiting is always
+   notified. A receiver stuck this way is not a deadlock, since eth_outer
+   keeps running; these two catch it. */</span>
+<span class="k">A[]</span> not (!dd.awake &amp;&amp; q_o2d.length &gt; <span class="n">0</span> &amp;&amp; !pend_o2d)
+<span class="k">A[]</span> not (!eth_inner.awake &amp;&amp; q_d2i.length &gt; <span class="n">0</span> &amp;&amp; !pend_d2i)
+
+<span class="c">/* Secrecy: no Low PD, and nothing in o2d, ever holds a frame that came in
+   on the inner (High) network. Frames carry the NIC they came in on, set by
+   eth_frame's contract and proved on eth.c. */</span>
+<span class="k">A[]</span> not (eth_outer.frame.origin == ORIGIN_INNER || dd.f.origin == ORIGIN_INNER || (exists (i : int[<span class="n">0</span>, <span class="n">2</span>]) q_o2d_val[i].origin == ORIGIN_INNER))
+
+<span class="c">/* The origin travels: dd receives a frame tagged with the outer network. */</span>
+<span class="k">E&lt;&gt;</span> dd.f.origin == ORIGIN_OUTER</pre></div>
           </div>
         </div>
 
         <!-- UPPAAL model -->
         <div class="code" style="margin-top: 16px">
-          <div class="code-head"><span class="path">UPPAAL model of dd, generated by fire build</span><span>datadiode.xta · datadiode.q</span></div>
+          <div class="code-head"><span class="path">UPPAAL model of dd, generated by fire build</span><span>build/datadiode.xta</span></div>
           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; padding: 16px">
             <div style="flex: 999 1 560px; min-width: 0; overflow-x: auto">
               <svg viewBox="0 0 816 168" style="display: block; width: 100%; min-width: 600px; height: auto" role="img" aria-labelledby="dd-title">
@@ -412,14 +1086,9 @@ frame: Frame;
                 </g>
               </svg>
             </div>
-<pre class="code-body" style="flex: 1 1 220px; padding: 0"><span class="c">// datadiode.q</span>
-<span class="k">A[]</span> not deadlock
-<span class="k">E&lt;&gt;</span> dd.L2
-
-<span class="c">// fire verify on the diode waits
-// for buffered channels in the model</span></pre>
           </div>
         </div>
+        <p style="margin: 16px 0 0; font-size: 14px" class="muted"><code>fire verify demo/datadiode/</code> first proves the contracts in <code>eth.h</code> on <code>eth.c</code> with Frama-C, then checks the model of all three domains against the seven queries in <code>datadiode.q</code>, both in the file list above.</p>
         <p style="margin: 16px 0 0; font-size: 14px" class="muted">Walk through it in the <a href="docs/manual/tutorial.html">tutorial</a>, or run it yourself with <code>fire run demo/datadiode/</code> (<a href="docs/manual/fire-run.html">fire run</a> in the manual).</p>
         <p class="more-examples">
           <a href="examples/nrl-pump.html">NRL Pump</a>
