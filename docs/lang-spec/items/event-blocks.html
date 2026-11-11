@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-a06aa16a.js";
+            window.path_to_searchindex_js = "../searchindex-e6c58091.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -311,7 +311,7 @@ process does not see it unless it is passed as an argument
 (<code>c?x -&gt; Drain(x)</code>). The send form <code>c!e</code> transmits the expression <code>e</code>,
 of type <code>T</code>. A signalling channel is a Microkit notification, which
 carries no value: its events are <code>c?</code> and <code>c!</code>, and a value or binder on
-it is an error (<code>channel 'ball' has no buffer, so it carries no value</code>),
+it is an error (<code>channel 'ball' carries no value</code>),
 as is leaving one off a buffered channel.</p>
 <h3 id="no-selective-receive"><a class="header" href="#no-selective-receive">No selective receive</a></h3>
 <p>The RHS of <code>?</code> is always a single identifier (a binder), never a value
