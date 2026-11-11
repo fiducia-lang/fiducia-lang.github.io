@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-08f206bc.js";
+            window.path_to_searchindex_js = "searchindex-d7e06615.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -721,7 +721,7 @@ network, so the secrecy query is not true for want of frames.</li>
 fire: verifying datadiode
   ✓ Running frama-c: /usr/bin/frama-c
 
-  ACSL: eth.c                                              PASS
+  ACSL: src/eth.c                                          PASS
   ✓ Running verifyta: /opt/uppaal/bin/verifyta
   ✓ Query file: demo/datadiode/spec/datadiode.q
 
@@ -847,6 +847,7 @@ a project has contracts in a language with no entry.</p>
 <tr><td><code>language</code></td><td>yes</td><td><code>"c"</code>: Frama-C’s WP plugin proves the ACSL. <code>"pnk"</code>: <code>pancake2viper</code> proves the Pancake contracts.</td></tr>
 <tr><td><code>path</code></td><td>no</td><td>The binary. Falls back to <code>$FRAMAC</code> / <code>$PANCAKE2VIPER</code>, then <code>frama-c</code> / <code>pancake2viper</code> on <code>PATH</code>.</td></tr>
 <tr><td><code>args</code></td><td>no</td><td>Extra flags, after the verifier’s own arguments.</td></tr>
+<tr><td><code>assume</code></td><td>no</td><td>C only: functions Frama-C does not prove. WP skips each (<code>-wp-skip-fct</code>) and its callers use its contract as given; <code>fire verify</code> lists them on an <code>ASSUMED</code> row. A name that no file sent to Frama-C defines is an error. E.g. <code>["virtio_net_rx", "virtio_net_tx"]</code>, a device driver’s entry points.</td></tr>
 </tbody>
 </table>
 </div>
@@ -953,12 +954,15 @@ for each language that has any: Frama-C for annotated C, <code>pancake2viper</co
 for Pancake. Files without contracts have nothing to prove. A header’s
 contracts are proved on the project’s <code>.c</code> file of the same name, which
 includes it (<code>include/eth.h</code> on <code>src/eth.c</code>); an annotated header with no
-such source is an error.</li>
+such source is an error. A C function named in the entry’s
+<a href="#verifycode_verifier--code-verifiers"><code>assume</code></a> is not
+proved: its file gets an <code>ASSUMED</code> row naming it. Rows name a file by
+its path in the project.</li>
 <li>Reads <code>build/&lt;name&gt;.xta</code>. The <code>--pretty</code> XML is for the GUI only.</li>
 <li>Runs <code>verifyta</code> (<code>[verify.model_checker] path</code>, then <code>$VERIFYTA</code>, then
 <code>PATH</code>) on the model and each query file, asking for a trace.</li>
-<li>Prints one PASS / FAIL line per query, and exits non-zero if any
-check fails, or if <code>verifyta</code> answered fewer queries than a file holds
+<li>Prints one PASS / FAIL line per contract file and per query, and exits
+non-zero if any check fails, or if <code>verifyta</code> answered fewer queries than a file holds
 (a refused licence, a crash).</li>
 </ol>
 <h2 id="writing-queries"><a class="header" href="#writing-queries">Writing queries</a></h2>

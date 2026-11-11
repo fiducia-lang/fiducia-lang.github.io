@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-08f206bc.js";
+            window.path_to_searchindex_js = "searchindex-d7e06615.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -285,6 +285,7 @@ a project has contracts in a language with no entry.</p>
 <tr><td><code>language</code></td><td>yes</td><td><code>"c"</code>: Frama-C’s WP plugin proves the ACSL. <code>"pnk"</code>: <code>pancake2viper</code> proves the Pancake contracts.</td></tr>
 <tr><td><code>path</code></td><td>no</td><td>The binary. Falls back to <code>$FRAMAC</code> / <code>$PANCAKE2VIPER</code>, then <code>frama-c</code> / <code>pancake2viper</code> on <code>PATH</code>.</td></tr>
 <tr><td><code>args</code></td><td>no</td><td>Extra flags, after the verifier’s own arguments.</td></tr>
+<tr><td><code>assume</code></td><td>no</td><td>C only: functions Frama-C does not prove. WP skips each (<code>-wp-skip-fct</code>) and its callers use its contract as given; <code>fire verify</code> lists them on an <code>ASSUMED</code> row. A name that no file sent to Frama-C defines is an error. E.g. <code>["virtio_net_rx", "virtio_net_tx"]</code>, a device driver’s entry points.</td></tr>
 </tbody>
 </table>
 </div>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-08f206bc.js";
+            window.path_to_searchindex_js = "searchindex-d7e06615.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -210,12 +210,15 @@ for each language that has any: Frama-C for annotated C, <code>pancake2viper</co
 for Pancake. Files without contracts have nothing to prove. A header’s
 contracts are proved on the project’s <code>.c</code> file of the same name, which
 includes it (<code>include/eth.h</code> on <code>src/eth.c</code>); an annotated header with no
-such source is an error.</li>
+such source is an error. A C function named in the entry’s
+<a href="fire-toml.html#verifycode_verifier--code-verifiers"><code>assume</code></a> is not
+proved: its file gets an <code>ASSUMED</code> row naming it. Rows name a file by
+its path in the project.</li>
 <li>Reads <code>build/&lt;name&gt;.xta</code>. The <code>--pretty</code> XML is for the GUI only.</li>
 <li>Runs <code>verifyta</code> (<code>[verify.model_checker] path</code>, then <code>$VERIFYTA</code>, then
 <code>PATH</code>) on the model and each query file, asking for a trace.</li>
-<li>Prints one PASS / FAIL line per query, and exits non-zero if any
-check fails, or if <code>verifyta</code> answered fewer queries than a file holds
+<li>Prints one PASS / FAIL line per contract file and per query, and exits
+non-zero if any check fails, or if <code>verifyta</code> answered fewer queries than a file holds
 (a refused licence, a crash).</li>
 </ol>
 <h2 id="writing-queries"><a class="header" href="#writing-queries">Writing queries</a></h2>
