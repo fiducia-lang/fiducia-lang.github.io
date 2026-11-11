@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "searchindex-dcedeacf.js";
+            window.path_to_searchindex_js = "searchindex-08f206bc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-4338b323.js"></script>
@@ -223,13 +223,19 @@ exists, and how the PDs are connected. It holds no behaviour.</p>
 <h3 id="a-struct-for-the-frame"><a class="header" href="#a-struct-for-the-frame">A struct for the frame</a></h3>
 <pre><code class="language-text">struct Frame {
     len: uint16;
+    origin: uint8;
     data: uint8[2048];
 }
+
+const ORIGIN_OUTER: uint8 = 1;
+const ORIGIN_INNER: uint8 = 2;
 </code></pre>
-<p><code>Frame</code> is the value that crosses the diode. A struct declared in the
-<code>.fis</code> is shared by every PD and by the C code: the build writes it to
-<code>include/gen/types.h</code>, which <code>include/eth.h</code> includes, so C sees the same
-<code>struct Frame</code>. See
+<p><code>Frame</code> is the value that crosses the diode. <code>origin</code> is the network the
+frame came in on, one of the two constants; the model tracks it, which is
+what <a href="#8-verify">Verify</a> states secrecy over. A struct or constant declared
+in the <code>.fis</code> is shared by every PD and by the C code: the build writes it
+to <code>include/gen/types.h</code>, which <code>include/eth.h</code> includes, so C sees the
+same <code>struct Frame</code>. See
 <a href="https://fiducia-lang.github.io/docs/lang-spec/system/data-layer.html">Data Layer</a>.</p>
 <h3 id="memory-regions"><a class="header" href="#memory-regions">Memory regions</a></h3>
 <pre><code class="language-text">Low MemoryRegion eth_outer_output(0x200000, 0x200000);
@@ -275,7 +281,7 @@ is a bare Microkit notification.</p>
 <ul>
 <li><strong>Capacity from the region.</strong> A 16-byte header holds the two indices
 and a signal word, then the slots, packed. <code>o2d</code>’s 2 MiB region of
-2050-byte <code>Frame</code>s holds ⌊(0x200000 − 16) / 2050⌋ = 1022 frames.</li>
+2052-byte <code>Frame</code>s holds ⌊(0x200000 − 16) / 2052⌋ = 1021 frames.</li>
 <li><strong>First in, first out.</strong> The receiver takes frames in the order they
 were sent.</li>
 <li><strong>A send never waits.</strong> A send copies the value into the next slot and
@@ -289,7 +295,7 @@ notified of the next send; until then, sends notify no one.</li>
 <p>A diode wants exactly this. The <code>Low</code> side must never wait on the <code>High</code>
 side, and with a lossy ring it cannot: when <code>eth_inner</code> falls behind, <code>d2i</code>
 fills and <code>dd</code> drops frames, and <code>eth_outer</code> and <code>dd</code> carry on. The queue
-holds up to 1022 frames in flight on each hop, so a burst from the network
+holds up to 1021 frames in flight on each hop, so a burst from the network
 does not drop frames as long as the PDs downstream keep up.</p>
 <p><code>System</code> lists the PDs, interleaved. The
 <a href="https://fiducia-lang.github.io/docs/lang-spec/system/channels.html#buffered-channels">Channel Declarations</a>
@@ -350,7 +356,7 @@ evt poll: {
 }
 
 evt stage_forward: {
-    frame = eth.eth_frame();
+    frame = eth.eth_frame(ORIGIN_OUTER);
     dbg("forward -&gt; o2d");
 }
 
@@ -359,7 +365,9 @@ evt send_frame.|len: uint16|: {
     dbg("Packet sent to network len=", len);
 }
 </code></pre>
-<p><code>eth_frame</code> returns a <code>struct Frame</code>, the type the <code>.fis</code> declared.
+<p><code>eth_frame</code> returns a <code>struct Frame</code>, the type the <code>.fis</code> declared, with
+its <code>origin</code> set to the argument: every frame <code>eth_outer</code> sends is tagged
+with the outer network.
 <code>send_frame</code> carries a value: <code>send_frame.reply_len</code> performs it with
 <code>len</code> bound to <code>reply_len</code>.</p>
 <p>At boot, <code>Init</code> brings up the NIC and reports whether it came up, with a
@@ -423,16 +431,16 @@ dropped. No branch sends anything towards <code>dd</code>.</p>
 <pre><code class="language-console">$ fire build demo/datadiode/
 fire: building datadiode for qemu_virt_aarch64 (debug)
   ✓ Wrote the data-layer headers to demo/datadiode/include/gen
-  ✓ Parsed 1 system + 3 program files + 3 foreign module(s)
+  ✓ Parsed 1 system + 3 program files + 1 foreign module(s)
   ✓ Resolved names
   ...
   ✓ Type-checked information flow
   ✓ Checked channel dependency acyclicity (WF2)
   ✓ Built the graphs and checked the notified ones (receive-headed, receives at the head only, guarded choices)
   ✓ Generated 3 C file(s) in demo/datadiode/build/gen
-MICROKIT|CAPDL SPEC: number of root objects = 88, spec footprint = 13.05 KiB
-MICROKIT|INITIAL TASK: memory size = 432 KiB
-MICROKIT|LOADER: image file size = 2.68 MiB
+MICROKIT|CAPDL SPEC: number of root objects = 90, spec footprint = 13.32 KiB
+MICROKIT|INITIAL TASK: memory size = 440 KiB
+MICROKIT|LOADER: image file size = 2.69 MiB
   ✓ image: demo/datadiode/build/datadiode.img
   ...
   ✓ UPPAAL model written to demo/datadiode/build/datadiode.xta
@@ -478,27 +486,73 @@ eth_outer: Packet sent to network len=42
 </code></pre>
 <p>Exit QEMU with <code>Ctrl-A x</code>.</p>
 <h2 id="8-verify"><a class="header" href="#8-verify">8. Verify</a></h2>
-<p><code>fire verify</code> checks the UPPAAL model <code>fire build</code> wrote against the
-queries in <code>spec/</code>. The diode’s are:</p>
+<p><code>fire verify</code> does two things: it proves the contracts on the project’s C
+with Frama-C, then checks the UPPAAL model <code>fire build</code> wrote against the
+queries in <code>spec/</code>.</p>
+<h3 id="the-contracts"><a class="header" href="#the-contracts">The contracts</a></h3>
+<p>The model does not look inside C. What it knows of a call is the
+function’s ACSL contract, which for the diode is in <code>include/eth.h</code>:</p>
+<pre><code class="language-c">/*@ ensures \result == 0 || \result == 1; */
+int64_t eth_poll(void);
+
+/*@ ensures 0 &lt;= \result &lt;= 3; */
+int64_t eth_pkt_kind(void);
+
+/*@ ensures \result.origin == origin; */
+struct Frame eth_frame(uint8_t origin);
+</code></pre>
+<p>The first two are the NIC’s input as the model sees it: on each <code>poll</code> a
+frame may or may not have arrived, of any of the four kinds, so the model
+explores every branch of <code>Drain</code>. The third says a frame carries the
+origin it was given. Frama-C’s WP proves all three on <code>src/eth.c</code>.</p>
+<p>Only these three are proved. <code>util.c</code> and <code>virtio_net.c</code> carry no
+contracts, so the proof assumes what <code>eth.c</code> calls in them and checks no
+runtime errors
+(<a href="https://github.com/fiducia-lang/fic/issues/646">#646</a>).</p>
+<h3 id="the-queries"><a class="header" href="#the-queries">The queries</a></h3>
+<p><code>spec/datadiode.q</code> holds seven:</p>
 <pre><code class="language-text">A[] not deadlock
 
 E&lt;&gt; dd.L2
+E&lt;&gt; eth_inner.Deliver
+
+A[] not (!dd.awake &amp;&amp; q_o2d.length &gt; 0 &amp;&amp; !pend_o2d)
+A[] not (!eth_inner.awake &amp;&amp; q_d2i.length &gt; 0 &amp;&amp; !pend_d2i)
+
+A[] not (eth_outer.frame.origin == ORIGIN_INNER || dd.f.origin == ORIGIN_INNER || (exists (i : int[0, 2]) q_o2d_val[i].origin == ORIGIN_INNER))
+
+E&lt;&gt; dd.f.origin == ORIGIN_OUTER
 </code></pre>
-<p>The first says the system never deadlocks; the second, that <code>dd</code> can
-reach the location after its receive on <code>o2d</code>, so a forward can start.</p>
-<p>The model does not translate buffered channels yet, so <code>verifyta</code> rejects
-the diode’s model:</p>
+<ul>
+<li><strong>No deadlock.</strong> The environment raises each NIC’s interrupt for ever, as
+<code>inject.py</code> keeps sending, so a deadlock would be a driver that never
+takes or never acknowledges its interrupt.</li>
+<li><strong>A frame crosses each hop.</strong> <code>dd</code> can reach the location after its
+receive on <code>o2d</code>, and <code>eth_inner</code> can reach <code>Deliver</code>.</li>
+<li><strong>No lost wake-up.</strong> A receiver that is waiting while its queue holds a
+value always has a notification pending. In the model a queue holds at
+most 3 values.</li>
+<li><strong>Secrecy.</strong> No <code>Low</code> PD, and no slot of <code>o2d</code>, ever holds a frame that
+came in on the inner network.</li>
+<li><strong>The origin travels.</strong> <code>dd</code> does receive a frame tagged with the outer
+network, so the secrecy query is not true for want of frames.</li>
+</ul>
 <pre><code class="language-console">$ fire verify demo/datadiode/
 fire: verifying datadiode
-  ✓ no contracts in the project's C files; nothing to prove
+  ✓ Running frama-c: /usr/bin/frama-c
+
+  ACSL: eth.c                                              PASS
+  ✓ Running verifyta: /opt/uppaal/bin/verifyta
+  ✓ Query file: demo/datadiode/spec/datadiode.q
+
+  Q1  A[] not deadlock                                     PASS
+  Q2  E&lt;&gt; dd.L2                                            PASS
+  Q3  E&lt;&gt; eth_inner.Deliver                                PASS
   ...
-  demo/datadiode/build/datadiode.xta::50: [error] Unknown identifier: o2d_c.
-  ...
-  ✗ verifyta answered 0 of 2 queries
-Error: one or more queries failed
+  Q7  E&lt;&gt; dd.f.origin == ORIGIN_OUTER                      PASS
 </code></pre>
-<p><a href="fire-verify.html">Verifying: <code>fire verify</code></a> runs the same steps to a pass
-on <code>demo/pingpong/</code>, whose channels are signalling channels.</p>
+<p><a href="fire-verify.html">Verifying: <code>fire verify</code></a> has the options, and how a
+contract becomes the model’s view of a call.</p>
 <h2 id="where-to-go-next"><a class="header" href="#where-to-go-next">Where to go next</a></h2>
 <ul>
 <li>The <a href="https://fiducia-lang.github.io/docs/lang-spec">Fiducia Language Reference</a>
