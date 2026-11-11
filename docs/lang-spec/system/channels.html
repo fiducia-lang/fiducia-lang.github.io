@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "rust";
             const default_dark_theme = "ayu";
-            window.path_to_searchindex_js = "../searchindex-e6c58091.js";
+            window.path_to_searchindex_js = "../searchindex-f02a99ab.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-95c1b5de.js"></script>
@@ -183,7 +183,7 @@
                         <h1 id="channel-declarations"><a class="header" href="#channel-declarations">Channel Declarations</a></h1>
 <pre><code class="language-text">ChannelDecl       ::= SyncChannelDecl | AsyncChannelDecl
 
-SyncChannelDecl   ::= 'Sync' 'Chan' ident '=' ident '--&gt;' ident ';'?
+SyncChannelDecl   ::= 'Sync' 'Chan' ('&lt;' Type '&gt;')? ident '=' ident '--&gt;' ident ';'?
 
 AsyncChannelDecl  ::= 'Async'? 'Chan' ident '=' ident '--&gt;' ident ViaClause? ';'?
                     | 'Async'? 'Chan' ident '=' ident '&lt;-&gt;' ident ';'?
@@ -199,10 +199,9 @@ files reference them by name only, in the channel events of a process.</p>
 <li>a <strong>signalling channel</strong> carries no value: a send <code>c!</code> wakes the other
 side, and a receive <code>c?</code> waits for it;</li>
 <li>a <strong>message-passing channel</strong> carries values of a type: a send <code>c!e</code>
-passes the value of <code>e</code>, and a receive <code>c?x</code> binds it to <code>x</code>. Today the
-one message-passing channel is the <a href="#buffered-channels">buffered channel</a>;
-a <a href="#synchronised-channels">synchronised channel</a> that passes a message
-is planned.</li>
+passes the value of <code>e</code>, and a receive <code>c?x</code> binds it to <code>x</code>: the
+<a href="#buffered-channels">buffered channel</a>, and the
+<a href="#synchronised-channels">synchronised channel</a> <code>Sync Chan&lt;T&gt;</code>.</li>
 </ul>
 <div class="table-wrapper">
 <table>
@@ -213,13 +212,16 @@ is planned.</li>
 <tr><td><code>Chan c = a --&gt; b;</code></td><td>signalling</td><td><code>a</code> to <code>b</code></td></tr>
 <tr><td><code>Chan c = a &lt;-&gt; b;</code></td><td>signalling</td><td>both ways; see <a href="#wf2-and-bidirectional-channels">WF2</a></td></tr>
 <tr><td><code>Sync Chan c = a --&gt; b;</code></td><td>signalling</td><td><code>a</code> to <code>b</code>, <code>a</code> of lower priority</td></tr>
+<tr><td><code>Sync Chan&lt;T&gt; c = a --&gt; b;</code></td><td>message passing</td><td><code>a</code> to <code>b</code>, <code>a</code> of lower priority, a <code>T</code> per call</td></tr>
 <tr><td><code>Chan c = a --&gt; b via region&lt;T&gt;;</code></td><td>message passing</td><td><code>a</code> to <code>b</code>, values of <code>T</code></td></tr>
 </tbody>
 </table>
 </div>
 <p>The <code>Async</code> keyword may be omitted — a <code>Chan</code> without a leading <code>Sync</code> is
 asynchronous. The arrow is always written: <code>Sync</code> channels and buffered
-channels take <code>--&gt;</code> only. The trailing semicolon is optional.</p>
+channels take <code>--&gt;</code> only. Only a <code>Sync</code> channel names a type after <code>Chan</code>:
+<code>Chan&lt;T&gt;</code> on an async channel is an error, since its values go in a
+buffer, <code>via region&lt;T&gt;</code>. The trailing semicolon is optional.</p>
 <h2 id="fields"><a class="header" href="#fields">Fields</a></h2>
 <ul>
 <li><strong>Name</strong> — <code>snake_case</code> identifier. The same name appears in process
@@ -248,12 +250,10 @@ receiver runs wake it once.</p>
 PD to the higher: <code>c!</code> is <code>microkit_ppcall</code>, and the sender waits while
 the receiver’s <code>@bind(microkit.protected)</code> process handles <code>c?</code> and runs
 to its end (see <a href="../semantics/entry-points.html">Entry Points</a>). The
-sender’s end is marked <code>pp</code> in the SDF. It carries no value yet, and the
-reply is empty: carrying a value is
-<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>, a reply
-<a href="https://github.com/fiducia-lang/fic/issues/625">#625</a>. The UPPAAL model
-does not cover it yet: <code>--emit=xta</code> refuses a PD that binds <code>protected</code>
-(<a href="https://github.com/fiducia-lang/fic/issues/355">#355</a>).</p>
+sender’s end is marked <code>pp</code> in the SDF. A <code>Sync Chan&lt;T&gt;</code> carries a value
+with the call (see <a href="#synchronised-channels">Synchronised channels</a>); the
+reply is empty. The UPPAAL model does not cover it yet: <code>--emit=xta</code>
+refuses a PD that binds <code>protected</code>.</p>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <pre><code class="language-text">// Signalling, one way.
 Chan tick = timer --&gt; worker;
@@ -302,9 +302,32 @@ cached, at addresses <code>fic</code> chooses): it must not also appear in a
 the generated unit exports no symbol for the region.</li>
 </ul>
 <h2 id="synchronised-channels"><a class="header" href="#synchronised-channels">Synchronised channels</a></h2>
-<p>Planned, not yet in the language: a <code>Sync</code> channel that passes a message,
-the value carried in the protected procedure call itself, by copy
-(<a href="https://github.com/fiducia-lang/fic/issues/602">#602</a>).</p>
+<p>A <code>Sync Chan&lt;T&gt;</code> passes a <code>T</code> in the protected procedure call itself: <code>c!e</code>
+copies the value of <code>e</code> into the message registers and calls, and the
+receiver’s <code>protected</code> process binds it with <code>c?x</code>. There is no shared
+memory and no queue: one value per call, by copy, and the sender waits until
+the receiver’s process has run.</p>
+<pre><code class="language-text">struct Req { a: int32; b: int64; }
+Sync Chan&lt;Req&gt; ask = client --&gt; server;
+
+// client.fi
+evt fill: r = mk.req_make();
+proc Init() { fill -&gt; ask!r -&gt; Skip; }
+
+// server.fi
+@bind(microkit.protected)
+proc Serve() { ask?q -&gt; show.q -&gt; Serve(); }
+</code></pre>
+<ul>
+<li><strong>It fits in one seL4 message.</strong> The value goes in the message registers,
+up to seL4’s <code>seL4_MsgMaxLength</code>, 120 words of 8 bytes; the kernel passes
+the first 4 in hardware registers on AArch64 and the rest through the IPC
+buffer. A <code>T</code> of more than 960 bytes is an error at the channel, naming its
+size.</li>
+<li><strong>A value both ways.</strong> <code>c!e</code> and <code>c?x</code> are required on a <code>Sync Chan&lt;T&gt;</code>,
+and rejected on a <code>Sync Chan</code> with no type, as on any channel that carries
+no value.</li>
+</ul>
 <h2 id="channel-events-in-process-bodies"><a class="header" href="#channel-events-in-process-bodies">Channel events in process bodies</a></h2>
 <p>Inside a process, channel events are written <code>chan_name '?' ident</code> (receive)
 and <code>chan_name '!' expr</code> (send) on a message-passing channel, and
