@@ -214,7 +214,7 @@
     whenVisible(out, function () { if (!started) { started = true; play(); } });
   });
 
-  // How it works: a pulse walks the loop on a tilted board. Lap 1 fails at
+  // How it works: a pulse walks the loop. Lap 1 fails at
   // System verification and goes round through Counterexample and Repair;
   // lap 2 holds and drops to the image. Each step's panel shows a real
   // snippet from demo/datadiode.
@@ -261,11 +261,11 @@
   var CENTRE = { 1: [124, 72], 2: [412, 72], 3: [700, 72], 4: [700, 248], 5: [412, 248], 6: [124, 248], 7: [700, 424] };
   document.querySelectorAll('[data-loop]').forEach(function (root) {
     var wrap = root.querySelector('[data-loop-wrap]'), stage = root.querySelector('[data-loop-stage]');
-    var board = root.querySelector('[data-loop-board]'), dot = root.querySelector('[data-loop-dot]');
+    var dot = root.querySelector('[data-loop-dot]');
     var cards = root.querySelectorAll('.loop-card'), detail = root.querySelector('[data-loop-detail]');
     var lap = root.querySelector('[data-loop-lap]'), toggle = root.querySelector('[data-loop-toggle]');
     var q = function (sel) { return root.querySelector(sel); };
-    var idx = 0, timer = null, playing = !reduceMotion, held = false, anim = null;
+    var idx = 0, timer = null, playing = true, anim = null;
     root.classList.add('is-live');
 
     function fit() {
@@ -311,7 +311,7 @@
 
     function schedule() {
       clearTimeout(timer);
-      if (!playing || held) return;
+      if (!playing) return;
       timer = setTimeout(function () { var p = idx; show((idx + 1) % LOOP.length, p); schedule(); }, LOOP[idx].dwell || 3600);
     }
     function setPlaying(on) { playing = on; toggle.textContent = on ? 'Pause' : 'Play'; schedule(); }
@@ -322,22 +322,12 @@
         var step = +c.dataset.step, cur = LOOP[idx].lap, pick = -1;
         LOOP.forEach(function (it, i) { if (pick < 0 && it.step === step && it.lap === cur) pick = i; });
         if (pick < 0) LOOP.forEach(function (it, i) { if (pick < 0 && it.step === step) pick = i; });
-        var p = idx; show(pick, p); setPlaying(false);
+        var p = idx; show(pick, p); setPlaying(true);
       });
     });
-    wrap.addEventListener('mouseenter', function () { held = true; clearTimeout(timer); });
-    wrap.addEventListener('mouseleave', function () { held = false; board.style.removeProperty('--ry'); board.style.removeProperty('--rx'); schedule(); });
-    if (!reduceMotion) {
-      wrap.addEventListener('mousemove', function (e) {
-        var r = wrap.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-        board.style.setProperty('--ry', (x * 10).toFixed(2) + 'deg');
-        board.style.setProperty('--rx', (24 - y * 10).toFixed(2) + 'deg');
-      });
-    }
 
     show(0);
-    setPlaying(false);
-    if (!reduceMotion) whenVisible(wrap, function () { setPlaying(true); });
+    setPlaying(true);
   });
 
   // Break the data diode: edit the shown files and print what fic says.
