@@ -156,27 +156,41 @@
 
   // Agent terminal: plays a short session. The fic and fire lines are real
   // output from fic 2.62.5 on demo/datadiode (abridged, paths shortened).
+  // A real Claude Code session (Sonnet 5.5) with fic 2.62.5 on its
+  // demo/datadiode, recorded 2026-11-17. Prompts and the agent's messages are
+  // shortened, paths made relative, and warnings and repeated progress lines
+  // left out; nothing is added.
   var SESSION = [
-    ['agent', 'Add a debug tap: let eth_outer read the inner DMA buffer.'],
+    ['you', 'For debugging, add a tap so eth_outer can read the inner DMA buffer and we can see frames after they cross the diode.'],
+    ['agent', 'I\'ll add the tap, then run the check.'],
     ['file', 'eth_outer.fi'],
-    ['add', 'Low Mapping peek(inner_dma, 0x2_800_000, "r", false);'],
+    ['add', 'Low Mapping inner_tap(inner_dma, 0x2_800_000, "r", false);'],
     ['cmd', 'fic . --check'],
-    ['err', 'Error: error: information flow violation: High memory region \'inner_dma\' is accessed through Low mapping \'peek\''],
-    ['dim', '  --> ./eth_outer.fi:10:1'],
-    ['dim', '   |'],
-    ['out', '10 | Low Mapping peek(inner_dma, 0x2_800_000, "r", false);'],
-    ['err', '   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'],
-    ['agent', 'inner_dma is High; eth_outer is the Low side. Removing the tap.'],
-    ['file', 'eth_outer.fi'],
-    ['del', 'Low Mapping peek(inner_dma, 0x2_800_000, "r", false);'],
+    ['err', 'Error: error: information flow violation: High memory region \'inner_dma\' is accessed through Low mapping \'inner_tap\''],
+    ['dim', '  --> ./eth_outer.fi:12:1'],
+    ['agent', 'The checker rejected the tap, and I\'m not going to work around it. I\'ll revert my edit.'],
+    ['cmd', 'git checkout eth_outer.fi'],
+    ['agent', 'inner_dma is High and eth_outer is the Low side. Letting eth_outer read it is a High\u2192Low flow, which is the exact thing the diode is built to prevent. My suggestion: tap on the High side.'],
+    ['you', 'Do option 1: tap on the High side. Then run the checks and build the model.'],
+    ['file', 'eth_inner.fi, include/eth.h, src/eth.c'],
+    ['add', 'dbg("tap: len=", f.len, " dst=", eth.eth_frame_dst(f), " ethertype=", eth.eth_frame_ethertype(f));'],
     ['cmd', 'fic . --check'],
-    ['ok', '  ✓ Parsed 1 system + 3 program files + 3 foreign module(s)'],
-    ['dim', '  ⋮'],
-    ['ok', '  ✓ Type-checked information flow'],
-    ['ok', '  ✓ Checked channel dependency acyclicity (WF2)'],
+    ['err', 'Error: error: event \'send_frame\': dbg arguments must be free of side effects: \'eth.eth_frame_dst\' is a call'],
+    ['dim', '  --> ./eth_inner.fi:25:38'],
+    ['agent', 'Calls aren\'t allowed inside dbg, so I\'ll assign the results to variables first.'],
+    ['file', 'eth_inner.fi'],
+    ['del', 'dbg("tap: len=", f.len, " dst=", eth.eth_frame_dst(f), " ethertype=", eth.eth_frame_ethertype(f));'],
+    ['add', 'tap_dst = eth.eth_frame_dst(f);'],
+    ['add', 'tap_type = eth.eth_frame_ethertype(f);'],
+    ['add', 'dbg("tap: len=", f.len, " dst=", tap_dst, " ethertype=", tap_type);'],
+    ['cmd', 'fic . --check'],
+    ['ok', '  \u2713 Parsed 1 system + 3 program files + 3 foreign module(s)'],
+    ['dim', '  \u22ee'],
+    ['ok', '  \u2713 Type-checked information flow'],
+    ['ok', '  \u2713 Checked channel dependency acyclicity (WF2)'],
     ['cmd', 'fire build --target=xta .'],
-    ['ok', '  ✓ UPPAAL model written to build/datadiode.xta'],
-    ['agent', 'Checks hold. The model is ready for fire verify.']
+    ['ok', '  \u2713 UPPAAL model written to build/datadiode.xta'],
+    ['agent', 'The diode is unchanged. The information-flow check and the channel acyclicity check both pass, and eth_outer has no new access to anything on the High side.']
   ];
   document.querySelectorAll('[data-term]').forEach(function (out) {
     var replay = out.parentNode.querySelector('[data-term-replay]');
@@ -186,6 +200,7 @@
       el.className = 'ln ' + kind;
       el.textContent = text;
       out.appendChild(el);
+      out.scrollTop = out.scrollHeight;
       return el;
     }
     function play() {
@@ -198,13 +213,13 @@
       (function step() {
         if (me !== run) return;
         if (i >= SESSION.length) { out.appendChild(caret); setTimeout(function () { if (me === run) play(); }, 6000); return; }
-        var s = SESSION[i++], typed = s[0] === 'cmd' || s[0] === 'agent';
+        var s = SESSION[i++], typed = s[0] === 'cmd' || s[0] === 'agent' || s[0] === 'you';
         if (!typed) { line(s[0], s[1]); setTimeout(step, s[0] === 'err' || s[0] === 'ok' ? 260 : 140); return; }
         var el = line(s[0], ''), k = 0;
         el.appendChild(caret);
         (function type() {
           if (me !== run) return;
-          if (k < s[1].length) { caret.before(s[1][k++]); setTimeout(type, s[0] === 'cmd' ? 45 : 22); return; }
+          if (k < s[1].length) { caret.before(s[1][k++]); out.scrollTop = out.scrollHeight; setTimeout(type, s[0] === 'cmd' ? 45 : 14); return; }
           caret.remove();
           setTimeout(step, s[0] === 'cmd' ? 650 : 900);
         })();

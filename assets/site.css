@@ -311,10 +311,11 @@ main p, main li, aside p, .steps span, .feed .summary {
 .term-head i:nth-child(1) { background: #fb7185; } .term-head i:nth-child(2) { background: #fbbf24; } .term-head i:nth-child(3) { background: #34d399; }
 .term-head .title { margin-left: 8px; flex: 1; }
 .term-head button { border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); font: 500 11px var(--mono); padding: 3px 8px; border-radius: 5px; cursor: pointer; }
-.term-body { margin: 0; padding: 16px 18px; min-height: 392px; font: 13px/1.65 var(--mono); color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.term-body { margin: 0; padding: 16px 18px; height: 480px; overflow-y: auto; scrollbar-width: thin; font: 13px/1.65 var(--mono); color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .term-body .ln { display: block; }
 .term-body .cmd { color: var(--text); } .term-body .cmd::before { content: "$ "; color: var(--green); }
 .term-body .agent { color: var(--purple); } .term-body .agent::before { content: "agent › "; color: var(--purple); font-weight: 600; }
+.term-body .you { color: var(--text); margin-top: 6px; } .term-body .you::before { content: "you › "; color: var(--accent); font-weight: 600; }
 .term-body .file { color: var(--text-dim); }
 .term-body .add { color: #86efac; background: rgba(52,211,153,0.10); } .term-body .add::before { content: "+ "; }
 .term-body .del { color: #fda4af; background: rgba(251,113,133,0.10); text-decoration: line-through; text-decoration-color: rgba(253,164,175,0.5); } .term-body .del::before { content: "- "; }

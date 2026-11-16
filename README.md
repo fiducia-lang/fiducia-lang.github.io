@@ -19,9 +19,10 @@ Written by fic CI, do not edit by hand: `docs/manual/`, `docs/lang-spec/`,
 `releases/`. When a release is published, update the release card and add a
 Release entry to the News feed on `index.html` (releases are not on the blog).
 Also update the version in the hero's install one-liner (`data-cmd` and the
-shown command). The "See it work" terminal (`SESSION` in `assets/site.js`) and
-the "Try to break it" diagnostics (`BREAKS`) are real fic output: re-capture
-them if fic's messages change.
+shown command). The "See it work" terminal (`SESSION` in `assets/site.js`) is
+a recorded Claude Code session on the release's `demo/datadiode`, shortened but
+with nothing added, and the "Try to break it" diagnostics (`BREAKS`) are real
+fic output: re-record or re-capture them if fic's messages change.
 
 When `assets/site.css` or `assets/site.js` changes, bump the `?v=` on their
 links in every hand-written page so browsers fetch the new copy.
