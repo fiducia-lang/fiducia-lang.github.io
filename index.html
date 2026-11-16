@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=202611111200">
+  <link rel="stylesheet" href="assets/site.css?v=202611161403">
 </head>
 <body>
   <header class="site-header">
@@ -41,7 +41,7 @@
     <main>
 
       <!-- Vision -->
-      <section style="padding: 80px 0 64px">
+      <section class="hero" style="padding: 80px 0 56px">
         <p class="eyebrow">Vision</p>
         <h1 style="margin: 0 0 28px; font-size: clamp(28px, 3vw, 38px); line-height: 1.15; letter-spacing: -0.025em">Trusted agentic development, continuously verified.</h1>
         <ul class="keywords" data-cloud aria-label="Techniques Fiducia uses">
@@ -77,6 +77,36 @@
           <a href="#how" class="btn btn-dark">How it works</a>
           <a href="#example" class="btn btn-secondary">Walk through an example</a>
         </div>
+        <div class="oneliner" data-oneliner>
+          <div class="oneliner-head" role="group" aria-label="Platform">
+            <span>install</span>
+            <button type="button" aria-pressed="true" data-cmd="curl -fsSL https://fiducia-lang.github.io/releases/v2.62.5/fic-macos-arm64-2.62.5.tar.gz | tar -xz">macOS arm64</button>
+            <button type="button" aria-pressed="false" data-cmd="curl -fsSL https://fiducia-lang.github.io/releases/v2.62.5/fic-linux-x86-64-2.62.5.tar.gz | tar -xz">Linux x86-64</button>
+          </div>
+          <div class="oneliner-body">
+            <code data-oneliner-cmd>curl -fsSL https://fiducia-lang.github.io/releases/v2.62.5/fic-macos-arm64-2.62.5.tar.gz | tar -xz</code>
+            <button type="button" class="copy-btn" data-copy>Copy</button>
+          </div>
+        </div>
+        <div class="trust">
+          <b>Built on seL4 · with</b>
+          <a href="https://www.anu.edu.au/" title="The Australian National University"><img src="images/logos/anu.jpg" alt="The Australian National University"></a>
+          <a href="https://trustworthy.systems/" title="Trustworthy Systems"><img src="images/logos/trustworthy-systems.svg" alt="Trustworthy Systems"></a>
+          <a href="https://skykraft.com.au/" title="Skykraft"><img src="images/logos/skykraft.png" alt="Skykraft"></a>
+          <span class="hw">AMD Kria K26I · NVIDIA Jetson Orin</span>
+        </div>
+      </section>
+
+      <!-- Agent session -->
+      <section id="watch" class="section">
+        <p class="eyebrow">See it work</p>
+        <h2>An agent writes. fic checks.</h2>
+        <p class="section-desc">An agent edits the data diode and slips in a leak. fic rejects it before anything is built, the agent repairs it, and only then does the model get built.</p>
+        <div class="term">
+          <div class="term-head"><i></i><i></i><i></i><span class="title">demo/datadiode</span><button type="button" data-term-replay>Replay</button></div>
+          <pre class="term-body" data-term aria-live="off"></pre>
+        </div>
+        <p class="term-note">The agent's steps are illustrative. Every <code>fic</code> and <code>fire</code> line is real output from fic 2.62.5, the current release, on its <code>demo/datadiode</code>; warnings and repeated progress lines are left out.</p>
       </section>
 
       <!-- Why Fiducia -->
@@ -151,6 +181,17 @@
               <path d="M700 296V370" stroke="#60a5fa" marker-end="url(#ah-blue)"/>
             </g>
 
+            <g class="loop-pulse" aria-hidden="true">
+              <circle r="6" fill="#22d3ee">
+                <animateMotion dur="8s" repeatCount="indefinite" path="M124 72H700V248H124Z"/>
+                <animate attributeName="fill" dur="8s" repeatCount="indefinite" values="#22d3ee;#22d3ee;#fb7185;#fb7185" keyTimes="0;0.49;0.5;1"/>
+              </circle>
+              <circle r="14" fill="none" stroke="#22d3ee" stroke-opacity="0.35">
+                <animateMotion dur="8s" repeatCount="indefinite" path="M124 72H700V248H124Z"/>
+                <animate attributeName="stroke" dur="8s" repeatCount="indefinite" values="#22d3ee;#22d3ee;#fb7185;#fb7185" keyTimes="0;0.49;0.5;1"/>
+              </circle>
+            </g>
+
             <g font-size="15" text-anchor="middle">
               <rect x="24" y="24" width="200" height="96" rx="10" fill="#111827" stroke="#cbd5e1" stroke-width="1.5"/>
               <text x="124" y="66" fill="#e2e8f0" font-weight="700">1 · Code + contract</text>
@@ -180,6 +221,14 @@
               <rect x="600" y="376" width="200" height="96" rx="10" fill="#1e293b" stroke="#60a5fa"/>
               <text x="700" y="418" fill="#ffffff" font-weight="700">7 · Executable image</text>
               <text x="700" y="440" class="mono" font-size="12" fill="#cbd5e1">QEMU or real board</text>
+            </g>
+            <g class="loop-pulse" aria-hidden="true" fill="none" stroke-width="3">
+              <rect x="312" y="200" width="200" height="96" rx="10" stroke="#fb7185" stroke-opacity="0">
+                <animate attributeName="stroke-opacity" dur="8s" repeatCount="indefinite" values="0;0;0.9;0;0" keyTimes="0;0.64;0.69;0.76;1"/>
+              </rect>
+              <rect x="24" y="24" width="200" height="96" rx="10" stroke="#22d3ee" stroke-opacity="0">
+                <animate attributeName="stroke-opacity" dur="8s" repeatCount="indefinite" values="0;0.9;0;0;0.9" keyTimes="0;0.03;0.1;0.95;1"/>
+              </rect>
             </g>
 
             <text x="576" y="428" text-anchor="end" class="mono" font-size="12" fill="#94a3b8">fire build · fire run</text>
@@ -214,6 +263,12 @@
           <span class="pd high">eth_inner · High</span><span aria-hidden="true">→</span><span>host</span>
         </div>
 
+        <div class="tryit" data-break-controls>
+          <span>Try to break it:</span>
+          <button type="button" data-break="leak" aria-pressed="false">Leak High data to the Low side</button>
+          <button type="button" data-break="reverse" aria-pressed="false">Add a channel back</button>
+          <button type="button" data-break="reset" hidden>Reset</button>
+        </div>
         <div class="code files" data-files>
           <div class="files-nav" role="tablist" aria-label="Data diode source files" aria-orientation="vertical">
             <div class="files-group" aria-hidden="true">System description</div>
@@ -1056,6 +1111,12 @@ nic: <span class="k">int</span>;
           </div>
         </div>
 
+        <div class="diag" data-diag hidden>
+          <div class="diag-head" data-diag-head></div>
+          <pre data-diag-out></pre>
+          <div class="diag-note" data-diag-note></div>
+        </div>
+
         <!-- UPPAAL model -->
         <div class="code" style="margin-top: 16px">
           <div class="code-head"><span class="path">UPPAAL model of dd, generated by fire build</span><span>build/datadiode.xta</span></div>
@@ -1096,6 +1157,19 @@ nic: <span class="k">int</span>;
           <a href="examples/clipboard-guard.html">Clipboard Guard</a>
           <a href="docs/examples/" class="more">More examples &rarr;</a>
         </p>
+      </section>
+
+      <!-- Call to action -->
+      <section class="section">
+        <div class="cta">
+          <h2>Build systems that can't leak.</h2>
+          <p>Write the protocol once, as a Fiducia program. fic checks it on every build, and what holds compiles to seL4.</p>
+          <div class="btns">
+            <a href="docs/manual/installation.html" class="btn btn-primary">Install fic</a>
+            <a href="docs/manual/tutorial.html" class="btn btn-secondary">Read the tutorial</a>
+            <a href="https://github.com/fiducia-lang" class="btn btn-secondary">GitHub</a>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -1172,6 +1246,6 @@ nic: <span class="k">int</span>;
       </div>
     </div>
   </footer>
-  <script src="assets/site.js?v=202611091705"></script>
+  <script src="assets/site.js?v=202611161403"></script>
 </body>
 </html>
