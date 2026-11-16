@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=202611161403">
+  <link rel="stylesheet" href="assets/site.css?v=202611161418">
 </head>
 <body>
   <header class="site-header">
@@ -160,88 +160,66 @@
         <p style="margin: 0 0 8px; font-size: 20px; font-weight: 600">Code, formalise, verify, repair. Then build.</p>
         <p class="section-desc">Every check that fails produces a counterexample, and the counterexample drives the next repair. Only a system where every check holds is compiled to an image.</p>
 
-        <figure class="figure">
-          <svg viewBox="0 0 824 496" role="img" aria-labelledby="loop-title">
-            <title id="loop-title">The Fiducia workflow: code and contract, autoformalisation, code verification and system verification. A failed check gives a counterexample, which drives repair and synthesis back to the code. When every check holds, the system is compiled to an executable seL4 image.</title>
-            <defs>
-              <marker id="ah-grey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#94a3b8"/></marker>
-              <marker id="ah-rose" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#fb7185"/></marker>
-              <marker id="ah-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#60a5fa"/></marker>
-            </defs>
-            <rect x="8" y="8" width="808" height="304" rx="12" fill="#0d1220"/>
-            <text x="24" y="340" class="mono" font-size="12" fill="#94a3b8">verification loop: repeats until every check holds</text>
+        <div class="loop3d" data-loop>
+          <div class="loop-wrap" data-loop-wrap>
+            <div class="loop-stage" data-loop-stage role="img" aria-label="The Fiducia workflow: code and contract, autoformalisation, code verification and system verification. A failed check gives a counterexample, which drives repair and synthesis back to the code. When every check holds, the system is compiled to an executable seL4 image.">
+              <div class="loop-board" data-loop-board>
+                <svg class="loop-lines" viewBox="0 0 824 496" aria-hidden="true">
+                  <defs>
+                    <marker id="ah-grey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#94a3b8"/></marker>
+                    <marker id="ah-rose" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#fb7185"/></marker>
+                    <marker id="ah-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#60a5fa"/></marker>
+                  </defs>
+                  <rect x="8" y="8" width="808" height="304" rx="12" fill="#0d1220"/>
+                  <g fill="none" stroke-width="2">
+                    <path d="M224 72H306" stroke="#94a3b8" marker-end="url(#ah-grey)"/>
+                    <path d="M512 72H594" stroke="#94a3b8" marker-end="url(#ah-grey)"/>
+                    <path d="M700 120V194" stroke="#94a3b8" marker-end="url(#ah-grey)"/>
+                    <path d="M600 248H518" stroke="#fb7185" marker-end="url(#ah-rose)"/>
+                    <path d="M312 248H230" stroke="#fb7185" marker-end="url(#ah-rose)"/>
+                    <path d="M124 200V126" stroke="#fb7185" marker-end="url(#ah-rose)"/>
+                    <path d="M700 296V370" stroke="#60a5fa" marker-end="url(#ah-blue)"/>
+                  </g>
+                  <g font-family="IBM Plex Sans, sans-serif" font-size="13">
+                    <text x="714" y="162" fill="#94a3b8">proved</text>
+                    <text x="556" y="236" text-anchor="middle" fill="#fb7185">fails</text>
+                    <text x="138" y="162" fill="#fb7185">repaired</text>
+                    <text x="714" y="338" fill="#60a5fa">holds</text>
+                  </g>
+                  <g font-family="IBM Plex Mono, monospace" font-size="12" fill="#94a3b8">
+                    <text x="24" y="340">verification loop: repeats until every check holds</text>
+                    <text x="576" y="428" text-anchor="end">fire build · fire run</text>
+                  </g>
+                </svg>
+              <button type="button" class="loop-card " data-step="1" style="left:24px;top:24px"><b>1 · Code + contract</b><span>.fis · .fi · C/Pancake</span></button>
+              <button type="button" class="loop-card " data-step="2" style="left:312px;top:24px"><b>2 · Autoformalisation</b><span>program → system model</span></button>
+              <button type="button" class="loop-card " data-step="3" style="left:600px;top:24px"><b>3 · Code verification</b><span>Frama-C or Viper</span></button>
+              <button type="button" class="loop-card " data-step="4" style="left:600px;top:200px"><b>4 · System verification</b><span>info-flow types · UPPAAL</span></button>
+              <button type="button" class="loop-card fail" data-step="5" style="left:312px;top:200px"><b>5 · Counterexample</b><span>the trace that breaks it</span></button>
+              <button type="button" class="loop-card fail" data-step="6" style="left:24px;top:200px"><b>6 · Repair &amp; synthesis</b><span>fix code or contract</span></button>
+              <button type="button" class="loop-card image" data-step="7" style="left:600px;top:376px"><b>7 · Executable image</b><span>QEMU or real board</span></button>
+                <div class="loop-dot" data-loop-dot aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+          <div class="loop-bar">
+            <span class="loop-lap" data-loop-lap></span>
+            <button type="button" class="loop-toggle" data-loop-toggle>Pause</button>
+          </div>
+          <div class="loop-detail" data-loop-detail aria-live="polite">
+            <div class="loop-detail-text">
+              <p class="loop-detail-kicker" data-loop-kicker></p>
+              <h3 data-loop-title></h3>
+              <p data-loop-text></p>
+            </div>
+            <figure class="loop-detail-code">
+              <pre data-loop-code></pre>
+              <figcaption data-loop-cap></figcaption>
+            </figure>
+          </div>
+        </div>
 
-            <g fill="none" stroke-width="2">
-              <path d="M224 72H306" stroke="#94a3b8" marker-end="url(#ah-grey)"/>
-              <path d="M512 72H594" stroke="#94a3b8" marker-end="url(#ah-grey)"/>
-              <path d="M700 120V194" stroke="#94a3b8" marker-end="url(#ah-grey)"/>
-              <path d="M600 248H518" stroke="#fb7185" marker-end="url(#ah-rose)"/>
-              <path d="M312 248H230" stroke="#fb7185" marker-end="url(#ah-rose)"/>
-              <path d="M124 200V126" stroke="#fb7185" marker-end="url(#ah-rose)"/>
-              <path d="M700 296V370" stroke="#60a5fa" marker-end="url(#ah-blue)"/>
-            </g>
-
-            <g class="loop-pulse" aria-hidden="true">
-              <circle r="6" fill="#22d3ee">
-                <animateMotion dur="8s" repeatCount="indefinite" path="M124 72H700V248H124Z"/>
-                <animate attributeName="fill" dur="8s" repeatCount="indefinite" values="#22d3ee;#22d3ee;#fb7185;#fb7185" keyTimes="0;0.49;0.5;1"/>
-              </circle>
-              <circle r="14" fill="none" stroke="#22d3ee" stroke-opacity="0.35">
-                <animateMotion dur="8s" repeatCount="indefinite" path="M124 72H700V248H124Z"/>
-                <animate attributeName="stroke" dur="8s" repeatCount="indefinite" values="#22d3ee;#22d3ee;#fb7185;#fb7185" keyTimes="0;0.49;0.5;1"/>
-              </circle>
-            </g>
-
-            <g font-size="15" text-anchor="middle">
-              <rect x="24" y="24" width="200" height="96" rx="10" fill="#111827" stroke="#cbd5e1" stroke-width="1.5"/>
-              <text x="124" y="66" fill="#e2e8f0" font-weight="700">1 · Code + contract</text>
-              <text x="124" y="88" class="mono" font-size="12" fill="#94a3b8">.fis · .fi · C/Pancake</text>
-
-              <rect x="312" y="24" width="200" height="96" rx="10" fill="#111827" stroke="#334155"/>
-              <text x="412" y="66" fill="#e2e8f0" font-weight="700">2 · Autoformalisation</text>
-              <text x="412" y="88" class="mono" font-size="12" fill="#94a3b8">program → system model</text>
-
-              <rect x="600" y="24" width="200" height="96" rx="10" fill="#111827" stroke="#334155"/>
-              <text x="700" y="66" fill="#e2e8f0" font-weight="700">3 · Code verification</text>
-              <text x="700" y="88" class="mono" font-size="12" fill="#94a3b8">Frama-C or Viper</text>
-
-              <rect x="600" y="200" width="200" height="96" rx="10" fill="#111827" stroke="#334155"/>
-              <text x="700" y="242" fill="#e2e8f0" font-weight="700">4 · System verification</text>
-              <text x="700" y="263" class="mono" font-size="12" fill="#94a3b8">info-flow types</text>
-              <text x="700" y="280" class="mono" font-size="12" fill="#94a3b8">UPPAAL model checker</text>
-
-              <rect x="312" y="200" width="200" height="96" rx="10" fill="rgba(251,113,133,0.12)" stroke="#fb7185"/>
-              <text x="412" y="242" fill="#e2e8f0" font-weight="700">5 · Counterexample</text>
-              <text x="412" y="264" class="mono" font-size="12" fill="#94a3b8">the trace that breaks it</text>
-
-              <rect x="24" y="200" width="200" height="96" rx="10" fill="#111827" stroke="#fb7185"/>
-              <text x="124" y="242" fill="#e2e8f0" font-weight="700">6 · Repair &amp; synthesis</text>
-              <text x="124" y="264" class="mono" font-size="12" fill="#94a3b8">fix code or contract</text>
-
-              <rect x="600" y="376" width="200" height="96" rx="10" fill="#1e293b" stroke="#60a5fa"/>
-              <text x="700" y="418" fill="#ffffff" font-weight="700">7 · Executable image</text>
-              <text x="700" y="440" class="mono" font-size="12" fill="#cbd5e1">QEMU or real board</text>
-            </g>
-            <g class="loop-pulse" aria-hidden="true" fill="none" stroke-width="3">
-              <rect x="312" y="200" width="200" height="96" rx="10" stroke="#fb7185" stroke-opacity="0">
-                <animate attributeName="stroke-opacity" dur="8s" repeatCount="indefinite" values="0;0;0.9;0;0" keyTimes="0;0.64;0.69;0.76;1"/>
-              </rect>
-              <rect x="24" y="24" width="200" height="96" rx="10" stroke="#22d3ee" stroke-opacity="0">
-                <animate attributeName="stroke-opacity" dur="8s" repeatCount="indefinite" values="0;0.9;0;0;0.9" keyTimes="0;0.03;0.1;0.95;1"/>
-              </rect>
-            </g>
-
-            <text x="576" y="428" text-anchor="end" class="mono" font-size="12" fill="#94a3b8">fire build · fire run</text>
-            <g font-size="13">
-              <text x="714" y="162" fill="#94a3b8">proved</text>
-              <text x="556" y="236" text-anchor="middle" fill="#fb7185">fails</text>
-              <text x="138" y="162" fill="#fb7185">repaired</text>
-              <text x="714" y="338" fill="#60a5fa">holds</text>
-            </g>
-          </svg>
-        </figure>
-
-        <div class="steps">
+        <div class="steps loop-fallback">
           <div><b>Code + contract.</b> <span>The system in <code>.fis</code>, each protection domain in <code>.fi</code>, computation in C or Pancake under ACSL or Viper contracts.</span></div>
           <div><b>Autoformalisation.</b> <span>fic derives a UPPAAL model of the whole system from the program itself, so the model and the image come from the same source.</span></div>
           <div><b>Code verification.</b> <span>Each call into foreign code carries a contract on its implementation, proved with Frama-C or Viper.</span></div>
@@ -1246,6 +1224,6 @@ nic: <span class="k">int</span>;
       </div>
     </div>
   </footer>
-  <script src="assets/site.js?v=202611161403"></script>
+  <script src="assets/site.js?v=202611161418"></script>
 </body>
 </html>

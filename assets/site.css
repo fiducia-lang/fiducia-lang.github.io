@@ -351,7 +351,64 @@ main p, main li, aside p, .steps span, .feed .summary {
 
 
 @media (prefers-reduced-motion: reduce) {
-  .loop-pulse { display: none; }
   .card, .card:hover { transition: none; transform: none; }
   .term-body .caret { animation: none; }
+}
+
+/* ══ How it works: the loop on a 3D board ══ */
+.loop3d { margin-top: 8px; }
+.loop-wrap { position: relative; overflow: visible; }
+.loop-stage { width: 824px; height: 496px; transform-origin: 0 0; perspective: 1600px; perspective-origin: 50% 20%; }
+.loop-board {
+  position: relative; width: 824px; height: 496px; transform-style: preserve-3d;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .5s ease-out;
+  border-radius: 16px; background: var(--bg-card); border: 1px solid var(--border);
+  box-shadow: 0 40px 80px rgba(2,6,23,0.55);
+}
+.loop3d.is-live .loop-board { --rx: 24deg; }
+.loop-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.loop-card {
+  position: absolute; width: 200px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border-radius: 10px; border: 1px solid var(--border-strong); background: #111827; color: var(--text);
+  font: inherit; cursor: pointer; transform: translateZ(0); transform-style: preserve-3d;
+  transition: transform .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s, border-color .3s, background .3s;
+  --glow: 34,211,238;
+}
+.loop-card b { font-size: 15px; } .loop-card span { font: 12px var(--mono); color: var(--text-dim); }
+.loop-card.fail { border-color: rgba(251,113,133,0.6); --glow: 251,113,133; }
+.loop-card[data-step="5"] { background: rgba(251,113,133,0.12); }
+.loop-card.image { border-color: var(--accent); background: #1e293b; --glow: 96,165,250; }
+.loop-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.loop-card.is-active {
+  transform: translateZ(46px) scale(1.04);
+  border-color: rgb(var(--glow));
+  box-shadow: 0 26px 30px rgba(2,6,23,0.6), 0 0 0 1px rgba(var(--glow),0.5), 0 0 36px rgba(var(--glow),0.35);
+}
+.loop-dot {
+  position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  background: rgb(var(--dot, 34,211,238)); box-shadow: 0 0 0 6px rgba(var(--dot, 34,211,238),0.18), 0 0 24px rgb(var(--dot, 34,211,238));
+  transform: translateZ(4px); opacity: 0; transition: opacity .3s;
+}
+.loop-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 10px; }
+.loop-lap { font: 600 12px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+.loop-lap.fail { color: var(--rose); } .loop-lap.hold { color: var(--accent); }
+.loop-toggle { border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); font: 500 12px var(--mono); padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+.loop-detail { display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); min-height: 210px; }
+.loop3d.is-live .loop-detail { display: grid; }
+.loop-detail-kicker { margin: 0 0 6px; font: 600 12px var(--mono); color: var(--text-dim); text-align: left; }
+.loop-detail h3 { margin: 0 0 8px; font-size: 20px; }
+.loop-detail p { margin: 0; color: var(--text-2); font-size: 15px; }
+.loop-detail-code { margin: 0; min-width: 0; }
+.loop-detail-code pre { margin: 0; padding: 14px; border-radius: 8px; background: var(--bg-code); border: 1px solid var(--border); font: 12.5px/1.6 var(--mono); color: var(--text-2); overflow-x: auto; white-space: pre; }
+.loop-detail-code pre .a { color: #86efac; } .loop-detail-code pre .d { color: #fda4af; } .loop-detail-code pre .w { color: var(--amber); } .loop-detail-code pre .o { color: var(--green); } .loop-detail-code pre .k { color: var(--accent); }
+.loop-detail-code figcaption { margin-top: 6px; font: 12px var(--mono); color: var(--text-dim); }
+.loop-detail.swap { animation: loopswap .45s ease; }
+@keyframes loopswap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.loop3d.is-live + .loop-fallback { display: none; }
+@media (max-width: 760px) { .loop-detail { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .loop3d.is-live .loop-board { --rx: 0deg; }
+  .loop-board, .loop-card { transition: none; }
+  .loop-dot { display: none; }
+  .loop-detail.swap { animation: none; }
 }
