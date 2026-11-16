@@ -154,43 +154,37 @@
     });
   });
 
-  // Agent terminal: plays a short session. The fic and fire lines are real
-  // output from fic 2.62.5 on demo/datadiode (abridged, paths shortened).
-  // A real Claude Code session (Sonnet 5.5) with fic 2.62.5 on its
+  // Agent terminal: plays a recorded session.
+  // A real Claude Code session (Sonnet 5.5) with fic 2.81.0 on its
   // demo/datadiode, recorded 2026-11-17. Prompts and the agent's messages are
   // shortened, paths made relative, and warnings and repeated progress lines
   // left out; nothing is added.
   var SESSION = [
     ['you', 'For debugging, add a tap so eth_outer can read the inner DMA buffer and we can see frames after they cross the diode.'],
-    ['agent', 'I\'ll add the tap, then run the check.'],
+    ['agent', 'I\'ll add the tap as a mapping of inner_dma into eth_outer, then run the check.'],
     ['file', 'eth_outer.fi'],
     ['add', 'Low Mapping inner_tap(inner_dma, 0x2_800_000, "r", false);'],
     ['cmd', 'fic . --check'],
+    ['ok', '  ✓ Resolved names'],
+    ['dim', '  ⋮'],
     ['err', 'Error: error: information flow violation: High memory region \'inner_dma\' is accessed through Low mapping \'inner_tap\''],
-    ['dim', '  --> ./eth_outer.fi:12:1'],
-    ['agent', 'The checker rejected the tap, and I\'m not going to work around it. I\'ll revert my edit.'],
+    ['dim', '  --> ./eth_outer.fi:10:1'],
+    ['agent', 'The checker rejected the tap. I\'m going to revert it instead of working around the error.'],
     ['cmd', 'git checkout eth_outer.fi'],
-    ['agent', 'inner_dma is High and eth_outer is the Low side. Letting eth_outer read it is a High\u2192Low flow, which is the exact thing the diode is built to prevent. My suggestion: tap on the High side.'],
-    ['you', 'Do option 1: tap on the High side. Then run the checks and build the model.'],
-    ['file', 'eth_inner.fi, include/eth.h, src/eth.c'],
-    ['add', 'dbg("tap: len=", f.len, " dst=", eth.eth_frame_dst(f), " ethertype=", eth.eth_frame_ethertype(f));'],
-    ['cmd', 'fic . --check'],
-    ['err', 'Error: error: event \'send_frame\': dbg arguments must be free of side effects: \'eth.eth_frame_dst\' is a call'],
-    ['dim', '  --> ./eth_inner.fi:25:38'],
-    ['agent', 'Calls aren\'t allowed inside dbg, so I\'ll assign the results to variables first.'],
+    ['agent', 'The error is the diode guarantee itself, not a typo or a bug. eth_outer is a Low protection domain and inner_dma is High, so any tap that lets eth_outer read it is a High→Low flow. Smallest change instead: log on the High side, in eth_inner.fi.'],
+    ['you', 'Do the High-side logging. Then run the checks and build the model.'],
     ['file', 'eth_inner.fi'],
-    ['del', 'dbg("tap: len=", f.len, " dst=", eth.eth_frame_dst(f), " ethertype=", eth.eth_frame_ethertype(f));'],
-    ['add', 'tap_dst = eth.eth_frame_dst(f);'],
-    ['add', 'tap_type = eth.eth_frame_ethertype(f);'],
-    ['add', 'dbg("tap: len=", f.len, " dst=", tap_dst, " ethertype=", tap_type);'],
+    ['del', 'dbg("delivered");'],
+    ['add', 'dbg("delivered len=", f.len, " origin=", f.origin);'],
     ['cmd', 'fic . --check'],
-    ['ok', '  \u2713 Parsed 1 system + 3 program files + 3 foreign module(s)'],
-    ['dim', '  \u22ee'],
-    ['ok', '  \u2713 Type-checked information flow'],
-    ['ok', '  \u2713 Checked channel dependency acyclicity (WF2)'],
+    ['ok', '  ✓ Resolved names'],
+    ['dim', '  ⋮'],
+    ['ok', '  ✓ Type-checked information flow'],
+    ['ok', '  ✓ Checked channel dependency acyclicity (WF2)'],
+    ['agent', 'Check passes. Building now.'],
     ['cmd', 'fire build --target=xta .'],
-    ['ok', '  \u2713 UPPAAL model written to build/datadiode.xta'],
-    ['agent', 'The diode is unchanged. The information-flow check and the channel acyclicity check both pass, and eth_outer has no new access to anything on the High side.']
+    ['ok', '  ✓ UPPAAL model written to build/datadiode.xta'],
+    ['agent', 'Both passed. I didn\'t run fire verify, so I haven\'t confirmed that spec/datadiode.q still holds on the new model.']
   ];
   document.querySelectorAll('[data-term]').forEach(function (out) {
     var replay = out.parentNode.querySelector('[data-term-replay]');
@@ -239,12 +233,12 @@
       code: '<span class="k">@bind</span>(microkit.notified)\n<span class="k">proc</span> Notified() {\n    o2d?f -&gt; forward -&gt; d2i!f -&gt; Notified();\n}',
       cap: 'demo/datadiode/dd.fi' },
     { step: 2, lap: 1, kicker: 'Step 2 · derived, not written', title: 'Autoformalisation',
-      text: 'fic turns the program itself into a UPPAAL model, one automaton per domain. Nobody writes the model, so it cannot drift from the code. dd becomes:',
-      code: '<span class="k">process</span> Dd() {\n  ...\n<span class="k">trans</span>\n    Init -&gt; init_exit { assign ready(); },\n    init_exit -&gt; Notified { },\n    Notified -&gt; L2 { sync c_o2d?; },\n    L2 -&gt; L3 { assign forward(); },\n    L3 -&gt; Exit { sync d2i_c!; },\n    Exit -&gt; Notified { };\n}',
-      cap: 'build/datadiode.xta, generated by fic 2.62.5' },
+      text: 'fic turns the program itself into a UPPAAL model, one automaton per domain, and each channel into a queue. Nobody writes the model, so it cannot drift from the code. dd becomes:',
+      code: '<span class="k">process</span> Dd() {\n  ...\n<span class="k">trans</span>\n    Init -&gt; init_exit { assign ready(); },\n    init_exit -&gt; Notified { },\n    Notified -&gt; L2 { guard awake &amp;&amp; q_o2d.length &gt; 0;\n                     assign f = q_o2d_val[0], ... },\n    L2 -&gt; L3 { assign forward(); },\n    L3 -&gt; Notified { guard q_d2i.length &lt; q_d2i.capacity;\n                     assign q_d2i_val[q_d2i.length] = f, ... },\n    L3 -&gt; Notified { guard q_d2i.length == q_d2i.capacity; },\n    ...\n}',
+      cap: 'build/datadiode.xta, generated by fic 2.81.0, abridged' },
     { step: 3, lap: 1, kicker: 'Step 3 · per function', title: 'Code verification',
       text: 'Each foreign function\'s contract is proved on its implementation, with Frama-C for C or Viper for Pancake. The proved contract is what the model assumes the function does.',
-      code: '<span class="k">/*@ ensures \\result == 0 || \\result == 1; */</span>\nint64_t eth_poll(void);\n\n<span class="k">/*@ ensures \\result.origin == origin; */</span>\nstruct Frame eth_frame(uint8_t origin);',
+      code: '<span class="k">/*@ ensures \\result == 0 || \\result == 1; */</span>\nbool eth_poll(void);\n\n<span class="k">/*@ ensures \\result.origin == origin; */</span>\nstruct Frame eth_frame(uint8_t origin);',
       cap: 'demo/datadiode/include/eth.h' },
     { step: 4, lap: 1, kicker: 'Step 4 · whole system', title: 'System verification: a check fails',
       text: 'fic checks information flow and the channel graph, and UPPAAL checks the queries on the model. Suppose someone added a channel back from eth_inner to eth_outer:',
