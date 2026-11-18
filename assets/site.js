@@ -1,60 +1,186 @@
-// Fiducia site behaviour: the keyword cloud, the example file browser and the blog filter.
+// Fiducia site behaviour: the keyword rings, the example file browser and the blog filter.
 (function () {
-  // Keyword cloud: place words, largest first, on an elliptical spiral out
-  // from the centre; every few smaller words stand vertical. Deterministic,
-  // so the cloud looks the same on every load.
+  // Keyword rings: each ring is one family of verification technique and its
+  // words travel round it. The rings are flat concentric ellipses (one plane seen
+  // from a low angle), so words swing behind the centre and come forward again (nearer = larger and
+  // brighter). Drag sideways to spin them. Honours prefers-reduced-motion
+  // (static, drag only) and pauses off-screen.
+  var RINGS = {
+    // Ring radius as a fraction of the stage half-width, inner to outer: interactive theorem
+    // proving, automatic proving and checking, the agents, then the language itself. The first ring sits well clear of the planet; the gaps between rings
+    // are consecutive Fibonacci numbers: 3 : 5 : 8. speed: rad/frame; font: type scale; gain: how
+    // much a word grows toward the front (inner rings are crowded, so they stay small).
+    itp:      { a: 0.400, speed: -0.0046, font: 0.78, gain: 0.22 },
+    atp:      { a: 0.512, speed:  0.0036, font: 0.78, gain: 0.22 },
+    agent:    { a: 0.700, speed: -0.0040, font: 0.95, gain: 0.30 },
+    language: { a: 1.000, speed:  0.0026, font: 1.05, gain: 0.46 }
+  };
+
+  // All rings lie in one plane seen from a low angle: ratio = minor/major axis, tilt in
+  // degrees on screen (negative = right side up).
+  var PLANE = { ratio: 0.5, tilt: -10 };
+
+
+
   document.querySelectorAll('[data-cloud]').forEach(function (root) {
-    var items = Array.prototype.slice.call(root.children).sort(function (a, b) {
-      return b.dataset.w - a.dataset.w;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var items = Array.prototype.slice.call(root.children);
+    var groups = {}, core = null;
+    items.forEach(function (li) {
+      var r = li.dataset.ring;
+      if (r === 'core') {
+        core = li;
+        var label = li.textContent;
+        li.textContent = '';
+        ['core-planet'].forEach(function (cls) {
+          var e = document.createElement('i'); e.className = cls; e.setAttribute('aria-hidden', 'true'); li.appendChild(e);
+        });
+        var t = document.createElement('span'); t.className = 'core-label'; t.textContent = label;
+        li.appendChild(t);
+        return;
+      }
+      (groups[r] = groups[r] || []).push(li);
+    });
+    var names = Object.keys(RINGS).filter(function (k) { return groups[k]; });
+    names.forEach(function (k, gi) {
+      var g = groups[k], cfg = RINGS[k];
+      cfg.t = gi * 1.3;
+      g.forEach(function (li, i) { li.dataset.a0 = (i / g.length) * Math.PI * 2; li.dataset.font = cfg.font; li.dataset.gain = cfg.gain; });
     });
 
-    function layout() {
-      root.classList.add('is-cloud');
-      root.style.height = '';
-      var W = root.clientWidth;
-      var scale = Math.min(1, Math.max(0.6, W / 820));
-      var cx = W / 2, cy = 0, placed = [], pad = 6 * scale;
-      var minY = 0, maxY = 0;
+    // Dust belts: a canvas of fine drifting dust behind the words, one belt per
+    // ring, each jittered about the ring's path and tinted like it.
+    var cv = document.createElement('canvas');
+    cv.setAttribute('aria-hidden', 'true');
+    cv.className = 'ring-lines';
+    root.insertBefore(cv, root.firstChild);
+    // A second canvas for the near half of each belt, stacked above the planet.
+    var cvF = document.createElement('canvas');
+    cvF.setAttribute('aria-hidden', 'true');
+    cvF.className = 'ring-lines ring-front';
+    root.appendChild(cvF);
+    var ctxB = cv.getContext('2d'), ctxF = cvF.getContext('2d'), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var VARS = { language: '--c-lang', itp: '--c-itp', atp: '--c-atp', agent: '--c-agent' };
+    var seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    var belts = {};
+    names.forEach(function (k) {
+      // Fine dust only: the words are the asteroids.
+      var cfg = RINGS[k], n = Math.round(170 + cfg.a * 300), list = [];
+      for (var i = 0; i < n; i += 1) {
+        list.push({ a: rnd() * Math.PI * 2, dr: (rnd() + rnd() - 1) * 0.06, dy: (rnd() - 0.5) * 0.05,
+                    k: 0.88 + rnd() * 0.24, size: 0.55 + rnd() * rnd() * 1.3, alpha: 0.18 + rnd() * 0.45 });
+      }
+      belts[k] = list;
+    });
+    var tints = {};
 
-      items.forEach(function (li, i) {
-        li.style.fontSize = '';
-        var fs = Math.max(10, parseFloat(getComputedStyle(li).fontSize) * scale);
-        li.style.fontSize = fs + 'px';
-        var w = li.offsetWidth, h = li.offsetHeight;
-        var vertical = li.dataset.w <= 2 && i % 3 === 0 && W > 480;
-        var bw = vertical ? h : w, bh = vertical ? w : h;
-        for (var t = 0; t < 4000; t += 1) {
-          var a = t * 0.18, r = 2.2 * a;
-          var x = cx + r * Math.cos(a) * 1.9 - bw / 2;
-          var y = cy + r * Math.sin(a) - bh / 2;
-          if (x < 0 || x + bw > W) continue;
-          var box = { x: x - pad, y: y - pad / 2, w: bw + 2 * pad, h: bh + pad };
-          var hit = placed.some(function (p) {
-            return box.x < p.x + p.w && p.x < box.x + box.w && box.y < p.y + p.h && p.y < box.y + box.h;
-          });
-          if (hit) continue;
-          placed.push(box);
-          li.dataset.x = x; li.dataset.y = y; li.dataset.v = vertical ? 1 : 0; li.dataset.bh = bh;
-          minY = Math.min(minY, y); maxY = Math.max(maxY, y + bh);
-          return;
-        }
-        li.dataset.x = -9999; // no room: hide
-      });
+    var W = 0, H = 0, Rx = 0, Ry = 0;
+    var spin = 0, dragging = false, lastX = 0, visible = true, raf = 0;
 
-      items.forEach(function (li) {
-        var x = +li.dataset.x, y = +li.dataset.y - minY;
-        li.hidden = x === -9999;
-        li.style.transform = li.dataset.v === '1'
-          ? 'translate(' + x + 'px,' + (y + +li.dataset.bh) + 'px) rotate(-90deg)'
-          : 'translate(' + x + 'px,' + y + 'px)';
-      });
-      root.style.height = Math.ceil(maxY - minY) + 'px';
+    // Point on a ring at angle t -> [x, y, depth] in pixels from the stage centre; depth is
+    // 0 (back) .. 1 (front). k widens or narrows the ellipse, to jitter dust about the path.
+    function point(cfg, t, k) {
+      var A = cfg.a * (k || 1) * Rx, B = A * PLANE.ratio, ro = PLANE.tilt * Math.PI / 180;
+      var x = A * Math.cos(t), y = B * Math.sin(t);
+      return [x * Math.cos(ro) - y * Math.sin(ro), x * Math.sin(ro) + y * Math.cos(ro), Math.sin(t) * 0.5 + 0.5];
     }
 
+    function measure() {
+      root.classList.add('is-cloud', 'is-rings');
+      W = root.clientWidth;
+      var scale = Math.min(0.8, Math.max(0.55, W / 960));
+      H = Math.round(Math.min(Math.max(W * 0.6, 340), 480));
+      Rx = W / 2 - Math.min(78, W * 0.09); Ry = H / 2 - 10;
+      root.style.height = H + 'px';
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      cvF.width = cv.width; cvF.height = cv.height;
+      cvF.style.width = cv.style.width; cvF.style.height = cv.style.height;
+      var cs = getComputedStyle(document.documentElement);
+      names.forEach(function (k) { tints[k] = cs.getPropertyValue(VARS[k]).trim() || '#888'; });
+      items.forEach(function (li) {
+        li.style.fontSize = '';
+        li.style.fontSize = Math.max(10, parseFloat(getComputedStyle(li).fontSize) * scale * (+li.dataset.font || 1)) + 'px';
+        li.dataset.bw = li.offsetWidth; li.dataset.bh = li.offsetHeight;
+      });
+    }
+
+    function place(li, p) {
+      var depth = p[2], gain = +li.dataset.gain || 0.46, s = 1 - gain / 2 + gain * depth;
+      var x = W / 2 + p[0] - li.dataset.bw * s / 2;
+      var y = H / 2 + p[1] - li.dataset.bh * s / 2;
+      li.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) scale(' + s.toFixed(3) + ')';
+      li.style.opacity = (0.28 + 0.72 * depth).toFixed(2);
+      li.style.zIndex = Math.round(depth * 100);
+    }
+
+    function drawBelts() {
+      ctxB.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxF.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxB.clearRect(0, 0, W, H);
+      ctxF.clearRect(0, 0, W, H);
+      names.forEach(function (k) {
+        var cfg = RINGS[k];
+        ctxB.fillStyle = ctxF.fillStyle = tints[k];
+        belts[k].forEach(function (b) {
+          var p = point(cfg, b.a + cfg.t * b.k, 1 + b.dr);
+          var d = p[2], ctx = d >= 0.5 ? ctxF : ctxB;
+          ctx.globalAlpha = Math.min(1, b.alpha * 1.25) * (0.4 + 0.6 * d) * 0.7;
+          var x = W / 2 + p[0], y = H / 2 + p[1] + b.dy * Ry, sz = b.size * (0.7 + 0.6 * d);
+          ctx.beginPath();
+          ctx.arc(x, y, sz, 0, 6.2832);
+          ctx.fill();
+        });
+      });
+      ctxB.globalAlpha = ctxF.globalAlpha = 1;
+    }
+
+    function draw() {
+      drawBelts();
+      names.forEach(function (k) {
+        var cfg = RINGS[k];
+        groups[k].forEach(function (li) { place(li, point(cfg, +li.dataset.a0 + cfg.t)); });
+      });
+      if (core) {
+        core.style.transform = 'translate3d(' + (W / 2 - core.dataset.bw / 2).toFixed(1) + 'px,' + (H / 2 - core.dataset.bh / 2).toFixed(1) + 'px,0)';
+        core.style.opacity = 1; core.style.zIndex = 49; // between the back half of the rings (below) and the front half (above)
+      }
+    }
+
+    function tick() {
+      raf = 0;
+      names.forEach(function (k) {
+        var cfg = RINGS[k];
+        cfg.t += (reduce ? 0 : cfg.speed) + (dragging ? 0 : spin * (cfg.speed < 0 ? -1 : 1));
+      });
+      if (!dragging) spin *= 0.94;
+      draw();
+      if ((visible && !reduce) || Math.abs(spin) > 1e-4) raf = requestAnimationFrame(tick);
+    }
+    function kick() { if (!raf) raf = requestAnimationFrame(tick); }
+
+    root.addEventListener('pointerdown', function (e) {
+      dragging = true; lastX = e.clientX; spin = 0;
+      root.setPointerCapture(e.pointerId); root.classList.add('is-grabbing'); kick();
+    });
+    root.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      var d = (e.clientX - lastX) * 0.008;
+      names.forEach(function (k) { RINGS[k].t += d * (RINGS[k].speed < 0 ? -1 : 1); });
+      spin = d; lastX = e.clientX; draw();
+    });
+    function release() { dragging = false; root.classList.remove('is-grabbing'); kick(); }
+    root.addEventListener('pointerup', release);
+    root.addEventListener('pointercancel', release);
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) kick(); }).observe(root);
+    }
     var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-    ready.then(layout);
+    ready.then(function () { measure(); draw(); kick(); });
     var timer;
-    window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(layout, 120); });
+    window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(function () { measure(); draw(); }, 120); });
   });
 
   // File browser: a vertical tablist of files beside one visible panel.
