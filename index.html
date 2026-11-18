@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/site.css?v=2026111614222">
+  <link rel="stylesheet" href="assets/site.css?v=202611170935">
 </head>
 <body>
   <header class="site-header">
@@ -80,11 +80,11 @@
         <div class="oneliner" data-oneliner>
           <div class="oneliner-head" role="group" aria-label="Platform">
             <span>install</span>
-            <button type="button" aria-pressed="true" data-cmd="curl -fsSL https://fiducia-lang.github.io/releases/v2.62.5/fic-macos-arm64-2.62.5.tar.gz | tar -xz">macOS arm64</button>
-            <button type="button" aria-pressed="false" data-cmd="curl -fsSL https://fiducia-lang.github.io/releases/v2.62.5/fic-linux-x86-64-2.62.5.tar.gz | tar -xz">Linux x86-64</button>
+            <button type="button" aria-pressed="true" data-cmd="curl -fsSL https://fiducia-lang.github.io/releases/v2.81.0/fic-macos-arm64-2.81.0.tar.gz | tar -xz">macOS arm64</button>
+            <button type="button" aria-pressed="false" data-cmd="curl -fsSL https://fiducia-lang.github.io/releases/v2.81.0/fic-linux-x86-64-2.81.0.tar.gz | tar -xz">Linux x86-64</button>
           </div>
           <div class="oneliner-body">
-            <code data-oneliner-cmd>curl -fsSL https://fiducia-lang.github.io/releases/v2.62.5/fic-macos-arm64-2.62.5.tar.gz | tar -xz</code>
+            <code data-oneliner-cmd>curl -fsSL https://fiducia-lang.github.io/releases/v2.81.0/fic-macos-arm64-2.81.0.tar.gz | tar -xz</code>
             <button type="button" class="copy-btn" data-copy>Copy</button>
           </div>
         </div>
@@ -101,12 +101,12 @@
       <section id="watch" class="section">
         <p class="eyebrow">See it work</p>
         <h2>An agent writes. fic checks.</h2>
-        <p class="section-desc">An agent edits the data diode and slips in a leak. fic rejects it before anything is built, the agent repairs it, and only then does the model get built.</p>
+        <p class="section-desc">Asked for a debug tap that would let the Low side read High data, a coding agent adds it. fic rejects it, and the agent backs out rather than relabel the memory. It logs on the High side instead, the checks pass, and only then is the model built.</p>
         <div class="term">
           <div class="term-head"><i></i><i></i><i></i><span class="title">demo/datadiode</span><button type="button" data-term-replay>Replay</button></div>
           <pre class="term-body" data-term aria-live="off"></pre>
         </div>
-        <p class="term-note">The agent's steps are illustrative. Every <code>fic</code> and <code>fire</code> line is real output from fic 2.62.5, the current release, on its <code>demo/datadiode</code>; warnings and repeated progress lines are left out.</p>
+        <p class="term-note">A real Claude Code session (Sonnet 5.5) with fic 2.81.0, the current release, on its <code>demo/datadiode</code>. Prompts and the agent's messages are shortened, and warnings and repeated progress lines are left out; nothing is added.</p>
       </section>
 
       <!-- Why Fiducia -->
@@ -316,10 +316,13 @@
 <span class="lo">Low</span> <span class="k">Mapping</span> vwin(virtio_window, <span class="n">0x2_000_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 <span class="lo">Low</span> <span class="k">Mapping</span> dma(outer_dma, <span class="n">0x2_400_000</span>, <span class="s">"rw"</span>, <span class="k">false</span>);
 
-<span class="c">// Set by each poll: rx = 1 if a frame was read; kind 1 = forward,</span>
+<span class="c">// Set by each poll: rx is true if a frame was read; kind 1 = forward,</span>
 <span class="c">// 2 = ARP for us, 3 = IPv4 for us, 0 = drop.</span>
-rx: <span class="k">int</span>;
+rx: <span class="k">bool</span>;
 kind: <span class="k">int</span>;
+<span class="c">// Set by handle_ping: replied is true if a reply was built, and reply_len</span>
+<span class="c">// is its length.</span>
+replied: <span class="k">bool</span>;
 reply_len: <span class="k">uint16</span>;
 <span class="c">// What `o2d` sends: the frame, copied into the ring.</span>
 frame: Frame;
@@ -346,8 +349,10 @@ nic: <span class="k">int</span>;
     dbg(<span class="s">"forward -&gt; o2d"</span>);
 }
 
-<span class="k">evt</span> handle_ping:
-    reply_len = eth.eth_make_reply();
+<span class="k">evt</span> handle_ping: {
+    replied = eth.eth_make_reply();
+    reply_len = eth.eth_reply_len();
+}
 
 <span class="k">evt</span> send_frame.|len: <span class="k">uint16</span>|: {
     eth.eth_send_frame(len);
@@ -378,10 +383,17 @@ nic: <span class="k">int</span>;
 
 <span class="k">proc</span> <span class="f">Drain</span>() {
     poll -&gt; Skip;
-        [rx == <span class="n">1</span> &amp;&amp; kind == <span class="n">1</span>] stage_forward -&gt; o2d!frame -&gt; Drain()
-     [] [rx == <span class="n">1</span> &amp;&amp; (kind == <span class="n">2</span> || kind == <span class="n">3</span>)] handle_ping -&gt; send_frame.reply_len -&gt; Drain()
-     [] [rx == <span class="n">1</span> &amp;&amp; kind == <span class="n">0</span>] Drain()
+        [rx &amp;&amp; kind == <span class="n">1</span>] stage_forward -&gt; o2d!frame -&gt; Drain()
+     [] [rx &amp;&amp; (kind == <span class="n">2</span> || kind == <span class="n">3</span>)] handle_ping -&gt; Reply()
+     [] [rx &amp;&amp; kind == <span class="n">0</span>] Drain()
      <span class="k">default</span> Skip;
+}
+
+<span class="c">// Send the reply, if one was built: a request shorter than its headers</span>
+<span class="c">// state gets none.</span>
+<span class="k">proc</span> <span class="f">Reply</span>() {
+        [replied] send_frame.reply_len -&gt; Drain()
+     [] [!replied] Drain();
 }</pre></div>
 
 <div role="tabpanel" id="p-dd" aria-labelledby="t-dd" tabindex="0" hidden><pre class="code-body"><span class="c">// Forwards frames one way, o2d -&gt; d2i. A full d2i loses the frame: the Low</span>
@@ -467,10 +479,10 @@ nic: <span class="k">int</span>;
 <span class="c">/* Read-and-acknowledge the device interrupt (once per notification). */</span>
 <span class="k">void</span> <span class="f">eth_clear_irq</span>(<span class="k">void</span>);
 
-<span class="c">/* Read and classify the next received frame; 0 if none. The model reads
- * the contract as a choice: a frame may or may not have arrived. */</span>
+<span class="c">/* Read and classify the next received frame; false if none. The model
+ * reads the contract as a choice: a frame may or may not have arrived. */</span>
 <span class="ac">/*@ ensures \result == 0 || \result == 1; */</span>
-<span class="k">int64_t</span> <span class="f">eth_poll</span>(<span class="k">void</span>);
+<span class="k">bool</span> <span class="f">eth_poll</span>(<span class="k">void</span>);
 
 <span class="c">/* Class of the current frame: 0 none, 1 forward across the diode,
  * 2 ARP request for us, 3 ICMP echo request for us. */</span>
@@ -481,10 +493,16 @@ nic: <span class="k">int</span>;
 <span class="ac">/*@ ensures \result.origin == origin; */</span>
 <span class="k">struct</span> Frame <span class="f">eth_frame</span>(<span class="k">uint8_t</span> origin);
 
-<span class="c">/* Build the ARP/ping reply for the current frame; returns its length. */</span>
-<span class="k">uint16_t</span> <span class="f">eth_make_reply</span>(<span class="k">void</span>);
+<span class="c">/* Build the ARP/ping reply to the current frame. Returns true if a reply
+ * was built, false if the frame is shorter than its headers state. The model
+ * reads the contract as a choice: a request may or may not get a reply. */</span>
+<span class="ac">/*@ ensures \result == 0 || \result == 1; */</span>
+<span class="k">bool</span> <span class="f">eth_make_reply</span>(<span class="k">void</span>);
 
-<span class="c">/* Transmit the reply built by eth_make_reply. */</span>
+<span class="c">/* Length of the reply eth_make_reply built; 0 if it built none. */</span>
+<span class="k">uint16_t</span> <span class="f">eth_reply_len</span>(<span class="k">void</span>);
+
+<span class="c">/* Transmit the reply built by eth_make_reply, if there is one. */</span>
 <span class="k">void</span> <span class="f">eth_send_frame</span>(<span class="k">uint16_t</span> len);
 
 <span class="c">/* Transmit a frame received on d2i. */</span>
@@ -494,55 +512,45 @@ nic: <span class="k">int</span>;
 
 <div role="tabpanel" id="p-eth" aria-labelledby="t-eth" tabindex="0" hidden><pre class="code-body"><span class="k">#include</span> <span class="s">"eth.h"</span>
 
+<span class="c">/* Generated by fic: the memory routines every PD links, and their contracts. */</span>
+<span class="k">#include</span> <span class="s">"gen/mem.h"</span>
 <span class="k">#include</span> <span class="s">"util.h"</span>
 <span class="k">#include</span> <span class="s">"virtio_net.h"</span>
-
-<span class="c">/* fic's runtime supplies it: a PD has no libc. */</span>
-<span class="k">void</span> *<span class="f">memcpy</span>(<span class="k">void</span> *dst, <span class="k">const</span> <span class="k">void</span> *src, <span class="k">size_t</span> n);
 
 <span class="k">#define</span> ETHERTYPE_IPV4 <span class="n">0x0800</span>
 <span class="k">#define</span> ETHERTYPE_ARP <span class="n">0x0806</span>
 
-<span class="k">#define</span> PACKED __attribute__((packed))
+<span class="c">/* Byte offsets of a frame's fields. The frame is read and written through
+ * these offsets, not through structs laid over the buffer, so that Frama-C
+ * can follow every access. Multi-byte fields are big-endian. */</span>
 
-<span class="k">struct</span> eth_header {
-    <span class="k">uint8_t</span> dest_mac[<span class="n">6</span>];
-    <span class="k">uint8_t</span> src_mac[<span class="n">6</span>];
-    <span class="k">uint16_t</span> ethertype;
-    <span class="k">uint8_t</span> payload[];
-} PACKED;
+<span class="c">/* Ethernet: destination MAC, source MAC, ethertype. */</span>
+<span class="k">#define</span> ETH_DST <span class="n">0</span>
+<span class="k">#define</span> ETH_SRC <span class="n">6</span>
+<span class="k">#define</span> ETH_TYPE <span class="n">12</span>
+<span class="k">#define</span> ETH_HDR_LEN <span class="n">14</span>
 
-<span class="k">struct</span> arp {
-    <span class="k">uint16_t</span> htype;
-    <span class="k">uint16_t</span> ptype;
-    <span class="k">uint8_t</span> hlen;
-    <span class="k">uint8_t</span> plen;
-    <span class="k">uint16_t</span> oper;
-    <span class="k">uint8_t</span> sha[<span class="n">6</span>];
-    <span class="k">uint8_t</span> spa[<span class="n">4</span>];
-    <span class="k">uint8_t</span> tha[<span class="n">6</span>];
-    <span class="k">uint8_t</span> tpa[<span class="n">4</span>];
-} PACKED;
+<span class="c">/* ARP for IPv4 over ethernet, after the ethernet header. */</span>
+<span class="k">#define</span> ARP_OPER (ETH_HDR_LEN + <span class="n">6</span>)
+<span class="k">#define</span> ARP_SHA (ETH_HDR_LEN + <span class="n">8</span>)
+<span class="k">#define</span> ARP_SPA (ETH_HDR_LEN + <span class="n">14</span>)
+<span class="k">#define</span> ARP_THA (ETH_HDR_LEN + <span class="n">18</span>)
+<span class="k">#define</span> ARP_TPA (ETH_HDR_LEN + <span class="n">24</span>)
+<span class="k">#define</span> ARP_LEN (ETH_HDR_LEN + <span class="n">28</span>)
 
-<span class="k">struct</span> ip {
-    <span class="k">uint8_t</span> ver_ihl;
-    <span class="k">uint8_t</span> tos;
-    <span class="k">uint16_t</span> len;
-    <span class="k">uint16_t</span> ident;
-    <span class="k">uint16_t</span> flags_frag;
-    <span class="k">uint8_t</span> ttl;
-    <span class="k">uint8_t</span> protocol;
-    <span class="k">uint16_t</span> checksum;
-    <span class="k">uint8_t</span> source_address[<span class="n">4</span>];
-    <span class="k">uint8_t</span> dest_address[<span class="n">4</span>];
-} PACKED;
+<span class="c">/* IPv4, after the ethernet header; its own header is at least 20 bytes. */</span>
+<span class="k">#define</span> IP_VER_IHL (ETH_HDR_LEN + <span class="n">0</span>)
+<span class="k">#define</span> IP_TOTAL_LEN (ETH_HDR_LEN + <span class="n">2</span>)
+<span class="k">#define</span> IP_PROTOCOL (ETH_HDR_LEN + <span class="n">9</span>)
+<span class="k">#define</span> IP_SRC (ETH_HDR_LEN + <span class="n">12</span>)
+<span class="k">#define</span> IP_DST (ETH_HDR_LEN + <span class="n">16</span>)
+<span class="k">#define</span> IP_MIN_HDR <span class="n">20</span>
+<span class="k">#define</span> IP_PROTOCOL_ICMP <span class="n">1</span>
 
-<span class="k">struct</span> icmp {
-    <span class="k">uint8_t</span> type;
-    <span class="k">uint8_t</span> code;
-    <span class="k">uint16_t</span> checksum;
-    <span class="k">uint16_t</span> rest_of_header;
-} PACKED;
+<span class="c">/* ICMP, after the IP header: type, code, checksum. */</span>
+<span class="k">#define</span> ICMP_TYPE <span class="n">0</span>
+<span class="k">#define</span> ICMP_CKSUM <span class="n">2</span>
+<span class="k">#define</span> ICMP_HDR_LEN <span class="n">4</span>
 
 <span class="k">extern</span> <span class="k">uintptr_t</span> vwin_vaddr;
 <span class="k">extern</span> <span class="k">uintptr_t</span> dma_vaddr;
@@ -551,7 +559,11 @@ nic: <span class="k">int</span>;
 <span class="k">static</span> <span class="k">uint16_t</span> cur_len;
 <span class="k">static</span> <span class="k">int</span> cur_kind;
 
+<span class="c">/* The reply, and its length (0 when there is none). */</span>
 <span class="k">static</span> <span class="k">uint8_t</span> scratch[VIRTIO_NET_BUF_SIZE];
+<span class="k">static</span> <span class="k">uint16_t</span> reply_len;
+
+<span class="k">static</span> <span class="k">const</span> <span class="k">uint8_t</span> broadcast_mac[<span class="n">6</span>] = {<span class="n">0xff</span>, <span class="n">0xff</span>, <span class="n">0xff</span>, <span class="n">0xff</span>, <span class="n">0xff</span>, <span class="n">0xff</span>};
 
 <span class="k">int64_t</span> <span class="f">eth_setup</span>(<span class="k">int</span> nth, <span class="k">uintptr_t</span> dma_paddr)
 {
@@ -563,25 +575,24 @@ nic: <span class="k">int</span>;
     virtio_net_ack();
 }
 
-<span class="k">int64_t</span> <span class="f">eth_poll</span>(<span class="k">void</span>)
+<span class="k">bool</span> <span class="f">eth_poll</span>(<span class="k">void</span>)
 {
     <span class="k">if</span> (!virtio_net_rx(cur, &amp;cur_len)) {
         cur_kind = <span class="n">0</span>;
-        <span class="k">return</span> <span class="n">0</span>;
+        <span class="k">return</span> <span class="k">false</span>;
     }
     cur_kind = <span class="n">0</span>;
-    <span class="k">if</span> (cur_len &gt;= <span class="k">sizeof</span>(<span class="k">struct</span> eth_header)) {
-        <span class="k">struct</span> eth_header *hdr = (<span class="k">struct</span> eth_header *)cur;
-        <span class="k">if</span> (!(mac_match(hdr-&gt;dest_mac, fic_eth_mac) ||
-              mac_match(hdr-&gt;dest_mac, (<span class="k">const</span> <span class="k">uint8_t</span> *)<span class="s">"\xff\xff\xff\xff\xff\xff"</span>))) {
+    <span class="k">if</span> (cur_len &gt;= ETH_HDR_LEN) {
+        <span class="k">uint32_t</span> ethertype = ((<span class="k">uint32_t</span>)cur[ETH_TYPE] &lt;&lt; <span class="n">8</span>) | cur[ETH_TYPE + <span class="n">1</span>];
+        <span class="k">if</span> (!(mac_match(&amp;cur[ETH_DST], fic_eth_mac) || mac_match(&amp;cur[ETH_DST], broadcast_mac))) {
             cur_kind = <span class="n">1</span>;
-        } <span class="k">else</span> <span class="k">if</span> (swap16(hdr-&gt;ethertype) == ETHERTYPE_ARP) {
+        } <span class="k">else</span> <span class="k">if</span> (ethertype == ETHERTYPE_ARP) {
             cur_kind = <span class="n">2</span>;
-        } <span class="k">else</span> <span class="k">if</span> (swap16(hdr-&gt;ethertype) == ETHERTYPE_IPV4) {
+        } <span class="k">else</span> <span class="k">if</span> (ethertype == ETHERTYPE_IPV4) {
             cur_kind = <span class="n">3</span>;
         }
     }
-    <span class="k">return</span> <span class="n">1</span>;
+    <span class="k">return</span> <span class="k">true</span>;
 }
 
 <span class="k">int64_t</span> <span class="f">eth_pkt_kind</span>(<span class="k">void</span>)
@@ -596,53 +607,97 @@ nic: <span class="k">int</span>;
 <span class="k">struct</span> Frame <span class="f">eth_frame</span>(<span class="k">uint8_t</span> origin)
 {
     <span class="k">struct</span> Frame f;
-    f.len = cur_len;
+    f.len = cur_len &lt;= <span class="k">sizeof</span>(f.data) ? cur_len : (<span class="k">uint16_t</span>)<span class="k">sizeof</span>(f.data);
     f.origin = origin;
-    memcpy(f.data, cur, cur_len);
+    fi_memcpy_u8(f.data, cur, f.len);
     <span class="k">return</span> f;
 }
 
-<span class="k">uint16_t</span> <span class="f">eth_make_reply</span>(<span class="k">void</span>)
+<span class="c">/* Build the reply to the current frame in `scratch`: swap the addresses,
+ * then answer an ARP request with our MAC, or an ICMP echo with an echo
+ * reply. Every length the frame states is checked against the received
+ * length before it is used; a frame shorter than its headers state gets no
+ * reply. Returns the reply's length, 0 for none. */</span>
+<span class="k">static</span> <span class="k">uint16_t</span> <span class="f">build_reply</span>(<span class="k">void</span>)
 {
     <span class="k">uint16_t</span> len = cur_len;
-    <span class="k">struct</span> eth_header *hdr = (<span class="k">struct</span> eth_header *)cur;
-    memcpy(scratch, cur, len);
+    <span class="k">if</span> (len &lt; ETH_HDR_LEN || len &gt; <span class="k">sizeof</span>(scratch)) {
+        <span class="k">return</span> <span class="n">0</span>;
+    }
+    fi_memcpy_u8(scratch, cur, len);
+    set_mac(&amp;scratch[ETH_DST], &amp;cur[ETH_SRC]);
+    set_mac(&amp;scratch[ETH_SRC], fic_eth_mac);
 
-    <span class="k">struct</span> eth_header *reply = (<span class="k">struct</span> eth_header *)scratch;
-    set_mac(reply-&gt;dest_mac, hdr-&gt;src_mac);
-    set_mac(reply-&gt;src_mac, fic_eth_mac);
-
-    <span class="k">if</span> (swap16(reply-&gt;ethertype) == ETHERTYPE_ARP) {
-        <span class="k">struct</span> arp *a = (<span class="k">struct</span> arp *)&amp;reply-&gt;payload[<span class="n">0</span>];
-        a-&gt;oper = swap16(<span class="n">2</span>);
-        set_mac(a-&gt;tha, a-&gt;sha);
-        set_ip(a-&gt;tpa, a-&gt;spa);
-        set_mac(a-&gt;sha, fic_eth_mac);
-        set_ip(a-&gt;spa, fic_eth_ip);
+    <span class="k">uint32_t</span> ethertype = ((<span class="k">uint32_t</span>)scratch[ETH_TYPE] &lt;&lt; <span class="n">8</span>) | scratch[ETH_TYPE + <span class="n">1</span>];
+    <span class="k">if</span> (ethertype == ETHERTYPE_ARP) {
+        <span class="k">if</span> (len &lt; ARP_LEN) {
+            <span class="k">return</span> <span class="n">0</span>;
+        }
+        scratch[ARP_OPER] = <span class="n">0</span>;
+        scratch[ARP_OPER + <span class="n">1</span>] = <span class="n">2</span>; <span class="c">/* reply */</span>
+        set_mac(&amp;scratch[ARP_THA], &amp;scratch[ARP_SHA]);
+        set_ip(&amp;scratch[ARP_TPA], &amp;scratch[ARP_SPA]);
+        set_mac(&amp;scratch[ARP_SHA], fic_eth_mac);
+        set_ip(&amp;scratch[ARP_SPA], fic_eth_ip);
     } <span class="k">else</span> {
-        <span class="k">struct</span> ip *ip_hdr = (<span class="k">struct</span> ip *)&amp;reply-&gt;payload[<span class="n">0</span>];
-        <span class="k">uint8_t</span> header_len = (<span class="k">uint8_t</span>)((ip_hdr-&gt;ver_ihl &amp; <span class="n">0xf</span>) * <span class="n">4</span>);
-        <span class="k">if</span> (ip_hdr-&gt;protocol == <span class="n">1</span>) {
-            <span class="k">struct</span> icmp *icmp_hdr = (<span class="k">struct</span> icmp *)(&amp;reply-&gt;payload[header_len]);
-            set_ip(ip_hdr-&gt;dest_address, ip_hdr-&gt;source_address);
-            set_ip(ip_hdr-&gt;source_address, fic_eth_ip);
-            icmp_hdr-&gt;type = <span class="n">0</span>; <span class="c">/* echo reply */</span>
-            icmp_hdr-&gt;checksum = <span class="n">0</span>;
-            icmp_hdr-&gt;checksum =
-                cksum((<span class="k">uint8_t</span> *)icmp_hdr, (<span class="k">size_t</span>)(swap16(ip_hdr-&gt;len) - header_len));
+        <span class="k">if</span> (len &lt; ETH_HDR_LEN + IP_MIN_HDR) {
+            <span class="k">return</span> <span class="n">0</span>;
+        }
+        <span class="k">if</span> (scratch[IP_PROTOCOL] == IP_PROTOCOL_ICMP) {
+            <span class="c">/* The IP header length is the low four bits of this byte, in
+             * 32-bit words. `%` and `*` stand in for `&amp;` and `&lt;&lt;`: the
+             * prover bounds the arithmetic, but not the bit operations. */</span>
+            <span class="k">uint32_t</span> header_len = (scratch[IP_VER_IHL] % <span class="n">16u</span>) * <span class="n">4</span>;
+            <span class="k">uint32_t</span> total = scratch[IP_TOTAL_LEN] * <span class="n">256u</span> + scratch[IP_TOTAL_LEN + <span class="n">1</span>];
+            <span class="c">/* The ICMP header must fit in the IP datagram, and the datagram
+             * in the frame. */</span>
+            <span class="k">if</span> (header_len &lt; IP_MIN_HDR || total &lt; header_len + ICMP_HDR_LEN ||
+                ETH_HDR_LEN + total &gt; len) {
+                <span class="k">return</span> <span class="n">0</span>;
+            }
+            <span class="k">uint32_t</span> icmp = ETH_HDR_LEN + header_len;
+            set_ip(&amp;scratch[IP_DST], &amp;scratch[IP_SRC]);
+            set_ip(&amp;scratch[IP_SRC], fic_eth_ip);
+            scratch[icmp + ICMP_TYPE] = <span class="n">0</span>; <span class="c">/* echo reply */</span>
+            scratch[icmp + ICMP_CKSUM] = <span class="n">0</span>;
+            scratch[icmp + ICMP_CKSUM + <span class="n">1</span>] = <span class="n">0</span>;
+            <span class="c">/* The checksum's first byte is in `cksum`'s low 8 bits. */</span>
+            <span class="k">uint16_t</span> sum = cksum(&amp;scratch[icmp], total - header_len);
+            scratch[icmp + ICMP_CKSUM] = (<span class="k">uint8_t</span>)(sum &amp; <span class="n">0xffu</span>);
+            scratch[icmp + ICMP_CKSUM + <span class="n">1</span>] = (<span class="k">uint8_t</span>)(sum &gt;&gt; <span class="n">8</span>);
         }
     }
     <span class="k">return</span> len;
 }
 
+<span class="k">bool</span> <span class="f">eth_make_reply</span>(<span class="k">void</span>)
+{
+    reply_len = build_reply();
+    <span class="k">return</span> reply_len != <span class="n">0</span>;
+}
+
+<span class="k">uint16_t</span> <span class="f">eth_reply_len</span>(<span class="k">void</span>)
+{
+    <span class="k">return</span> reply_len;
+}
+
 <span class="k">void</span> <span class="f">eth_send_frame</span>(<span class="k">uint16_t</span> len)
 {
+    <span class="c">/* No reply was built. */</span>
+    <span class="k">if</span> (len == <span class="n">0</span>) {
+        <span class="k">return</span>;
+    }
+    <span class="k">if</span> (len &gt; <span class="k">sizeof</span>(scratch)) {
+        len = (<span class="k">uint16_t</span>)<span class="k">sizeof</span>(scratch);
+    }
     virtio_net_tx(scratch, len);
 }
 
 <span class="k">void</span> <span class="f">eth_send_frame_value</span>(<span class="k">struct</span> Frame f)
 {
-    virtio_net_tx(f.data, f.len);
+    <span class="c">/* `f.len` is the sender's word, from the other side of the diode. */</span>
+    <span class="k">uint16_t</span> len = f.len &lt;= <span class="k">sizeof</span>(f.data) ? f.len : (<span class="k">uint16_t</span>)<span class="k">sizeof</span>(f.data);
+    virtio_net_tx(f.data, len);
 }</pre></div>
 
 <div role="tabpanel" id="p-util-h" aria-labelledby="t-util-h" tabindex="0" hidden><pre class="code-body"><span class="k">#ifndef</span> UTIL_H
@@ -655,10 +710,26 @@ nic: <span class="k">int</span>;
 <span class="k">extern</span> <span class="k">const</span> <span class="k">uint8_t</span> fic_eth_mac[<span class="n">6</span>];
 <span class="k">extern</span> <span class="k">const</span> <span class="k">uint8_t</span> fic_eth_ip[<span class="n">4</span>];
 
+<span class="c">/* The contracts say what each helper reads and writes, which is what its
+ * callers' proofs rest on; `fire verify` proves them on util.c. */</span>
+
+<span class="ac">/*@ assigns \nothing; */</span>
 <span class="k">uint16_t</span> <span class="f">swap16</span>(<span class="k">uint16_t</span> v);
+
+<span class="ac">/*@ requires \valid_read(a + (0 .. 5)) &amp;&amp; \valid_read(b + (0 .. 5));
+    assigns \nothing; */</span>
 <span class="k">int</span> <span class="f">mac_match</span>(<span class="k">const</span> <span class="k">uint8_t</span> *a, <span class="k">const</span> <span class="k">uint8_t</span> *b);
+
+<span class="ac">/*@ requires \valid(dst + (0 .. 5)) &amp;&amp; \valid_read(src + (0 .. 5));
+    assigns dst[0 .. 5]; */</span>
 <span class="k">void</span> <span class="f">set_mac</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src);
+
+<span class="ac">/*@ requires \valid(dst + (0 .. 3)) &amp;&amp; \valid_read(src + (0 .. 3));
+    assigns dst[0 .. 3]; */</span>
 <span class="k">void</span> <span class="f">set_ip</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src);
+
+<span class="ac">/*@ requires \valid_read(data + (0 .. len - 1));
+    assigns \nothing; */</span>
 <span class="k">uint16_t</span> <span class="f">cksum</span>(<span class="k">const</span> <span class="k">uint8_t</span> *data, <span class="k">size_t</span> len);
 
 <span class="k">#endif</span> <span class="c">/* UTIL_H */</span></pre></div>
@@ -670,11 +741,14 @@ nic: <span class="k">int</span>;
 
 <span class="k">uint16_t</span> <span class="f">swap16</span>(<span class="k">uint16_t</span> v)
 {
-    <span class="k">return</span> (<span class="k">uint16_t</span>)(((v &amp; <span class="n">0xff</span>) &lt;&lt; <span class="n">8</span>) | (v &gt;&gt; <span class="n">8</span>));
+    <span class="k">return</span> (<span class="k">uint16_t</span>)(((v &amp; <span class="n">0xffu</span>) &lt;&lt; <span class="n">8</span>) | (v &gt;&gt; <span class="n">8</span>));
 }
 
 <span class="k">int</span> <span class="f">mac_match</span>(<span class="k">const</span> <span class="k">uint8_t</span> *a, <span class="k">const</span> <span class="k">uint8_t</span> *b)
 {
+    <span class="ac">/*@ loop invariant 0 &lt;= i &lt;= 6;
+        loop assigns i;
+        loop variant 6 - i; */</span>
     <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; <span class="n">6</span>; i++) {
         <span class="k">if</span> (a[i] != b[i]) {
             <span class="k">return</span> <span class="n">0</span>;
@@ -685,6 +759,9 @@ nic: <span class="k">int</span>;
 
 <span class="k">void</span> <span class="f">set_mac</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src)
 {
+    <span class="ac">/*@ loop invariant 0 &lt;= i &lt;= 6;
+        loop assigns i, dst[0 .. 5];
+        loop variant 6 - i; */</span>
     <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; <span class="n">6</span>; i++) {
         dst[i] = src[i];
     }
@@ -692,6 +769,9 @@ nic: <span class="k">int</span>;
 
 <span class="k">void</span> <span class="f">set_ip</span>(<span class="k">uint8_t</span> *dst, <span class="k">const</span> <span class="k">uint8_t</span> *src)
 {
+    <span class="ac">/*@ loop invariant 0 &lt;= i &lt;= 4;
+        loop assigns i, dst[0 .. 3];
+        loop variant 4 - i; */</span>
     <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; <span class="n">4</span>; i++) {
         dst[i] = src[i];
     }
@@ -701,16 +781,23 @@ nic: <span class="k">int</span>;
 <span class="k">uint16_t</span> <span class="f">cksum</span>(<span class="k">const</span> <span class="k">uint8_t</span> *d, <span class="k">size_t</span> len)
 {
     <span class="k">uint32_t</span> sum = <span class="n">0</span>;
+    <span class="ac">/*@ loop invariant len &lt;= \at(len, Pre);
+        loop invariant d == \at(d, Pre) + (\at(len, Pre) - len);
+        loop assigns sum, d, len;
+        loop variant len; */</span>
     <span class="k">while</span> (len &gt; <span class="n">1</span>) {
-        sum += (<span class="k">uint32_t</span>)((d[<span class="n">0</span>] &lt;&lt; <span class="n">8</span>) | d[<span class="n">1</span>]);
+        sum += ((<span class="k">uint32_t</span>)d[<span class="n">0</span>] &lt;&lt; <span class="n">8</span>) | d[<span class="n">1</span>];
         d += <span class="n">2</span>;
         len -= <span class="n">2</span>;
     }
     <span class="k">if</span> (len) {
-        sum += (<span class="k">uint32_t</span>)(d[<span class="n">0</span>] &lt;&lt; <span class="n">8</span>);
+        sum += (<span class="k">uint32_t</span>)d[<span class="n">0</span>] &lt;&lt; <span class="n">8</span>;
     }
-    <span class="k">while</span> (sum &gt;&gt; <span class="n">16</span>) {
-        sum = (sum &amp; <span class="n">0xffff</span>) + (sum &gt;&gt; <span class="n">16</span>);
+    <span class="c">/* Fold the carries back in: each pass makes `sum` smaller. */</span>
+    <span class="ac">/*@ loop assigns sum;
+        loop variant sum; */</span>
+    <span class="k">while</span> (sum &gt; <span class="n">0xffff</span>) {
+        sum = (sum % <span class="n">0x10000</span>) + (sum / <span class="n">0x10000</span>);
     }
     <span class="k">return</span> swap16((<span class="k">uint16_t</span>)~sum);
 }</pre></div>
@@ -731,25 +818,41 @@ nic: <span class="k">int</span>;
 <span class="k">#define</span> VIRTIO_NET_QUEUE_SIZE <span class="n">128</span>
 <span class="c">/* Per-frame buffer: 12-byte virtio-net header + frame, 2 KiB stride. */</span>
 <span class="k">#define</span> VIRTIO_NET_BUF_SIZE <span class="n">2048</span>
+<span class="c">/* Longest frame: a buffer less its virtio-net header. */</span>
+<span class="k">#define</span> VIRTIO_NET_FRAME_MAX (VIRTIO_NET_BUF_SIZE - <span class="n">12</span>)
 
 <span class="c">/* Number of virtio-mmio slots in one 4 KiB window page (0x200 stride). */</span>
 <span class="k">#define</span> VIRTIO_MMIO_SLOTS_PER_PAGE <span class="n">8</span>
+
+<span class="c">/* These contracts are assumed, not proved: the driver reaches the device
+ * through raw addresses and `volatile` rings, which WP does not model. A
+ * caller's proof uses them as given. `assigns` lists only what a caller can
+ * name; it leaves out the driver's own state and the device's. */</span>
 
 <span class="c">/* Bring up the `nth` virtio-net device (counting from slot 0) in the
  * window page at `window_vaddr`, with its virtqueues in
  * [dma_vaddr, +2 MiB), uncached and physically contiguous, seen by the
  * device at dma_paddr.
  * Returns the slot index (0..7), negative on failure. */</span>
+<span class="ac">/*@ assigns \nothing; */</span>
 <span class="k">int</span> <span class="f">virtio_net_up</span>(<span class="k">uintptr_t</span> window_vaddr, <span class="k">unsigned</span> nth, <span class="k">uintptr_t</span> dma_vaddr, <span class="k">uintptr_t</span> dma_paddr);
 
 <span class="c">/* Pop one received frame, without its virtio-net header, into `dst`
- * (&gt;= VIRTIO_NET_BUF_SIZE). False if nothing pending or the frame is empty. */</span>
+ * (&gt;= VIRTIO_NET_BUF_SIZE). `*len` is at most VIRTIO_NET_FRAME_MAX, whatever
+ * the device reports. False if nothing pending or the frame is empty. */</span>
+<span class="ac">/*@ requires \valid(dst + (0 .. VIRTIO_NET_BUF_SIZE - 1)) &amp;&amp; \valid(len);
+    assigns dst[0 .. VIRTIO_NET_BUF_SIZE - 1], *len;
+    ensures *len &lt;= VIRTIO_NET_FRAME_MAX; */</span>
 <span class="k">bool</span> <span class="f">virtio_net_rx</span>(<span class="k">uint8_t</span> *dst, <span class="k">uint16_t</span> *len);
 
-<span class="c">/* Queue one frame for transmission; `frame` is copied. */</span>
+<span class="c">/* Queue one frame for transmission; `frame` is copied, its first
+ * VIRTIO_NET_FRAME_MAX bytes if `len` is more. */</span>
+<span class="ac">/*@ requires \valid_read(frame + (0 .. len - 1));
+    assigns \nothing; */</span>
 <span class="k">void</span> <span class="f">virtio_net_tx</span>(<span class="k">const</span> <span class="k">uint8_t</span> *frame, <span class="k">uint16_t</span> len);
 
 <span class="c">/* Read and acknowledge the device's interrupt status. */</span>
+<span class="ac">/*@ assigns \nothing; */</span>
 <span class="k">uint32_t</span> <span class="f">virtio_net_ack</span>(<span class="k">void</span>);
 
 <span class="k">#endif</span> <span class="c">/* VIRTIO_NET_H */</span></pre></div>
@@ -1013,7 +1116,12 @@ nic: <span class="k">int</span>;
 
     <span class="k">uint16_t</span> frame_len = <span class="n">0</span>;
     <span class="k">if</span> (total &gt; NET_HDR_LEN) {
-        frame_len = (<span class="k">uint16_t</span>)(total - NET_HDR_LEN);
+        <span class="c">/* The length is the device's word; the buffer it filled is ours. */</span>
+        <span class="k">uint32_t</span> n = total - NET_HDR_LEN;
+        <span class="k">if</span> (n &gt; VIRTIO_NET_FRAME_MAX) {
+            n = VIRTIO_NET_FRAME_MAX;
+        }
+        frame_len = (<span class="k">uint16_t</span>)n;
         <span class="k">volatile</span> <span class="k">const</span> <span class="k">uint8_t</span> *src = rxq.bufs + (<span class="k">uint32_t</span>)id * VIRTIO_NET_BUF_SIZE + NET_HDR_LEN;
         <span class="k">for</span> (<span class="k">uint16_t</span> i = <span class="n">0</span>; i &lt; frame_len; i++) {
             dst[i] = src[i];
@@ -1034,6 +1142,10 @@ nic: <span class="k">int</span>;
 {
     <span class="k">uint16_t</span> id = tx_next % Q;
     tx_next++;
+    <span class="c">/* Header and frame fit one buffer. */</span>
+    <span class="k">if</span> (len &gt; VIRTIO_NET_FRAME_MAX) {
+        len = VIRTIO_NET_FRAME_MAX;
+    }
 
     <span class="k">volatile</span> <span class="k">uint8_t</span> *buf = txq.bufs + (<span class="k">uint32_t</span>)id * VIRTIO_NET_BUF_SIZE;
     <span class="k">for</span> (<span class="k">unsigned</span> i = <span class="n">0</span>; i &lt; NET_HDR_LEN; i++) {
@@ -1100,34 +1212,32 @@ nic: <span class="k">int</span>;
           <div class="code-head"><span class="path">UPPAAL model of dd, generated by fire build</span><span>build/datadiode.xta</span></div>
           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; padding: 16px">
             <div style="flex: 999 1 560px; min-width: 0; overflow-x: auto">
-              <svg viewBox="0 0 816 168" style="display: block; width: 100%; min-width: 600px; height: auto" role="img" aria-labelledby="dd-title">
-                <title id="dd-title">Automaton for dd: Init, ready, Notified, receive on o2d, L2, forward, L3, send on d2i, Exit, then back to Notified.</title>
+              <svg viewBox="0 0 648 168" style="display: block; width: 100%; max-width: 680px; min-width: 520px; height: auto" role="img" aria-labelledby="dd-title">
+                <title id="dd-title">Automaton for dd: Init, ready, Notified, take a frame from the o2d queue, L2, forward, L3, put it on the d2i queue or drop it if d2i is full, then back to Notified.</title>
                 <defs><marker id="ah-code" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#8b929c"/></marker></defs>
                 <g fill="none" stroke="#8b929c" stroke-width="2">
                   <path d="M120 60H186" marker-end="url(#ah-code)"/>
                   <path d="M288 60H354" marker-end="url(#ah-code)"/>
                   <path d="M456 60H522" marker-end="url(#ah-code)"/>
-                  <path d="M624 60H690" marker-end="url(#ah-code)"/>
-                  <path d="M744 80V120H240V86" marker-end="url(#ah-code)"/>
+                  <path d="M576 80V120H240V86" marker-end="url(#ah-code)"/>
                 </g>
                 <g font-family="IBM Plex Mono, monospace" font-size="13" text-anchor="middle" fill="#e6e8eb">
                   <rect x="24" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="72" y="65">Init</text>
                   <rect x="192" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="240" y="65">Notified</text>
                   <rect x="360" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#fb7185" stroke-width="1.5"/><text x="408" y="65">L2</text>
                   <rect x="528" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="576" y="65">L3</text>
-                  <rect x="696" y="40" width="96" height="40" rx="20" fill="#111827" stroke="#334155"/><text x="744" y="65">Exit</text>
                 </g>
                 <g font-family="IBM Plex Mono, monospace" font-size="12" text-anchor="middle">
                   <text x="156" y="44" fill="#a9afb8">ready</text>
                   <text x="324" y="44" fill="#8ab4ff">o2d?</text>
                   <text x="492" y="44" fill="#a9afb8">forward</text>
-                  <text x="660" y="44" fill="#8ab4ff">d2i!</text>
+                  <text x="408" y="140" fill="#8ab4ff">d2i!  <tspan fill="#a9afb8">· or drop, if d2i is full</tspan></text>
                 </g>
               </svg>
             </div>
           </div>
         </div>
-        <p style="margin: 16px 0 0; font-size: 14px" class="muted"><code>fire verify demo/datadiode/</code> first proves the contracts in <code>eth.h</code> on <code>eth.c</code> with Frama-C, then checks the model of all three domains against the seven queries in <code>datadiode.q</code>, both in the file list above.</p>
+        <p style="margin: 16px 0 0; font-size: 14px" class="muted"><code>fire verify demo/datadiode/</code> first proves the contracts in <code>eth.h</code> and <code>util.h</code> on <code>eth.c</code> and <code>util.c</code> with Frama-C, taking the virtio-net driver's contracts as assumed, then checks the model of all three domains against the seven queries in <code>datadiode.q</code>, both in the file list above.</p>
         <p style="margin: 16px 0 0; font-size: 14px" class="muted">Walk through it in the <a href="docs/manual/tutorial.html">tutorial</a>, or run it yourself with <code>fire run demo/datadiode/</code> (<a href="docs/manual/fire-run.html">fire run</a> in the manual).</p>
         <p class="more-examples">
           <a href="examples/nrl-pump.html">NRL Pump</a>
@@ -1155,7 +1265,7 @@ nic: <span class="k">int</span>;
     <aside aria-label="News" style="padding: 80px 0 56px">
       <div class="release-card">
         <div class="mono muted" style="font-size: 12px; margin-bottom: 6px">Current release</div>
-        <div class="ver">fic 2.62.5</div>
+        <div class="ver">fic 2.81.0</div>
         <div style="font-size: 14px; color: var(--text-2); margin-bottom: 16px">fic + fire · Linux x86-64 · macOS arm64</div>
         <a href="docs/manual/installation.html" class="btn btn-primary btn-sm">Install</a>
         <div style="margin-top: 10px; font-size: 14px; text-align: center"><a href="releases/">All releases</a></div>
@@ -1169,6 +1279,11 @@ nic: <span class="k">int</span>;
         <a href="blog/?cat=post" class="chip">Posts</a>
       </div>
       <ol class="feed">
+        <li>
+          <span class="meta"><span class="tag tag-release">Release</span>17 Nov 2026</span>
+          <a class="title" href="releases/">fic 2.81.0</a>
+          <span class="summary">Synchronous channels carry a value (<code>Sync Chan&lt;T&gt;</code>), a channel can declare its ring's capacity, and <code>fire verify</code> reports which contracts are proved, assumed or external. New timer and ethernet demos.</span>
+        </li>
         <li>
           <span class="meta"><span class="tag tag-release">Release</span>10 Nov 2026</span>
           <a class="title" href="releases/">fic 2.62.5</a>
@@ -1224,6 +1339,6 @@ nic: <span class="k">int</span>;
       </div>
     </div>
   </footer>
-  <script src="assets/site.js?v=2026111614222"></script>
+  <script src="assets/site.js?v=202611170935"></script>
 </body>
 </html>
